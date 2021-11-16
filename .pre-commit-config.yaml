@@ -1,0 +1,15 @@
+# generated with pre-commit sample-config
+
+# NOTE allow entry only for very trusted hooks, since this breaks pre-commit guarantee
+# of never modifying source files on its own
+repos:
+- repo: https://github.com/pycqa/isort
+  rev: 5.10.1
+  hooks:
+  - id: isort
+    entry: bash -c 'isort "$@"; git add -u' --
+- repo: https://github.com/psf/black
+  rev: 21.10b0
+  hooks:
+  - id: black
+    entry: bash -c 'black "$@"; git add -u' --

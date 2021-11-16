@@ -20,74 +20,70 @@ See: https://github.com/google/dopamine
 """
 
 import pathlib
-from setuptools import find_packages
-from setuptools import setup
+
+from setuptools import find_packages, setup
 
 here = pathlib.Path(__file__).parent.resolve()
 
-long_description = (here / 'README.md').read_text(encoding='utf-8')
+long_description = (here / "README.md").read_text(encoding="utf-8")
 
 install_requires = [
-    'tensorflow >= 2.2.0',
-    'gin-config >= 0.3.0',
-    'absl-py >= 0.9.0',
-    'opencv-python >= 3.4.8.29',
-    'gym[atari] >= 0.13.1',
-    'flax >= 0.2.0',
-    'jax >= 0.1.72',
-    'jaxlib >= 0.1.51',
-    'Pillow >= 7.0.0',
-    'numpy >= 1.16.4',
-    'pygame >= 1.9.2',
-    'pandas >= 0.24.2',
-    'tf_slim >= 1.0',
-    'tensorflow-probability >= 0.13.0',
+    "tensorflow >= 2.2.0",
+    "gin-config >= 0.3.0",
+    "absl-py >= 0.9.0",
+    "opencv-python >= 3.4.8.29",
+    "gym[atari] >= 0.13.1",
+    "flax >= 0.2.0",
+    "jax >= 0.1.72",
+    "jaxlib >= 0.1.51",
+    "Pillow >= 7.0.0",
+    "numpy >= 1.16.4",
+    "pygame >= 1.9.2",
+    "pandas >= 0.24.2",
+    "tf_slim >= 1.0",
+    "tensorflow-probability >= 0.13.0",
 ]
 
 dopamine_description = (
-    'Dopamine: A framework for flexible Reinforcement Learning research')
+    "Dopamine: A framework for flexible Reinforcement Learning research"
+)
 
 setup(
-    name='dopamine_rl',
-    version='4.0.0',
+    name="dopamine_rl",
+    version="4.0.0",
     description=dopamine_description,
     long_description=long_description,
-    long_description_content_type='text/markdown',
-    url='https://github.com/google/dopamine',
-    author='The Dopamine Team',
+    long_description_content_type="text/markdown",
+    url="https://github.com/google/dopamine",
+    author="The Dopamine Team",
     classifiers=[
-        'Development Status :: 4 - Beta',
-
-        'Intended Audience :: Developers',
-        'Intended Audience :: Education',
-        'Intended Audience :: Science/Research',
-
-        'License :: OSI Approved :: Apache Software License',
-
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
-        'Programming Language :: Python :: 3.8',
-        'Programming Language :: Python :: 3 :: Only',
-
-        'Topic :: Scientific/Engineering',
-        'Topic :: Scientific/Engineering :: Mathematics',
-        'Topic :: Scientific/Engineering :: Artificial Intelligence',
-        'Topic :: Software Development',
-        'Topic :: Software Development :: Libraries',
-        'Topic :: Software Development :: Libraries :: Python Modules',
-
+        "Development Status :: 4 - Beta",
+        "Intended Audience :: Developers",
+        "Intended Audience :: Education",
+        "Intended Audience :: Science/Research",
+        "License :: OSI Approved :: Apache Software License",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3 :: Only",
+        "Topic :: Scientific/Engineering",
+        "Topic :: Scientific/Engineering :: Mathematics",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
+        "Topic :: Software Development",
+        "Topic :: Software Development :: Libraries",
+        "Topic :: Software Development :: Libraries :: Python Modules",
     ],
-    keywords='dopamine, reinforcement, machine, learning, research',
+    keywords="dopamine, reinforcement, machine, learning, research",
     include_package_data=True,
-    packages=find_packages(exclude=['docs']),
-    package_data={'testdata': ['testdata/*.gin']},
+    packages=find_packages(exclude=["docs"]),
+    package_data={"testdata": ["testdata/*.gin"]},
     install_requires=install_requires,
     project_urls={  # Optional
-        'Documentation': 'https://github.com/google/dopamine',
-        'Bug Reports': 'https://github.com/google/dopamine/issues',
-        'Source': 'https://github.com/google/dopamine',
+        "Documentation": "https://github.com/google/dopamine",
+        "Bug Reports": "https://github.com/google/dopamine/issues",
+        "Source": "https://github.com/google/dopamine",
     },
-    license='Apache 2.0',
+    license="Apache 2.0",
 )

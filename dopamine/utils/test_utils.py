@@ -14,27 +14,24 @@
 # limitations under the License.
 """Common testing utilities shared across agents."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
-
+from __future__ import absolute_import, division, print_function
 
 import mock
 import tensorflow as tf
 
 
 class MockReplayBuffer(object):
-  """Mock ReplayBuffer to verify the way the agent interacts with it."""
+    """Mock ReplayBuffer to verify the way the agent interacts with it."""
 
-  def __init__(self, is_jax=False):
-    if is_jax:
-      self.add = mock.Mock()
-      self.add_count = 0
-      self.sum_tree = mock.Mock()
-    else:
-      with tf.compat.v1.variable_scope(
-          'MockReplayBuffer', reuse=tf.compat.v1.AUTO_REUSE):
-        self.add = mock.Mock()
-        self.memory = mock.Mock()
-        self.memory.add_count = 0
+    def __init__(self, is_jax=False):
+        if is_jax:
+            self.add = mock.Mock()
+            self.add_count = 0
+            self.sum_tree = mock.Mock()
+        else:
+            with tf.compat.v1.variable_scope(
+                "MockReplayBuffer", reuse=tf.compat.v1.AUTO_REUSE
+            ):
+                self.add = mock.Mock()
+                self.memory = mock.Mock()
+                self.memory.add_count = 0
