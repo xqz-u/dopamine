@@ -1,0 +1,5 @@
+import thesis.tests.gin_multiple_calls
+
+# Pippo.mimmo = [1, 2, 3]
+
+Pippo.add_mimmo.el = 1
