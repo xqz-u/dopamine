@@ -9,6 +9,7 @@ def all_equal(iterable):
     return next(g, True) and not next(g, False)
 
 
+# TODO use timeit module to have proper execution time metrics
 def timer(fn):
     @ft.wraps(fn)
     def inner(*args, **kwargs):

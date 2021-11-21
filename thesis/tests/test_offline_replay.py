@@ -1,4 +1,5 @@
 import functools as ft
+import itertools as it
 import os
 from concurrent import futures
 
@@ -41,7 +42,8 @@ def load_buffers_io_sub(self, checkpoint_dir: str, iterations: list):
     with futures.ThreadPoolExecutor(max_workers=4) as thread_pool:
         buffers = [
             thread_pool.submit(self._load_buffer, fold, i)
-            for fold, i in zip([checkpoint_dir] * len(iterations), iterations)
+            # for fold, i in zip([checkpoint_dir] * len(iterations), iterations)
+            for fold, i in zip(it.cycle([checkpoint_dir]), iterations)
         ]
     ft.reduce(mem._merge_replay_buffers, [b.result() for b in buffers], self)
 
@@ -102,3 +104,7 @@ def test_loading_speeds():
 
 test_buffers_load_consistently()
 test_loading_speeds()
+
+# buf = mem.OfflineOutOfGraphReplayBuffer(obs_shape, stack_sz, batch_sz)
+# buf.load_single_buffer(checkpoints_dir, "49")
+# buf.sample_transition_batch()
