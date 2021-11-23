@@ -19,3 +19,7 @@ def timer(fn):
         return ret
 
     return inner
+
+
+def dict_pop(d, k):
+    return (d, d.pop(k))[0]
