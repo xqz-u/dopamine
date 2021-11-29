@@ -4,6 +4,7 @@ import math
 import multiprocessing as mp
 from concurrent import futures
 
+import gin
 import numpy as np
 
 from dopamine.replay_memory import circular_replay_buffer as mem
@@ -14,7 +15,6 @@ def _merge_replay_buffers(self, other):
     self.invalid_range = np.concatenate(
         [self.invalid_range, self._replay_capacity + other.invalid_range]
     )
-
     self.add_count += other.add_count
     self._replay_capacity += other._replay_capacity
     self._store = dict(
@@ -30,13 +30,15 @@ def _merge_replay_buffers(self, other):
 
 
 # TODO document this hazy thing
-# TODO gin configuration
+# TODO gin configuration on methods
+@gin.configurable
 class OfflineOutOfGraphReplayBuffer(mem.OutOfGraphReplayBuffer):
     def __init__(self, observation_shape, stack_size, batch_size, **kwargs):
         super().__init__(observation_shape, stack_size, math.inf, batch_size, **kwargs)
         self.invalid_range = np.array([], dtype=np.int32)
         self._kwargs = kwargs
 
+    # override of parent's method, in parent's __init__
     def _create_storage(self):
         self._replay_capacity = 0
         super()._create_storage()

@@ -8,12 +8,12 @@ from dopamine.discrete_domains import atari_lib
 
 
 # Basic classic control parent class network, to keep using the D*NNetworktype
-# named tupel defined in atari_lib and minimize code duplication.
+# named tuple defined in atari_lib and minimize code duplication.
 # NOTE this is
 # very basic compared to the same one defined in dopamine.jax.networks, might
 # need refinement. main difference is the use of the hidden_features
 # parameters, borrowed from the flax tutorials
-# TODO test gin configurability
+# TODO test gin configuration
 class ClassicControlDNNetwork(nn.Module):
     output_wrap: namedtuple
     output_dim: int = 1
