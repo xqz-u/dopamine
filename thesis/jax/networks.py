@@ -32,6 +32,7 @@ class ClassicControlDNNetwork(nn.Module):
 
     def __call__(self, x):
         for layer in self.layers:
+            x = x.reshape((-1))  # flatten
             x = layer(x)
             x = self.activation_fn(x)
         return self.output_wrap(self.final_layer(x))
