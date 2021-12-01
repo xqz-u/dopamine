@@ -19,7 +19,7 @@ class ExperimentData:
     epsilon: float = 0.01
     update_horizon: int = 1
     stack_size: int = dqn_agent.NATURE_DQN_STACK_SIZE
-    replay_capacity: int = 1e6
+    replay_capacity: int = int(1e6)
     batch_size: int = 32
     min_replay_history: int = 20000
     update_period: int = 4  # NOTE not using this rn
