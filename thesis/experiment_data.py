@@ -5,11 +5,10 @@ from dataclasses import dataclass
 import gin
 
 from dopamine.agents.dqn import dqn_agent
+from dopamine.jax import losses
 
 
-# different action selection strategies?
-# eval / train mode difference?
-# FIXME why is `stack_size` here alone and the other related parameters in the
+# different action selection from dopamine.replay_memory.circular_replay_buffer import OutOfGraphReplayBuffer rs in the
 # agent?
 @gin.configurable
 @dataclass
@@ -24,8 +23,8 @@ class ExperimentData:
     min_replay_history: int = 20000
     update_period: int = 4  # NOTE not using this rn
     target_update_period: int = 8000
-    optimizer: str = "adam"
-    loss_type: str = "huber"
+    learning_rate: float = 0.01
+    loss_fn: callable = losses.huber_loss
     checkpoint_dir: str = None
     checkpoint_iterations: list = None
 

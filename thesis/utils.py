@@ -1,6 +1,9 @@
 import functools as ft
 import time
 from itertools import groupby
+from typing import Sequence
+
+import jax
 
 
 # https://stackoverflow.com/questions/3844801/check-if-all-elements-in-a-list-are-identical
@@ -23,3 +26,10 @@ def timer(fn):
 
 def dict_pop(d, k):
     return (d, d.pop(k))[0]
+
+
+def force_devicearray_split(
+    key: jax.random.PRNGKey, n=2
+) -> Sequence[jax.random.PRNGKey]:
+    splits = jax.random.split(key, n)
+    return [jax.numpy.asarray(k) for k in splits]
