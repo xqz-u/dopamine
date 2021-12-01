@@ -23,8 +23,21 @@ from thesis.offline.replay_memory.offline_circular_replay_buffer import (
 # those args that already have sensible defaults plus can be configured with gin
 
 
-def compute_TD_error():
-    ...
+# onp.set_printoptions(threshold=10)
+
+
+# NOTE the update in the paper by Matthia computes TD errors discriminating
+# against terminal _next_states_, whereas here I am using terminal _states_
+def dqv_td_error(
+    vnet: nn.Module, target_params: FrozenDict, next_states, rewards, terminals, gamma
+) -> jnp.DeviceArray:
+    def td(next_state):
+        return vnet.apply(target_params, next_state)
+
+    v_values = jax.vmap(td)(next_states).v_values
+    # needed, vmap creates a column vector to vectorize operation on states
+    v_values = v_values.squeeze()
+    return rewards + gamma * v_values * (1 - terminals)
 
 
 # TODO mark class and `build_networks` method with gin.register; configuration
@@ -34,7 +47,8 @@ def compute_TD_error():
 def build_networks(
     agent, V_features: Sequence[int] = None, Q_features: Sequence[int] = None
 ):
-    agent.state = onp.zeros(agent.state_shape)
+    state_shape = agent.state_shape + (agent.exp_data.stack_size,)
+    agent.state = onp.zeros(state_shape)
     Vnet = (
         agent.V_network(hidden_features=V_features) if V_features else agent.V_network()
     )
@@ -58,12 +72,14 @@ def egreedy_action_selection(
     q_net: networks.ClassicControlDQNNetwork,
     params: FrozenDict,
     state: onp.ndarray,
-) -> Tuple[jnp.DeviceArray, jnp.DeviceArray]:
+) -> Tuple[jnp.DeviceArray, onp.ndarray]:
     key, key1, key2 = jrand.split(rng, 3)
-    return key, jnp.where(
-        jrand.uniform(key1) <= epsilon,
-        jrand.randint(key2, (), 0, n_actions),
-        jnp.argmax(q_net.apply(params, state).q_values),
+    return key, onp.asarray(
+        jnp.where(
+            jrand.uniform(key1) <= epsilon,
+            jrand.randint(key2, (), 0, n_actions),
+            jnp.argmax(q_net.apply(params, state).q_values),
+        )
     )
 
 
@@ -129,6 +145,9 @@ class JaxDQVAgent:
             self.exp_data.checkpoint_dir, self.exp_data.checkpoint_iterations
         )
 
+    def update_state(self, observation):
+        self.state = onp.reshape(observation, self.state_shape)
+
     # TODO
     def begin_episode(self, observation: onp.ndarray) -> int:
         """
@@ -136,7 +155,7 @@ class JaxDQVAgent:
         next interaction step.
         """
         # initialize state with first observation
-        self.state = observation
+        self.update_state(observation)
         # train step
         self._train_step()
         # action selection
@@ -156,7 +175,7 @@ class JaxDQVAgent:
         # 1. store current trajectory in replay memory
         self.memory.add(self.state, self.action, reward, False)
         # 2. update current state with observation
-        self.state = onp.reshape(observation, self.state_shape)
+        self.update_state(observation)
         # 3. train
         self._train_step()
         # finally, choose next action and return it
@@ -188,16 +207,29 @@ class JaxDQVAgent:
         # 1. sample mini-batch of size Z of transitions from replay memory
         replay_elements = self.sample_memory()
         # 2. compute TD-error
+        td_error = dqv_td_error(
+            self.V_network,
+            self.target_params,
+            replay_elements["next_state"],
+            replay_elements["reward"],
+            replay_elements["terminal"],
+            self.exp_data.gamma,
+        )
         # 3. compute loss on TD-error and train the NNs
         # 4. sync weights between online and target networks with frequency X
         if not (self.training_steps % self.exp_data.target_update_period):
             self.V_target = self.V_online
         self.training_steps += 1
 
-    def sample_memory(self) -> dict:
+    def sample_memory(self, batch_size=None, indices=None) -> dict:
         return dict(
             zip(
-                [el.name for el in self.memory.get_transition_elements()],
-                self.memory.sample_transition_batch(),
+                [
+                    el.name
+                    for el in self.memory.get_transition_elements(batch_size=batch_size)
+                ],
+                self.memory.sample_transition_batch(
+                    batch_size=batch_size, indices=indices
+                ),
             )
         )
