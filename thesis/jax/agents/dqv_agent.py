@@ -7,6 +7,7 @@ import gin
 import jax
 import numpy as onp
 import optax
+import tensorflow as tf
 from flax import linen as nn
 from flax.core.frozen_dict import FrozenDict
 from jax import numpy as jnp
@@ -16,6 +17,7 @@ from dopamine.replay_memory.circular_replay_buffer import OutOfGraphReplayBuffer
 from thesis import utils as u
 from thesis.experiment_data import ExperimentData
 from thesis.jax import networks
+from thesis.jax.agents import utils as agents_u
 from thesis.offline.replay_memory.offline_circular_replay_buffer import (
     OfflineOutOfGraphReplayBuffer,
 )
@@ -26,59 +28,27 @@ from thesis.offline.replay_memory.offline_circular_replay_buffer import (
 # those args that already have sensible defaults plus can be configured with gin
 
 
-# TODO test performances both with and without jitting
-# TODO rewrite this monster better...
-@u.timer
-@ft.partial(jax.jit, static_argnums=(0, 1, 5, 8))
-def train(
-    q_net: nn.Module,
-    v_net: nn.Module,
-    q_params: FrozenDict,
-    v_params: FrozenDict,
+@ft.partial(jax.jit, static_argnums=(0, 3, 5, 7))
+def train_module(
+    net: nn.Module,
+    params: FrozenDict,
     td_errors: jnp.DeviceArray,
-    optimizer: optax.GradientTransformation,
-    q_opt_state: optax.OptState,
-    v_opt_state: optax.OptState,
-    loss_fn: callable,
-    states,
-    actions,
-    rewards,
-    next_states,
-    terminals,
-) -> Sequence[Tuple[optax.OptState, FrozenDict, float]]:
-    def loss(estimates):
-        return jnp.mean(jax.vmap(loss_fn)(td_errors, estimates))
-
-    def v_estimates(params):
-        def v_values(state):
-            return v_net.apply(params, state)
-
-        return loss(jax.vmap(v_values)(states).v_values.squeeze())
-
-    def q_estimates(params):
-        def q_values(state):
-            return q_net.apply(params, state)
-
-        qs = jax.vmap(q_values)(states).q_values.squeeze()
-        # retrieve the q values of the actions actually performed in the sampled
-        # states
-        return loss(jax.vmap(lambda x, y: x[y])(qs, actions))
-
-    grad_fn_v = jax.value_and_grad(v_estimates)
-    grad_fn_q = jax.value_and_grad(q_estimates)
-    return optimize(optimizer, v_opt_state, v_params, grad_fn_v), optimize(
-        optimizer, q_opt_state, q_params, grad_fn_q
-    )
-
-
-@u.timer
-# @ft.partial(jax.jit, static_argnums=(0))
-def optimize(
     optim: optax.GradientTransformation,
     opt_state: optax.OptState,
-    params: FrozenDict,
-    grad_fn: callable,
+    loss_fn: callable,
+    states: onp.ndarray,
+    callback: callable,
+    *args,
+    **kwargs
 ) -> [Tuple[optax.OptState, FrozenDict, float]]:
+    # evaluation and loss function
+    def estimate_states(params):
+        estimates = jax.vmap(lambda state: net.apply(params, state))(states)
+        estimates = callback(estimates.squeeze(), *args, **kwargs)
+        return jnp.mean(jax.vmap(loss_fn)(td_errors, estimates))
+
+    # optimize the network, taking the gradient of the loss function
+    grad_fn = jax.value_and_grad(estimate_states)
     loss, grad = grad_fn(params)
     updates, opt_state = optim.update(grad, opt_state, loss)
     params = optax.apply_updates(params, updates)
@@ -87,7 +57,7 @@ def optimize(
 
 # NOTE the update in the paper by Matthia computes TD errors discriminating
 # against terminal _next_states_, whereas here I am using terminal _states_
-@u.timer
+# @u.timer
 @ft.partial(jax.jit, static_argnums=(0, 5))
 def dqv_td_error(
     vnet: nn.Module, target_params: FrozenDict, next_states, rewards, terminals, gamma
@@ -95,73 +65,39 @@ def dqv_td_error(
     def td(next_state):
         return vnet.apply(target_params, next_state)
 
-    v_values = jax.vmap(td)(next_states).v_values
+    v_values = jax.vmap(td)(next_states)
     # needed, vmap might create a column vector to vectorize operation on states
     v_values = v_values.squeeze()
     return rewards + gamma * v_values * (1 - terminals)
 
 
-@u.timer
+# @u.timer
 @ft.partial(jax.jit, static_argnums=(1, 2, 3))
 def egreedy_action_selection(
     rng: jnp.DeviceArray,
     epsilon: float,
-    n_actions: int,
-    q_net: networks.ClassicControlDQNNetwork,
+    num_actions: int,
+    q_net: networks.ClassicControlDNNetwork,
     params: FrozenDict,
     state: onp.ndarray,
 ) -> Tuple[jnp.DeviceArray, jnp.DeviceArray]:
     key, key1, key2 = u.force_devicearray_split(rng, 3)
     return key, jnp.where(
         jrand.uniform(key1) <= epsilon,
-        jrand.randint(key2, (), 0, n_actions),
-        jnp.argmax(q_net.apply(params, state).q_values),
+        jrand.randint(key2, (), 0, num_actions),
+        jnp.argmax(q_net.apply(params, state)),
     )
 
 
-# TODO mark class and `build_networks` method with gin.register; configuration
-# works, but how to use it in python code? See their docs for details, using
-# that decorator is also the suggested practice...
-@gin.configurable
-def build_networks(
-    agent, V_features: Sequence[int] = None, Q_features: Sequence[int] = None
-):
-    state_shape = agent.state_shape + (agent.exp_data.stack_size,)
-    agent.state = onp.zeros(state_shape)
-    Vnet = (
-        agent.V_network(hidden_features=V_features) if V_features else agent.V_network()
-    )
-    Qnet = (
-        agent.Q_network(hidden_features=Q_features, output_dim=agent.n_actions)
-        if Q_features
-        else agent.Q_network(output_dim=agent.n_actions)
-    )
-    agent.rng, _rng = u.force_devicearray_split(agent.rng)
-
-    agent.V_online = Vnet.init(agent.rng, agent.state)
-    agent.V_target = agent.V_online
-    agent.Q_online = Qnet.init(_rng, agent.state)
-    agent.V_network, agent.Q_network = Vnet, Qnet
-
-
-# TODO take care of calling in a __post_init__ once I know how to call
-# build_networks there as well
-def build_optimizer(agent):
-    agent.optimizer = agent.optimizer(agent.exp_data.learning_rate)
-    agent.Q_optim_state = agent.optimizer.init(agent.Q_online)
-    agent.V_optim_state = agent.optimizer.init(agent.V_online)
-
-
-# TODO call self._train_step() iff not in eval mode
-# TODO training routine, check if it is very different than the dqn_agent one, in
-# any case would be cool to use the TrainingState from flax
+# TODO unbundle method to restart from checkpoint
+# TODO eval mode
 @gin.configurable
 @dataclass
 class JaxDQVAgent:
     state_shape: tuple
-    n_actions: tuple
+    num_actions: tuple
     exp_data: ExperimentData
-    state: onp.ndarray = None
+    state: jnp.DeviceArray = None
     action: int = None
     memory: Union[OfflineOutOfGraphReplayBuffer, OutOfGraphReplayBuffer] = None
     # NOTE could use runner's one, but useful here for check-pointing?
@@ -170,22 +106,35 @@ class JaxDQVAgent:
     Q_online: FrozenDict = FrozenDict()
     V_online: FrozenDict = FrozenDict()
     V_target: FrozenDict = FrozenDict()
-    V_network: nn.Module = networks.ClassicControlDVNNetwork
-    Q_network: nn.Module = networks.ClassicControlDQNNetwork
+    V_network: nn.Module = networks.ClassicControlDNNetwork
+    Q_network: nn.Module = networks.ClassicControlDNNetwork
     optimizer: optax.GradientTransformation = optax.sgd
     Q_optim_state: optax.OptState = None
     V_optim_state: optax.OptState = None
+    summary_writer: tf.compat.v1.summary.FileWriter = None
+    summary_writing_freq: int = 500
 
     def __post_init__(self):
         # create rng
         if self.exp_data.seed is None:
             self.exp_data.seed = int(time.time() * 1e6)
         self.rng = jrand.PRNGKey(self.exp_data.seed)
+        state_shape = self.state_shape + (self.exp_data.stack_size,)
+        self.state = jnp.zeros(state_shape)
         # initialize replay memory
         self.build_memory()
-        # TODO maybe call build_networks here? if parameters are bound/passed to
-        # constructor
-        # TODO same for build_optimizer
+        # initialize neural networks and optimizer
+        self.build_networks()
+        self.build_optimizer()
+
+    # NOTE other parameters of the networks should be already bound
+    def build_networks(self):
+        self.rng, rng0, rng1 = u.force_devicearray_split(self.rng, 3)
+        self.V_network = self.V_network()
+        self.Q_network = self.Q_network(output_dim=self.num_actions)
+        self.V_online = self.V_network.init(rng0, self.state)
+        self.V_target = self.V_online
+        self.Q_online = self.Q_network.init(rng1, self.state)
 
     def build_optimizer(self):
         self.optimizer = self.optimizer(self.exp_data.learning_rate)
@@ -212,9 +161,17 @@ class JaxDQVAgent:
         )
 
     def update_state(self, observation):
-        self.state = onp.reshape(observation, self.state_shape)
+        self.state = jnp.reshape(observation, self.state_shape)
 
-    # TODO
+    def record_trajectory(self, reward: float, terminal: bool, episode_end=False):
+        self.memory.add(
+            onp.asarray(self.state),
+            self.action,
+            reward,
+            terminal,
+            episode_end=episode_end,
+        )
+
     def begin_episode(self, observation: onp.ndarray) -> int:
         """
         Perform the first action. This first trajectory will be recorded in the
@@ -228,7 +185,7 @@ class JaxDQVAgent:
         self.rng, self.action = egreedy_action_selection(
             self.rng,
             self.exp_data.epsilon,
-            self.n_actions,
+            self.num_actions,
             self.Q_network,
             self.Q_online,
             jnp.asarray(self.state),
@@ -240,7 +197,7 @@ class JaxDQVAgent:
     # and this routine returns the next action the agent will perform
     def step(self, reward: float, observation: onp.ndarray) -> int:
         # 1. store current trajectory in replay memory
-        self.memory.add(self.state, self.action, reward, False)
+        self.record_trajectory(reward, False)
         # 2. update current state with observation
         self.update_state(observation)
         # 3. train
@@ -249,7 +206,7 @@ class JaxDQVAgent:
         self.rng, self.action = egreedy_action_selection(
             self.rng,
             self.exp_data.epsilon,
-            self.n_actions,
+            self.num_actions,
             self.Q_network,
             self.Q_online,
             jnp.asarray(self.state),
@@ -264,7 +221,7 @@ class JaxDQVAgent:
         Called by experiment runner when end of episode is detected.
         Simply add this last transition to the memory and signal episode end.
         """
-        self.memory.add(self.state, self.action, reward, True, episode_end=True)
+        self.record_trajectory(reward, terminal, episode_end=True)
 
     def _train_step(self):
         # 0. if running number of interactions with env is > than N: train phase
@@ -284,28 +241,28 @@ class JaxDQVAgent:
             self.exp_data.gamma,
         )
         # 3. compute loss on TD-error and train the NNs
-        (self.V_optim_state, self.V_online, v_loss), (
-            self.Q_optim_state,
-            self.Q_online,
-            q_loss,
-        ) = train(
-            self.Q_network,
+        self.V_optim_state, self.V_online, v_loss = train_module(
             self.V_network,
-            self.Q_online,
             self.V_online,
             td_error,
             self.optimizer,
-            self.Q_optim_state,
             self.V_optim_state,
             self.exp_data.loss_fn,
             replay_elements["state"],
-            replay_elements["action"],
-            replay_elements["reward"],
-            replay_elements["next_state"],
-            replay_elements["terminal"],
+            lambda estim, *_, **__: estim,
         )
-        # TODO save losses for analysis
-        # print(f"v-loss: {v_loss}, q-loss: {q_loss}")
+        self.Q_optim_state, self.Q_online, q_loss = train_module(
+            self.Q_network,
+            self.Q_online,
+            td_error,
+            self.optimizer,
+            self.Q_optim_state,
+            self.exp_data.loss_fn,
+            replay_elements["state"],
+            lambda estim, *args, **_: agents_u.replay_chosen_q(estim, args[0]),
+            replay_elements["action"],
+        )
+        self.save_summaries(v_loss, q_loss)
         # 4. sync weights between online and target networks with frequency X
         if not (self.training_steps % self.exp_data.target_update_period):
             self.V_target = self.V_online
@@ -323,6 +280,38 @@ class JaxDQVAgent:
                 ),
             )
         )
+
+    def save_summaries(self, v_loss, q_loss):
+        if (
+            self.summary_writer is None
+            or self.training_steps % self.summary_writing_freq
+        ):
+            return
+        self.summary_writer.add_summary(
+            tf.compat.v1.Summary(
+                value=[
+                    tf.compat.v1.Summary.Value(tag="V-Loss", simple_value=v_loss),
+                    tf.compat.v1.Summary.Value(tag="Q-Loss", simple_value=q_loss),
+                ]
+            ),
+            self.training_steps,
+        )
+        self.summary_writer.flush()
+
+    def bundle_and_checkpoint(self, checkpoint_dir, iteration_number):
+        if not tf.io.gfile.exists(checkpoint_dir):
+            return None
+        # Checkpoint the out-of-graph replay buffer.
+        self.memory.save(checkpoint_dir, iteration_number)
+        return {
+            "state": onp.asarray(self.state),
+            "training_steps": self.training_steps,
+            "Q_online": self.Q_online,
+            "V_online": self.V_online,
+            "V_target": self.V_target,
+            "Q_optim_state": self.Q_optim_state,
+            "V_optim_state": self.V_optim_state,
+        }
 
     @property
     def networks_shape(self):

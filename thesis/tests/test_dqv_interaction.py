@@ -37,3 +37,22 @@ for _ in range(steps):
     else:
         action = agent.step(reward, observation)
         partial_steps += 1
+
+self = agent
+
+# res = dqv.train(
+#     agent.Q_network,
+#     agent.V_network,
+#     agent.Q_online,
+#     agent.V_online,
+#     td_errors,
+#     agent.optimizer,
+#     agent.Q_optim_state,
+#     agent.V_optim_state,
+#     agent.exp_data.loss_fn,
+#     states,
+#     actions,
+#     rewards,
+#     next_states,
+#     terminals,
+# )

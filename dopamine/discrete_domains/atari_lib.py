@@ -54,7 +54,6 @@ NATURE_DQN_DTYPE = tf.uint8  # DType of Atari 2600 observations.
 NATURE_DQN_STACK_SIZE = 4  # Number of frames in the state stack.
 
 DQNNetworkType = collections.namedtuple("dqn_network", ["q_values"])
-DVNNetworkType = collections.namedtuple("dvn_network", ["v_values"])
 RainbowNetworkType = collections.namedtuple(
     "c51_network", ["q_values", "logits", "probabilities"]
 )
