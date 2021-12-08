@@ -17,7 +17,6 @@ ExperimentData.target_update_period = 100
 # networks
 ClassicControlDNNetwork.min_vals = %jax_networks.CARTPOLE_MIN_VALS
 ClassicControlDNNetwork.max_vals = %jax_networks.CARTPOLE_MAX_VALS
-ClassicControlDNNetwork.hidden_features = (512, 512)
 
 
 # agent
@@ -25,6 +24,12 @@ JaxDQVAgent.state_shape = %gym_lib.CARTPOLE_OBSERVATION_SHAPE
 JaxDQVAgent.exp_data = @ExperimentData()
 JaxDQVAgent.V_network = @ClassicControlDNNetwork
 JaxDQVAgent.Q_network = @ClassicControlDNNetwork
+
+
+# memory
+OutOfGraphReplayBuffer.observation_dtype = %jax_networks.CARTPOLE_OBSERVATION_DTYPE
+OutOfGraphReplayBuffer.replay_capacity = 50000
+OutOfGraphReplayBuffer.batch_size = 128
 
 
 # train runner

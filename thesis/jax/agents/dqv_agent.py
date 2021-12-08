@@ -1,7 +1,7 @@
 import functools as ft
 import time
 from dataclasses import dataclass
-from typing import Sequence, Tuple, Union
+from typing import Tuple, Union
 
 import gin
 import jax
@@ -62,10 +62,7 @@ def train_module(
 def dqv_td_error(
     vnet: nn.Module, target_params: FrozenDict, next_states, rewards, terminals, gamma
 ) -> jnp.DeviceArray:
-    def td(next_state):
-        return vnet.apply(target_params, next_state)
-
-    v_values = jax.vmap(td)(next_states)
+    v_values = jax.vmap(lambda state: vnet.apply(target_params, state))(next_states)
     # needed, vmap might create a column vector to vectorize operation on states
     v_values = v_values.squeeze()
     return rewards + gamma * v_values * (1 - terminals)
@@ -79,7 +76,7 @@ def egreedy_action_selection(
     num_actions: int,
     q_net: networks.ClassicControlDNNetwork,
     params: FrozenDict,
-    state: onp.ndarray,
+    state: jnp.DeviceArray,
 ) -> Tuple[jnp.DeviceArray, jnp.DeviceArray]:
     key, key1, key2 = u.force_devicearray_split(rng, 3)
     return key, jnp.where(
@@ -130,7 +127,7 @@ class JaxDQVAgent:
     # NOTE other parameters of the networks should be already bound
     def build_networks(self):
         self.rng, rng0, rng1 = u.force_devicearray_split(self.rng, 3)
-        self.V_network = self.V_network()
+        self.V_network = self.V_network(output_dim=1)
         self.Q_network = self.Q_network(output_dim=self.num_actions)
         self.V_online = self.V_network.init(rng0, self.state)
         self.V_target = self.V_online
@@ -223,49 +220,48 @@ class JaxDQVAgent:
         """
         self.record_trajectory(reward, terminal, episode_end=True)
 
+    # 0. if running number of interactions with env is > than N: train phase
+    # 1. sample mini-batch of size Z of transitions from replay memory
+    # 2. compute TD-error
+    # 3. compute loss on TD-error and train the NNs
+    # 4. sync weights between online and target networks with frequency X
     def _train_step(self):
-        # 0. if running number of interactions with env is > than N: train phase
-        if self.memory.add_count <= self.exp_data.min_replay_history:
+        if self.memory.add_count > self.exp_data.min_replay_history:
             # NOTE rn update every time after enough experiences have been
             # collected, the Nature DQNN paper also uses `self.exp_data.update_period`
-            return
-        # 1. sample mini-batch of size Z of transitions from replay memory
-        replay_elements = self.sample_memory()
-        # 2. compute TD-error
-        td_error = dqv_td_error(
-            self.V_network,
-            self.V_target,
-            replay_elements["next_state"],
-            replay_elements["reward"],
-            replay_elements["terminal"],
-            self.exp_data.gamma,
-        )
-        # 3. compute loss on TD-error and train the NNs
-        self.V_optim_state, self.V_online, v_loss = train_module(
-            self.V_network,
-            self.V_online,
-            td_error,
-            self.optimizer,
-            self.V_optim_state,
-            self.exp_data.loss_fn,
-            replay_elements["state"],
-            lambda estim, *_, **__: estim,
-        )
-        self.Q_optim_state, self.Q_online, q_loss = train_module(
-            self.Q_network,
-            self.Q_online,
-            td_error,
-            self.optimizer,
-            self.Q_optim_state,
-            self.exp_data.loss_fn,
-            replay_elements["state"],
-            lambda estim, *args, **_: agents_u.replay_chosen_q(estim, args[0]),
-            replay_elements["action"],
-        )
-        self.save_summaries(v_loss, q_loss)
-        # 4. sync weights between online and target networks with frequency X
-        if not (self.training_steps % self.exp_data.target_update_period):
-            self.V_target = self.V_online
+            replay_elements = self.sample_memory()
+            td_error = dqv_td_error(
+                self.V_network,
+                self.V_target,
+                replay_elements["next_state"],
+                replay_elements["reward"],
+                replay_elements["terminal"],
+                self.exp_data.gamma,
+            )
+            self.V_optim_state, self.V_online, v_loss = train_module(
+                self.V_network,
+                self.V_online,
+                td_error,
+                self.optimizer,
+                self.V_optim_state,
+                self.exp_data.loss_fn,
+                replay_elements["state"],
+                lambda estim, *_, **__: estim,
+            )
+            self.Q_optim_state, self.Q_online, q_loss = train_module(
+                self.Q_network,
+                self.Q_online,
+                td_error,
+                self.optimizer,
+                self.Q_optim_state,
+                self.exp_data.loss_fn,
+                replay_elements["state"],
+                lambda estim, *args, **_: agents_u.replay_chosen_q(estim, args[0]),
+                replay_elements["action"],
+            )
+            self.save_summaries(v_loss, q_loss)
+            if self.training_steps % self.exp_data.target_update_period == 0:
+                self.V_target = self.V_online
         self.training_steps += 1
 
     def sample_memory(self, batch_size=None, indices=None) -> dict:
