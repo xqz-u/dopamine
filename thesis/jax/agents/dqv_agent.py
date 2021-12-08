@@ -1,4 +1,3 @@
-import functools as ft
 import time
 from dataclasses import dataclass
 from typing import Tuple, Union
@@ -28,7 +27,6 @@ from thesis.offline.replay_memory.offline_circular_replay_buffer import (
 # those args that already have sensible defaults plus can be configured with gin
 
 
-@ft.partial(jax.jit, static_argnums=(0, 3, 5, 7))
 def train_module(
     net: nn.Module,
     params: FrozenDict,
@@ -55,10 +53,11 @@ def train_module(
     return opt_state, params, loss
 
 
+train_module_jit = jax.jit(train_module, static_argnums=(0, 3, 5, 7))
+
+
 # NOTE the update in the paper by Matthia computes TD errors discriminating
 # against terminal _next_states_, whereas here I am using terminal _states_
-# @u.timer
-@ft.partial(jax.jit, static_argnums=(0, 5))
 def dqv_td_error(
     vnet: nn.Module, target_params: FrozenDict, next_states, rewards, terminals, gamma
 ) -> jnp.DeviceArray:
@@ -68,8 +67,9 @@ def dqv_td_error(
     return rewards + gamma * v_values * (1 - terminals)
 
 
-# @u.timer
-@ft.partial(jax.jit, static_argnums=(1, 2, 3))
+dqv_td_error_jit = jax.jit(dqv_td_error, static_argnums=(0, 5))
+
+
 def egreedy_action_selection(
     rng: jnp.DeviceArray,
     epsilon: float,
@@ -85,6 +85,10 @@ def egreedy_action_selection(
         jnp.argmax(q_net.apply(params, state)),
     )
 
+
+egreedy_action_selection_jit = jax.jit(
+    egreedy_action_selection, static_argnums=(1, 2, 3)
+)
 
 # TODO unbundle method to restart from checkpoint
 # TODO eval mode
@@ -179,7 +183,7 @@ class JaxDQVAgent:
         # train step
         self._train_step()
         # action selection
-        self.rng, self.action = egreedy_action_selection(
+        self.rng, self.action = egreedy_action_selection_jit(
             self.rng,
             self.exp_data.epsilon,
             self.num_actions,
@@ -200,7 +204,7 @@ class JaxDQVAgent:
         # 3. train
         self._train_step()
         # finally, choose next action and return it
-        self.rng, self.action = egreedy_action_selection(
+        self.rng, self.action = egreedy_action_selection_jit(
             self.rng,
             self.exp_data.epsilon,
             self.num_actions,
@@ -230,7 +234,7 @@ class JaxDQVAgent:
             # NOTE rn update every time after enough experiences have been
             # collected, the Nature DQNN paper also uses `self.exp_data.update_period`
             replay_elements = self.sample_memory()
-            td_error = dqv_td_error(
+            td_error = dqv_td_error_jit(
                 self.V_network,
                 self.V_target,
                 replay_elements["next_state"],
@@ -238,7 +242,7 @@ class JaxDQVAgent:
                 replay_elements["terminal"],
                 self.exp_data.gamma,
             )
-            self.V_optim_state, self.V_online, v_loss = train_module(
+            self.V_optim_state, self.V_online, v_loss = train_module_jit(
                 self.V_network,
                 self.V_online,
                 td_error,
@@ -248,7 +252,7 @@ class JaxDQVAgent:
                 replay_elements["state"],
                 lambda estim, *_, **__: estim,
             )
-            self.Q_optim_state, self.Q_online, q_loss = train_module(
+            self.Q_optim_state, self.Q_online, q_loss = train_module_jit(
                 self.Q_network,
                 self.Q_online,
                 td_error,
