@@ -90,6 +90,7 @@ egreedy_action_selection_jit = jax.jit(
     egreedy_action_selection, static_argnums=(1, 2, 3)
 )
 
+
 # TODO unbundle method to restart from checkpoint
 # TODO eval mode
 @gin.configurable
@@ -150,8 +151,9 @@ class JaxDQVAgent:
         for offline training. The assumption is that the proper paths for
         offline buffers are given, and the buffers are loaded here.
         """
-        memory_args = self.exp_data.replay_buffers_view() | {
-            "observation_shape": self.state_shape
+        memory_args = {
+            **self.exp_data.replay_buffers_view(),
+            "observation_shape": self.state_shape,
         }
         if self.exp_data.online:
             self.memory = OutOfGraphReplayBuffer(**memory_args)
