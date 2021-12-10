@@ -16,7 +16,6 @@ from dopamine.replay_memory.circular_replay_buffer import OutOfGraphReplayBuffer
 from thesis import utils as u
 from thesis.experiment_data import ExperimentData
 from thesis.jax import networks
-from thesis.jax.agents import utils as agents_u
 from thesis.offline.replay_memory.offline_circular_replay_buffer import (
     OfflineOutOfGraphReplayBuffer,
 )
@@ -27,6 +26,21 @@ from thesis.offline.replay_memory.offline_circular_replay_buffer import (
 # those args that already have sensible defaults plus can be configured with gin
 
 
+def mask_v_estimates(v_estimates: jnp.DeviceArray, *_, **__) -> jnp.DeviceArray:
+    return v_estimates
+
+
+def mask_q_estimates(q_estimates: jnp.DeviceArray, *args, **_) -> jnp.DeviceArray:
+    """
+    Given Q-values (a matrix of shape (replayed_states, n_actions)),
+    extract the Q-values of the action chosen for replay and indexed
+    by `replay_actions`.
+    """
+    replay_chosen_actions = args[0]
+    return jax.vmap(lambda x, y: x[y])(q_estimates, replay_chosen_actions)
+
+
+# TODO check if states should be jnp.DeviceArray's
 def train_module(
     net: nn.Module,
     params: FrozenDict,
@@ -35,14 +49,14 @@ def train_module(
     opt_state: optax.OptState,
     loss_fn: callable,
     states: onp.ndarray,
-    callback: callable,
+    mask: callable,
     *args,
     **kwargs
 ) -> [Tuple[optax.OptState, FrozenDict, float]]:
     # evaluation and loss function
     def estimate_states(params):
         estimates = jax.vmap(lambda state: net.apply(params, state))(states)
-        estimates = callback(estimates.squeeze(), *args, **kwargs)
+        estimates = mask(estimates.squeeze(), *args, **kwargs)
         return jnp.mean(jax.vmap(loss_fn)(td_errors, estimates))
 
     # optimize the network, taking the gradient of the loss function
@@ -252,7 +266,7 @@ class JaxDQVAgent:
                 self.V_optim_state,
                 self.exp_data.loss_fn,
                 replay_elements["state"],
-                lambda estim, *_, **__: estim,
+                mask_v_estimates,
             )
             self.Q_optim_state, self.Q_online, q_loss = train_module_jit(
                 self.Q_network,
@@ -262,7 +276,7 @@ class JaxDQVAgent:
                 self.Q_optim_state,
                 self.exp_data.loss_fn,
                 replay_elements["state"],
-                lambda estim, *args, **_: agents_u.replay_chosen_q(estim, args[0]),
+                mask_q_estimates,
                 replay_elements["action"],
             )
             self.save_summaries(v_loss, q_loss)
