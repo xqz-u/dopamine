@@ -1,9 +1,13 @@
 import functools as ft
+import os
 import time
 from itertools import groupby
 from typing import Sequence
 
+import gin
 import jax
+
+from thesis import config
 
 
 # https://stackoverflow.com/questions/3844801/check-if-all-elements-in-a-list-are-identical
@@ -37,3 +41,14 @@ def force_devicearray_split(
 ) -> Sequence[jax.random.PRNGKey]:
     splits = jax.random.split(key, n)
     return [jax.numpy.asarray(k) for k in splits]
+
+
+# experiment_spec = [agent name, network name, environment name]
+@gin.configurable
+def make_unique_data_dir(experiment_spec: list, base_dir: str = None) -> str:
+    agent, net, env_name = experiment_spec
+    if not base_dir:
+        base_dir = os.path.join(config.base_dir, "online", "data_collection")
+    return os.path.join(
+        base_dir, f"{agent.__name__}_{net.__name__}_{env_name}_{int(time.time())}"
+    )
