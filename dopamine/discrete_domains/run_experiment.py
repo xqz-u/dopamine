@@ -41,7 +41,7 @@ from dopamine.jax.agents.implicit_quantile import (
 )
 from dopamine.jax.agents.quantile import quantile_agent as jax_quantile_agent
 from dopamine.jax.agents.rainbow import rainbow_agent as jax_rainbow_agent
-from thesis.jax.agents import dqv_agent as jax_dqv
+from thesis.jax.agents.dqv_family import dqv_agent as jax_dqv
 
 
 def load_gin_configs(gin_files, gin_bindings):
