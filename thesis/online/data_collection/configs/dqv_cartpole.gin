@@ -1,8 +1,9 @@
-import thesis.experiment_data
 import dopamine.discrete_domains.run_experiment
 import dopamine.discrete_domains.gym_lib
+
+import thesis.jax.agents.dqv_family.dqv_agent
 import thesis.jax.networks
-import dopamine.jax.networks
+import thesis.experiment_data
 import thesis.utils
 
 # experiment config, use defaults for the rest
@@ -39,5 +40,5 @@ create_agent.agent_name = "jax_dqv"
 create_agent.debug_mode = True
 create_runner.schedule = 'continuous_train'
 
-make_unique_data_dir.experiment_spec = [@JaxDQNAgent, @ClassicControlDQNNetwork, "CartPole-v0"]
+make_unique_data_dir.experiment_spec = [@JaxDQVAgent, @ClassicControlDQNNetwork, "CartPole-v0"]
 create_runner.base_dir = @make_unique_data_dir()
