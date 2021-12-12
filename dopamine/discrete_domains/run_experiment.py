@@ -42,6 +42,7 @@ from dopamine.jax.agents.implicit_quantile import (
 from dopamine.jax.agents.quantile import quantile_agent as jax_quantile_agent
 from dopamine.jax.agents.rainbow import rainbow_agent as jax_rainbow_agent
 from thesis.jax.agents.dqv_family import dqv_agent as jax_dqv
+from thesis.jax.agents.dqv_family import dqv_max_agent as jax_dqv_max
 
 
 def load_gin_configs(gin_files, gin_bindings):
@@ -117,6 +118,10 @@ def create_agent(
         )
     elif agent_name == "jax_dqv":
         return jax_dqv.JaxDQVAgent(
+            num_actions=environment.action_space.n, summary_writer=summary_writer
+        )
+    elif agent_name == "jax_dqv_max":
+        return jax_dqv_max.JaxDQVMaxAgent(
             num_actions=environment.action_space.n, summary_writer=summary_writer
         )
     else:
@@ -319,7 +324,14 @@ class Runner(object):
           reward: float, the last reward from the environment.
           terminal: bool, whether the last state-action led to a terminal state.
         """
-        if isinstance(self._agent, (jax_dqn_agent.JaxDQNAgent, jax_dqv.JaxDQVAgent)):
+        if isinstance(
+            self._agent,
+            (
+                jax_dqn_agent.JaxDQNAgent,
+                jax_dqv.JaxDQVAgent,
+                jax_dqv_max.JaxDQVMaxAgent,
+            ),
+        ):
             self._agent.end_episode(reward, terminal)
         else:
             # TODO(joshgreaves): Add terminal signal to TF dopamine agents

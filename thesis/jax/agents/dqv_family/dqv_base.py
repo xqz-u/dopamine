@@ -1,23 +1,99 @@
 #!/usr/bin/env python3
 
-from typing import Union
+import functools as ft
+import time
+from typing import Tuple, Union
 
 import attr
+import jax
 import numpy as np
 import optax
 import tensorflow as tf
 from flax import linen as nn
+from flax.core.frozen_dict import FrozenDict
 from jax import numpy as jnp
 from jax import random as jrand
 
 from dopamine.replay_memory.circular_replay_buffer import OutOfGraphReplayBuffer
 from thesis import experiment_data
+from thesis import utils as u
 from thesis.jax import exploration, networks
 from thesis.offline.replay_memory.offline_circular_replay_buffer import (
     OfflineOutOfGraphReplayBuffer,
 )
 
+# NOTE many functions and class methods are called with no args when they are
+# actually required; args passing is intended to be done with gin. In any case,
+# ideally one would still pass the required parameters, and not pass values for
+# those args that already have sensible defaults plus can be configured with gin
 
+
+def mask_v_estimates(v_estimates: jnp.DeviceArray, *_, **__) -> jnp.DeviceArray:
+    return v_estimates
+
+
+def mask_q_estimates(q_estimates: jnp.DeviceArray, *args, **_) -> jnp.DeviceArray:
+    """
+    Given Q-values (a matrix of shape (replayed_states, n_actions)),
+    extract the Q-values of the action chosen for replay and indexed
+    by `replay_actions`.
+    """
+    replay_chosen_actions = args[0]
+    return jax.vmap(lambda x, y: x[y])(q_estimates, replay_chosen_actions)
+
+
+@ft.partial(jax.jit, static_argnums=(0, 3, 5, 7))
+def train_module(
+    net: nn.Module,
+    params: FrozenDict,
+    td_errors: jnp.DeviceArray,
+    optim: optax.GradientTransformation,
+    opt_state: optax.OptState,
+    loss_fn: callable,
+    states,
+    mask: callable,
+    *args,
+    **kwargs
+) -> [Tuple[optax.OptState, FrozenDict, float]]:
+    # evaluation and loss function
+    def estimate_states(params):
+        estimates = jax.vmap(lambda state: net.apply(params, state))(states)
+        estimates = mask(estimates.squeeze(), *args, **kwargs)
+        return jnp.mean(jax.vmap(loss_fn)(td_errors, estimates))
+
+    # optimize the network, taking the gradient of the loss function
+    grad_fn = jax.value_and_grad(estimate_states)
+    loss, grad = grad_fn(params)
+    updates, opt_state = optim.update(grad, opt_state, loss)
+    params = optax.apply_updates(params, updates)
+    return opt_state, params, loss
+
+
+# NOTE the update in the paper by Matthia computes TD errors discriminating
+# against terminal _next_states_, whereas here I am using terminal _states_, but
+# it should be the same
+@ft.partial(jax.jit, static_argnums=(0, 5, 6))
+def dqv_family_td_error(
+    net: nn.Module,
+    target_params: FrozenDict,
+    next_states,
+    rewards,
+    terminals,
+    gamma: float,
+    mask: callable,
+    *args,
+    **kwargs
+) -> jnp.DeviceArray:
+    values = jax.vmap(lambda state: net.apply(target_params, state))(next_states)
+    # needed, vmap might create a column vector to vectorize operation on states
+    values = values.squeeze()
+    values = mask(values, *args, **kwargs)
+    return rewards + gamma * values * (1 - terminals)
+
+
+# TODO eval mode
+# TODO unbundle method to restart from checkpoint
+# TODO check if an `update_period` for memory sampling gives better performance
 # TODO split for online and offline agents?
 @attr.s(auto_attribs=True)
 class DQV:
@@ -50,11 +126,29 @@ class DQV:
         self.build_networks()
         self.build_optimizer()
 
-    def build_networks(self):
+    def _train_step(self, replay_elements: dict) -> Tuple[jnp.DeviceArray]:
         raise NotImplementedError
 
-    def _train_step(self):
+    def sync_weights(self):
         raise NotImplementedError
+
+    # 0. if running number of interactions with env is > than N: train phase
+    # 1. sample mini-batch of size Z of transitions from replay memory
+    # 2. specific _train_phase: compute TD-error and train NNs with its loss
+    # 3. sync weights between online and target networks with frequency X
+    def wrapped_train_step(self):
+        if self.memory.add_count > self.exp_data.min_replay_history:
+            q_loss, v_loss = self._train_step(self.sample_memory())
+            self.save_summaries(v_loss, q_loss)
+            if self.training_steps % self.exp_data.target_update_period == 0:
+                self.sync_weights()
+        self.training_steps += 1
+
+    def build_networks(self) -> Tuple[jnp.DeviceArray]:
+        rng, k0, k1 = u.force_devicearray_split(self.rng, 3)
+        self.V_network = self.V_network(output_dim=1)
+        self.Q_network = self.Q_network(output_dim=self.num_actions)
+        return rng, k0, k1
 
     def build_optimizer(self):
         self.optimizer = self.optimizer(self.exp_data.learning_rate)
@@ -101,7 +195,7 @@ class DQV:
         # initialize state with first observation
         self.update_state(observation)
         # train step
-        self._train_step()
+        self.wrapped_train_step()
         # action selection
         self.rng, self.action = exploration.egreedy_action_selection(
             self.rng,
@@ -109,7 +203,7 @@ class DQV:
             self.num_actions,
             self.Q_network,
             self.Q_online,
-            jnp.asarray(self.state),
+            self.state,
         )
         self.action = np.asarray(self.action)
         return self.action
@@ -122,7 +216,7 @@ class DQV:
         # 2. update current state with observation
         self.update_state(observation)
         # 3. train
-        self._train_step()
+        self.wrapped_train_step()
         # finally, choose next action and return it
         self.rng, self.action = exploration.egreedy_action_selection(
             self.rng,
@@ -130,7 +224,7 @@ class DQV:
             self.num_actions,
             self.Q_network,
             self.Q_online,
-            jnp.asarray(self.state),
+            self.state,
         )
         self.action = np.asarray(self.action)
         return self.action
@@ -176,7 +270,7 @@ class DQV:
 
     def bundle_and_checkpoint(
         self, checkpoint_dir, iteration_number, **additional_args
-    ):
+    ) -> dict:
         if not tf.io.gfile.exists(checkpoint_dir):
             return None
         # Checkpoint the out-of-graph replay buffer.

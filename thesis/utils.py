@@ -32,7 +32,7 @@ def dict_pop(d, k):
     return (d, d.pop(k))[0]
 
 
-def mget(d, keys):
+def mget(d, *keys):
     return [d[k] for k in keys]
 
 
