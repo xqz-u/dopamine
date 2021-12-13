@@ -53,18 +53,18 @@ def create_optimizer(
 ):
     """Create an optimizer for training.
 
-    Currently, only the Adam and RMSProp optimizers are supported.
+      Currently, only the Adam and RMSProp optimizers are supported.
 
-    Args:
-      name: str, name of the optimizer to create.
-      learning_rate: float, learning rate to use in the optimizer.
-      beta1: float, beta1 parameter for the optimizer.
-      beta2: float, beta2 parameter for the optimizer.
-      eps: float, epsilon parameter for the optimizer.
-      centered: bool, centered parameter for RMSProp.
+      Args:
+        name: str, name of the optimizer to create.
+        learning_rate: float, learning rate to use in the optimizer.
+        beta1: float, beta1 parameter for the optimizer.
+        beta2: float, beta2 parameter for the optimizer.
+        eps: float, epsilon parameter for the optimizer.
+        centered: bool, centered parameter for RMSProp.
 
     Returns:
-      A flax optimizer.
+      An optax optimizer.
     """
     if name == "adam":
         logging.info(
