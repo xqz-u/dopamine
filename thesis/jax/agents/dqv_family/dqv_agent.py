@@ -25,7 +25,7 @@ class JaxDQVAgent(dqv_base.DQV):
     def sync_weights(self):
         self.V_target = self.V_online
 
-    def _train_step(self, replay_elements: dict):
+    def agent_train_step(self, replay_elements: dict):
         td_error = dqv_base.dqv_family_td_error(
             self.V_network,
             self.V_target,

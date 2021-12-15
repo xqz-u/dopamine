@@ -91,7 +91,6 @@ def dqv_family_td_error(
     return rewards + gamma * values * (1 - terminals)
 
 
-# TODO eval mode
 # TODO unbundle method to restart from checkpoint
 # TODO check if an `update_period` for memory sampling gives better performance
 # TODO split for online and offline agents?
@@ -112,6 +111,7 @@ class DQV:
     V_optim_state: optax.OptState = None
     summary_writer: tf.compat.v1.summary.FileWriter = None
     summary_writing_freq: int = 500
+    eval_mode: bool = False
 
     def __attrs_post_init__(self):
         # create rng
@@ -124,9 +124,10 @@ class DQV:
         self.build_memory()
         # initialize neural networks and optimizer
         self.build_networks()
-        self.build_optimizer()
+        if not self.eval_mode:
+            self.build_optimizer()
 
-    def _train_step(self, replay_elements: dict) -> Tuple[jnp.DeviceArray]:
+    def agent_train_step(self, replay_elements: dict) -> Tuple[jnp.DeviceArray]:
         raise NotImplementedError
 
     def sync_weights(self):
@@ -136,9 +137,9 @@ class DQV:
     # 1. sample mini-batch of size Z of transitions from replay memory
     # 2. specific _train_phase: compute TD-error and train NNs with its loss
     # 3. sync weights between online and target networks with frequency X
-    def wrapped_train_step(self):
+    def _train_step(self):
         if self.memory.add_count > self.exp_data.min_replay_history:
-            q_loss, v_loss = self._train_step(self.sample_memory())
+            q_loss, v_loss = self.agent_train_step(self.sample_memory())
             self.save_summaries(v_loss, q_loss)
             if self.training_steps % self.exp_data.target_update_period == 0:
                 self.sync_weights()
@@ -166,6 +167,7 @@ class DQV:
         memory_args = {
             **self.exp_data.replay_buffers_view(),
             "observation_shape": self.state_shape,
+            "observation_dtype": np.asarray(self.state).dtype,
         }
         if self.exp_data.online:
             self.memory = OutOfGraphReplayBuffer(**memory_args)
@@ -195,13 +197,16 @@ class DQV:
         # initialize state with first observation
         self.update_state(observation)
         # train step
-        self.wrapped_train_step()
+        if not self.eval_mode:
+            self._train_step()
         # action selection
         self.rng, self.action = exploration.egreedy_action_selection(
             self.rng,
-            self.exp_data.epsilon,
-            self.num_actions,
             self.Q_network,
+            self.num_actions,
+            self.eval_mode,
+            self.exp_data.epsilon_train,
+            self.exp_data.epsilon_eval,
             self.Q_online,
             self.state,
         )
@@ -212,17 +217,21 @@ class DQV:
     # and this routine returns the next action the agent will perform
     def step(self, reward: float, observation: np.ndarray) -> int:
         # 1. store current trajectory in replay memory
-        self.record_trajectory(reward, False)
+        if not self.eval_mode:
+            self.record_trajectory(reward, False)
         # 2. update current state with observation
         self.update_state(observation)
         # 3. train
-        self.wrapped_train_step()
+        if not self.eval_mode:
+            self._train_step()
         # finally, choose next action and return it
         self.rng, self.action = exploration.egreedy_action_selection(
             self.rng,
-            self.exp_data.epsilon,
-            self.num_actions,
             self.Q_network,
+            self.num_actions,
+            self.eval_mode,
+            self.exp_data.epsilon_train,
+            self.exp_data.epsilon_eval,
             self.Q_online,
             self.state,
         )
@@ -236,7 +245,8 @@ class DQV:
         Called by experiment runner when end of episode is detected.
         Simply add this last transition to the memory and signal episode end.
         """
-        self.record_trajectory(reward, terminal, episode_end=True)
+        if not self.eval_mode:
+            self.record_trajectory(reward, terminal, episode_end=True)
 
     def sample_memory(self, batch_size=None, indices=None) -> dict:
         return dict(
