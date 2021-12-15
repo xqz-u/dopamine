@@ -15,7 +15,8 @@ from dopamine.jax import losses
 class ExperimentData:
     seed: int = None
     gamma: float = 0.99
-    epsilon: float = 0.01
+    epsilon_train: float = 0.01
+    epsilon_eval: float = 0.001
     update_horizon: int = 1
     stack_size: int = dqn_agent.NATURE_DQN_STACK_SIZE
     replay_capacity: int = int(1e6)
