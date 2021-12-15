@@ -16,12 +16,16 @@ def run(conf_path):
 
 gin.enter_interactive_mode()
 
-configs_path = os.path.join(config.base_dir, "online", "data_collection", "configs")
+configs_path = os.path.join(config.base_dir, "data_collection", "configs")
 
 dqn_cartpole_classic = os.path.join(configs_path, "dqn_cartpole.gin")
 dqv_cartpole_classic = os.path.join(configs_path, "dqv_cartpole.gin")
 dqv_max_cartpole_classic = os.path.join(configs_path, "dqv_max_cartpole.gin")
+dqv_max_cartpole_classic_offline = os.path.join(
+    configs_path, "dqv_max_cartpole_offline.gin"
+)
 
 # run(dqn_cartpole_classic)
 # run(dqv_cartpole_classic)
-run(dqv_max_cartpole_classic)
+# run(dqv_max_cartpole_classic)
+run(dqv_max_cartpole_classic_offline)
