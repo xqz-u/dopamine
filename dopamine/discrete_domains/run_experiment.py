@@ -129,7 +129,9 @@ def create_agent(
 
 
 @gin.configurable
-def create_runner(base_dir, schedule="continuous_train_and_eval"):
+def create_runner(
+    base_dir, offline: bool = False, schedule="continuous_train_and_eval"
+):
     """Creates an experiment Runner.
 
     Args:
@@ -145,10 +147,12 @@ def create_runner(base_dir, schedule="continuous_train_and_eval"):
     assert base_dir is not None
     # Continuously runs training and evaluation until max num_iterations is hit.
     if schedule == "continuous_train_and_eval":
-        return Runner(base_dir, create_agent)
+        runner = OfflineRunner if offline else Runner
+        return runner(base_dir, create_agent)
     # Continuously runs training until max num_iterations is hit.
     elif schedule == "continuous_train":
-        return TrainRunner(base_dir, create_agent)
+        runner = OfflineTrainRunner if offline else TrainRunner
+        return runner(base_dir, create_agent)
     else:
         raise ValueError("Unknown schedule: {}".format(schedule))
 
@@ -668,3 +672,82 @@ class TrainRunner(Runner):
             ]
         )
         self._summary_writer.add_summary(summary, iteration)
+
+
+@gin.configurable
+class OfflineRunner(Runner):
+    def __init__(
+        self,
+        base_dir,
+        create_agent_fn,
+        create_environment_fn=atari_lib.create_atari_environment,
+    ):
+        logging.info("Creating OfflineRunner ...")
+        super(OfflineRunner, self).__init__(
+            base_dir, create_agent_fn, create_environment_fn
+        )
+
+    def _run_train_phase(self):
+        """Run training phase."""
+        self._agent.eval_mode = False
+        # start_time = time.time()
+        for _ in range(self._training_steps):
+            self._agent._train_step()
+        # time_delta = time.time() - start_time
+        # tf.logging.info(
+        #     "Average training steps per second: %.2f", self._training_steps / time_delta
+        # )
+
+    def _run_one_iteration(self, iteration):
+        """Runs one iteration of agent/environment interaction."""
+        statistics = iteration_statistics.IterationStatistics()
+        # tf.logging.info("Starting iteration %d", iteration)
+        # if not self._agent._replay_suffix:
+        #     # Reload the replay buffer
+        #     self._agent._replay.memory.reload_buffer(num_buffers=5)
+        self._run_train_phase()
+        num_episodes_eval, average_reward_eval = self._run_eval_phase(statistics)
+        self._save_tensorboard_summaries(
+            iteration, num_episodes_eval, average_reward_eval
+        )
+        return statistics.data_lists
+
+    def _save_tensorboard_summaries(
+        self, iteration, num_episodes_eval, average_reward_eval
+    ):
+        """Save statistics as tensorboard summaries.
+        Args:
+          iteration: int, The current iteration number.
+          num_episodes_eval: int, number of evaluation episodes run.
+          average_reward_eval: float, The average evaluation reward.
+        """
+        summary = tf.compat.v1.Summary(
+            value=[
+                tf.compat.v1.Summary.Value(
+                    tag="Eval/NumEpisodes", simple_value=num_episodes_eval
+                ),
+                tf.compat.v1.Summary.Value(
+                    tag="Eval/AverageReturns", simple_value=average_reward_eval
+                ),
+            ]
+        )
+        self._summary_writer.add_summary(summary, iteration)
+
+
+@gin.configurable
+class OfflineTrainRunner(OfflineRunner):
+    def __init__(
+        self,
+        base_dir,
+        create_agent_fn,
+        create_environment_fn=atari_lib.create_atari_environment,
+    ):
+        logging.info("Creating OfflineRunner ...")
+        super(OfflineRunner, self).__init__(
+            base_dir, create_agent_fn, create_environment_fn
+        )
+        self._agent.eval_mode = False
+
+    def _run_one_iteration(self, iteration):
+        """Runs one iteration of agent/environment interaction."""
+        self._run_train_phase()
