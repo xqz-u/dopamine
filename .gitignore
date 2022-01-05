@@ -1,7 +1,12 @@
-**/__pycache__
+**/.xqz-u-egg
 
-atari-roms
-poetry.lock
-**/logs
-**/checkpoints
-**/events.out.tfevents.*
+resources/data
+resources/images
+resources/papers/auto
+resources/papers/_minted-summary
+resources/papers/summary.tex
+resources/papers/summary.pdf
+resources/**/.pdf-view-restore
+resources/**/*.bbl
+
+**/__pycache__

@@ -1,0 +1,9 @@
++ make it so that, in my agents, =observation_dtype= is not needed,
+  and is passed by the =create_agent_fn= after creating the
+  environment in =dopamine/discrete_domains/run_experiment=
++ is merging the replay buffers for the offline agents a good idea? if
+  one wants to inspect the learning process, any reference to which
+  loaded buffer the replayed actions originated from is lost
++ get rid of =ExperimentData=?
++ check if DQN stores observations or states in replay memory, and if
+  their shapes match

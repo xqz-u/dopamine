@@ -1,0 +1,7 @@
+**/__pycache__
+
+atari-roms
+poetry.lock
+**/logs
+**/checkpoints
+**/events.out.tfevents.*
