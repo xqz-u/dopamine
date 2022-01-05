@@ -7,3 +7,5 @@
 + get rid of =ExperimentData=?
 + check if DQN stores observations or states in replay memory, and if
   their shapes match
++ change folder structure pattern: keep my changes in a separate
+  branch?
