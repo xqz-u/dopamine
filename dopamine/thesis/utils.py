@@ -77,7 +77,6 @@ def add_aim_values(run_l: Run, reports, step):
             val,
             name=tag,
             step=step,
-            epoch=0,
             context={
                 "subset": "train",
             },
