@@ -1,3 +1,5 @@
+import functools as ft
+
 import attr
 import gin
 from flax.core.frozen_dict import FrozenDict
@@ -26,19 +28,19 @@ class JaxDQVMaxAgent(dqv_base.DQV):
     def sync_weights(self):
         self.Q_target = self.Q_online
 
-    def agent_train_step(self):
-        v_td_targets = self.td_error(
-            dqv_base.net_eval(
-                self.Q_network, self.Q_online, self.replay_elts["next_states"]
-            ).max(1)
-        )
-        q_td_targets = self.td_error(
-            dqv_base.net_eval(
-                self.V_network, self.V_online, self.replay_elts["next_states"]
-            )
-        )
+    # def agent_train_step(self):
+    #     v_td_targets = self.td_error(
+    #         dqv_base.net_eval(
+    #             self.Q_network, self.Q_online, self.replay_elts["next_states"]
+    #         ).max(1)
+    #     )
+    #     q_td_targets = self.td_error(
+    #         dqv_base.net_eval(
+    #             self.V_network, self.V_online, self.replay_elts["next_states"]
+    #         )
+    #     )
 
-    def _agent_train_step(self, replay_elements: dict):
+    def agent_train_step(self, replay_elements: dict):
         td_error_replay_els = u.mget(
             replay_elements, "next_state", "reward", "terminal"
         )

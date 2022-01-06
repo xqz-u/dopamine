@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from dataclasses import dataclass
+from typing import Optional
 
 import gin
 from dopamine.agents.dqn import dqn_agent
@@ -23,7 +24,7 @@ class ExperimentData:
     replay_capacity: int = int(1e6)
     batch_size: int = 32
     min_replay_history: int = 20000
-    update_period: int = 4
+    update_period: Optional[int] = None  # TODO
     target_update_period: int = 8000
     create_optimizer_fn: callable = optimizers.sgd_optimizer
     loss_fn: callable = losses.huber_loss

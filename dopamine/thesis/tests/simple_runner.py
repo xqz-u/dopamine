@@ -1,21 +1,7 @@
 import os
 import time
 
-from thesis import utils
-
-# def run(agent, env):
-#     for i in range(500):
-#         run_r = 0.0
-#         obs = env.reset()
-#         done = False
-#         while not done:
-#             action = agent.select_action(obs)
-#             obs, reward, done, _ = env.step(action)
-#             run_r += reward
-#             agent.learn(obs, reward, done)
-#         print(run_r)
-#         if i % 10 == 0:
-#             agent.q_net_target.load_state_dict(agent.q_net_online.state_dict())
+from thesis import utils as u
 
 
 def run_iter(agent, env, steps):
@@ -39,16 +25,25 @@ def run_exp(iters, steps, agent, env):
         run_rwd, run_steps, n_episodes = run_iter(agent, env, steps)
         mean_steps_per_second = run_steps / (time.time() - start)
         mean_rwd = run_rwd / n_episodes
-        utils.add_summary_v2(
+        u.add_aim_values(
             agent.summary_writer,
             [
-                ["scalar", "Train/AverageReturns", mean_rwd],
-                ["scalar", "Train/AverageStepsPerSecond", mean_steps_per_second],
-                ["scalar", "Train/NumEpisodes", n_episodes],
+                ["Train/AverageReturns", mean_rwd],
+                ["Train/AverageStepsPerSecond", mean_steps_per_second],
+                ["Train/NumEpisodes", n_episodes],
             ],
             i,
-            flush=True,
         )
+        # utils.add_summary_v2(
+        #     agent.summary_writer,
+        #     [
+        #         ["scalar", "Train/AverageReturns", mean_rwd],
+        #         ["scalar", "Train/AverageStepsPerSecond", mean_steps_per_second],
+        #         ["scalar", "Train/NumEpisodes", n_episodes],
+        #     ],
+        #     i,
+        #     flush=True,
+        # )
         print(f"{i}-{run_steps}: rwd {mean_rwd} mean_loss {agent._avg_loss}")
 
 

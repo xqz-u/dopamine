@@ -6,6 +6,7 @@ from typing import Sequence
 
 import gin
 import tensorflow as tf
+from aim import Run
 
 import jax
 from thesis import config
@@ -68,3 +69,16 @@ def add_summary_v2(
     if flush:
         summary_writer.flush()
     return status
+
+
+def add_aim_values(run_l: Run, reports, step):
+    for tag, val in reports:
+        run_l.track(
+            val,
+            name=tag,
+            step=step,
+            epoch=0,
+            context={
+                "subset": "train",
+            },
+        )
