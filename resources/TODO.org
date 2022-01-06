@@ -9,3 +9,41 @@
   their shapes match
 + change folder structure pattern: keep my changes in a separate
   branch?
+
+
+* Logger
+  + Agent has a list of logger classes. When these classes are called,
+    they perform their logging. They can be configured beforehand to
+    set up folder and their internals. *parameters passing* should be
+    agnostic: best solution is Max's one. Analyze the call argspec,
+    and pass the required args from wherever they are stored (agent?
+    experiment data container? dict?).
+    Goal -> loggers should be pluggable easily in an agent, given
+    that they are properly configured. Ideally they should also be
+    able to be stopped and reloaded
+
+* Agent
+  + Base class for my agents
+  + Profile jax/training operations
+  + DQV max and DQV
+  + Train online on Atari games!
+  + how about some parallesim? check when to use =jax.pmap=
+
+* Runner
+  + Dopamine has a dope runner with some useful functionality
+    (checkpointing, logging and start/stop/reload ability). It's
+    instantiation is quite strict, so maybe work on that... And in
+    general try to keep configurations as python dictionaries, do not
+    rely on gin
+  + Runner should be able to work with offline data as well! Unify the
+    interfaces
+  + Ask Matthia for Peregrine access!!!
+
+* Offline
+  + First, choose whether to work with the Dopamine runner or not,
+    since it already has a mechanism to dump the trajectories.
+    If so  -> check if satisfied with current offline replay buffer
+	      implementation
+    If not -> choose whether to keep working with the Dopamine replay
+	      buffer, or to write a new one (consider also available
+	      time...)
