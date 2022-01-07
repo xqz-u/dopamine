@@ -2,14 +2,16 @@ import functools as ft
 import os
 import time
 from itertools import groupby
-from typing import Sequence
+from typing import Any, Dict, Tuple, Union
 
 import gin
 import tensorflow as tf
 from aim import Run
+from dopamine.replay_memory import circular_replay_buffer
 
-import jax
+from jax import numpy as jnp
 from thesis import config
+from thesis.offline.replay_memory import offline_circular_replay_buffer
 
 
 # https://stackoverflow.com/questions/3844801/check-if-all-elements-in-a-list-are-identical
@@ -18,16 +20,25 @@ def all_equal(iterable):
     return next(g, True) and not next(g, False)
 
 
-# TODO use timeit module to have proper execution time metrics
-def timer(fn):
-    @ft.wraps(fn)
-    def inner(*args, **kwargs):
-        start = time.time()
-        ret = fn(*args, **kwargs)
-        print(f"`{fn.__name__}` exec time: {time.time () - start}")
-        return ret
+def timer(want_time=False):
+    def decorator(fn):
+        @ft.wraps(fn)
+        def inner(*args, **kwargs) -> Union[Any, Tuple[Any, float]]:
+            start = time.time()
+            ret = fn(*args, **kwargs)
+            end = time.time() - start
+            if not want_time:
+                print(f"`{fn.__name__}` exec time: {end}")
+            return ret if not want_time else (ret, end)
 
-    return inner
+        return inner
+
+    # trick to keep writing @timer, @timer() and @timer(True)
+    if callable(want_time):
+        f = want_time
+        want_time = False
+        return decorator(f)
+    return decorator
 
 
 def dict_pop(d, k):
@@ -36,13 +47,6 @@ def dict_pop(d, k):
 
 def mget(d, *keys):
     return [d[k] for k in keys]
-
-
-def force_devicearray_split(
-    key: jax.random.PRNGKey, n=2
-) -> Sequence[jax.random.PRNGKey]:
-    splits = jax.random.split(key, n)
-    return [jax.numpy.asarray(k) for k in splits]
 
 
 # experiment_spec = [agent name, network name, environment name, *]
@@ -81,3 +85,19 @@ def add_aim_values(run_l: Run, reports, step):
                 "subset": "train",
             },
         )
+
+
+def sample_replay_buffer(
+    memory: Union[
+        circular_replay_buffer.OutOfGraphReplayBuffer,
+        offline_circular_replay_buffer.OfflineOutOfGraphReplayBuffer,
+    ],
+    batch_size: int = None,
+    indices: int = None,
+) -> Dict[str, jnp.DeviceArray]:
+    return dict(
+        zip(
+            [el.name for el in memory.get_transition_elements(batch_size=batch_size)],
+            memory.sample_transition_batch(batch_size=batch_size, indices=indices),
+        )
+    )

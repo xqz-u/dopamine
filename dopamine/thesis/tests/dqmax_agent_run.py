@@ -22,7 +22,7 @@ exp_data = ed.ExperimentData(
     target_update_period=1e4,
 )
 
-path = "/home/xqz-u/uni/dopamine/resources/data/aim_mul_runs"
+path = "/home/xqz-u/uni/dopamine/resources/data/aim_mul_runs_2"
 for i in range(10):
     run_log = Run(repo=path, experiment=f"dqv_max_cartpole_{i}")
     run_log["hparams"] = {

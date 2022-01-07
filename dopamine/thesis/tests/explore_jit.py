@@ -2,12 +2,12 @@ import functools as ft
 from typing import Sequence
 
 import flax
+import jax
 from dopamine.jax import losses
 from flax import linen as nn
-
-import jax
 from jax import numpy as jnp
 from jax import random as jrand
+from thesis import jax_utils as u_jax
 
 
 class Sequential(nn.Module):
@@ -305,3 +305,82 @@ d = jrand.uniform(key1, (5,))
 
 cip(a, b)
 cip(c, d)
+
+
+def max_action_mask(arr):
+    return arr.max(1)
+
+
+@ft.partial(jax.jit, static_argnums=(1))
+def pippo(a, mask):
+    print(a)
+    print(mask)
+    a = mask(a)
+    return a
+
+
+state_shape = (4,)
+n_obs = 10
+batch_state_shape = (n_obs,) + state_shape
+
+
+key = u_jax.PRNGKeyWrap(0)
+states = jrand.uniform(next(key), batch_state_shape, minval=-1.0)
+next_states = jrand.uniform(next(key), batch_state_shape, minval=-1.0)
+actions = jrand.randint(next(key), (n_obs,), 0, 2)
+rewards = jrand.uniform(next(key), (n_obs,))
+terminals = jrand.randint(next(key), (n_obs,), 0, 2)
+
+pippo(states, max_action_mask)
+pippo(states, max_action_mask)
+
+pippo(jrand.uniform(key._prev_rng, (5, 3)), max_action_mask)
+pippo(jrand.uniform(key._prev_rng, (5, 3)), max_action_mask)
+
+pippo(states, max_action_mask)
+
+jax.make_jaxpr(pippo, static_argnums=(1))(states, max_action_mask)
+jax.make_jaxpr(pippo, static_argnums=(1))(
+    jrand.uniform(key._prev_rng, (5, 3)), max_action_mask
+)
+
+
+# NOTE do not pass args and kwargs, jitting caches a new version of
+# this function for each different args and kwargs passed
+@jax.jit
+def args_kwargs(a, *args, **kwargs):
+    print(a)
+    print(args, kwargs)
+    return a * (3 if not args else 2)
+
+
+p = jnp.ones_like(states[0])
+
+args_kwargs(p)
+args_kwargs(p)
+
+args_kwargs(p, 1)
+args_kwargs(p, 1)
+
+# shape was already encountered, there is already a cached version of
+# the function that can be used
+args_kwargs(states[1])
+
+# valid for args and kwargs as well if they are valid jax types!
+args_kwargs(p, 2)
+
+args_kwargs(p, 2, b=1)
+args_kwargs(p, 2, b=2)
+jax.make_jaxpr(args_kwargs)(p, 2, b=2)
+jax.make_jaxpr(args_kwargs)(p, b=2)
+
+# conclusion: as long as the arguments to a jitted function are valid
+# python types, and when the traceable types do not change shapes, jit
+# won't recompile a cached version of the function. so it is safe to
+# pass functions, *args and **kwargs to jitted functions (remember
+# that kwargs will be traversed fully during tracing, since that is
+# the behavior with a dict PyTree for lax)
+# Another solution can be to pass values in a more general format such
+# that the jitted function only takes care of doing its work, without
+# invoking a callback. when this is the case, the callback will be
+# invoked before and it should be jitted on its own

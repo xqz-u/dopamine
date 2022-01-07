@@ -13,6 +13,7 @@ from flax.core.frozen_dict import FrozenDict
 from jax import numpy as jnp
 from jax import random as jrand
 from thesis import experiment_data
+from thesis import jax_utils as u_jax
 from thesis import utils as u
 from thesis.jax import exploration, networks
 from thesis.offline.replay_memory.offline_circular_replay_buffer import (
@@ -161,7 +162,7 @@ class DQV:
         )
 
     def build_networks(self) -> Tuple[jnp.DeviceArray]:
-        rng, k0, k1 = u.force_devicearray_split(self.rng, 3)
+        rng, k0, k1 = u_jax.force_devicearray_split(self.rng, 3)
         self.V_network = self.V_network(output_dim=1)
         self.Q_network = self.Q_network(output_dim=self.num_actions)
         return rng, k0, k1
@@ -247,18 +248,8 @@ class DQV:
             return
         self._train_step()
 
-    def sample_memory(self, batch_size=None, indices=None):
-        return dict(
-            zip(
-                [
-                    el.name
-                    for el in self.memory.get_transition_elements(batch_size=batch_size)
-                ],
-                self.memory.sample_transition_batch(
-                    batch_size=batch_size, indices=indices
-                ),
-            )
-        )
+    def sample_memory(self, batch_size=None, indices=None) -> dict:
+        return u.sample_replay_buffer(self.memory, batch_size, indices)
 
     @ft.partial(jax.jit, static_argnums=(0))
     def td_error(self, estimates: jnp.DeviceArray) -> jnp.DeviceArray:
