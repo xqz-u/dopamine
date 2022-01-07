@@ -9,7 +9,11 @@ from thesis.jax import optimizers
 from thesis.jax.agents.dqv_family import dqv_max_agent
 from thesis.tests import simple_runner as sr
 
-mse = lambda x, y: jnp.power(x - y, 2)
+
+def mse(x, y):
+    return jnp.power(x - y, 2)
+
+
 env = gym.make("CartPole-v0")
 exp_data = ed.ExperimentData(
     create_optimizer_fn=partial(optimizers.adam_optimizer, 3.125e-4),
@@ -18,11 +22,9 @@ exp_data = ed.ExperimentData(
     target_update_period=1e4,
 )
 
+path = "/home/xqz-u/uni/dopamine/resources/data/aim_mul_runs"
 for i in range(10):
-    run_log = Run(
-        repo="/home/xqz-u/uni/thesis/resources/data/aim_mul_runs",
-        experiment=f"dqv_max_cartpole_{i}",
-    )
+    run_log = Run(repo=path, experiment=f"dqv_max_cartpole_{i}")
     run_log["hparams"] = {
         "optimizer": {"name": "adam", "lr": 3.125e-4},
         "net": {

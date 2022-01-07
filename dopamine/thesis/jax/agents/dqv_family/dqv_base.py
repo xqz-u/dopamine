@@ -18,7 +18,6 @@ from thesis.jax import exploration, networks
 from thesis.offline.replay_memory.offline_circular_replay_buffer import (
     OfflineOutOfGraphReplayBuffer,
 )
-from thesis.tests.dqn_jax import egreedy_selection
 
 # NOTE many functions and class methods are called with no args when they are
 # actually required; args passing is intended to be done with gin. In any case,
@@ -123,7 +122,7 @@ class DQV:
     summary_writer: tf.compat.v1.summary.FileWriter = None
     summary_writing_freq: int = 500
     eval_mode: bool = False
-    _avg_loss: np.ndarray = np.array((0.0, 0 * 0))
+    _avg_loss: jnp.DeviceArray = jnp.array((0.0, 0.0))
 
     def __attrs_post_init__(self):
         # create rng
@@ -182,16 +181,14 @@ class DQV:
         if self.memory.add_count > self.exp_data.min_replay_history:
             # self.training_steps % self.exp_data.update_period == 0,
             q_loss, v_loss = self.agent_train_step(self.sample_memory())
-            q_loss = np.array(q_loss)
-            v_loss = np.array(v_loss)
-            self._avg_loss = (self._avg_loss + np.array((q_loss, v_loss))) / 2
+            self._avg_loss = (self._avg_loss + jnp.array((q_loss, v_loss))) / 2
             # print(f"{self.training_steps} V loss: {v_loss} Q_loss: {q_loss}")
             if (
                 self.summary_writer is not None
                 and self.training_steps > 0
                 and self.training_steps % self.summary_writing_freq == 0
             ):
-                self.save_summaries(v_loss, q_loss)
+                self.save_summaries(float(v_loss), float(q_loss))
             if self.training_steps % self.exp_data.target_update_period == 0:
                 self.sync_weights()
                 print("synced weights...")
@@ -273,14 +270,8 @@ class DQV:
         u.add_aim_values(
             self.summary_writer,
             [
-                [
-                    f"q-{self.exp_data.loss_fn.__name__}",
-                    q_loss,
-                ],
-                [
-                    f"v-{self.exp_data.loss_fn.__name__}",
-                    v_loss,
-                ],
+                [f"q-{self.exp_data.loss_fn.__name__}", q_loss],
+                [f"v-{self.exp_data.loss_fn.__name__}", v_loss],
             ],
             self.training_steps,
         )
