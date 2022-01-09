@@ -5,7 +5,7 @@ from typing import Tuple
 
 import flax
 from flax import linen as nn
-from thesis import utils as u
+from thesis import jax_utils as u_jax
 
 import jax
 from jax import numpy as jnp
@@ -24,7 +24,7 @@ def egreedy_action_selection(
     state: jnp.DeviceArray,
 ) -> Tuple[jnp.DeviceArray, jnp.DeviceArray]:
     epsilon = epsilon_train if not eval_mode else epsilon_eval
-    key, key1, key2 = u.force_devicearray_split(rng, 3)
+    key, key1, key2 = u_jax.force_devicearray_split(rng, 3)
     # p = jrand.uniform(key1)
     # if p <= epsilon:
     #     print("RAND act!")
