@@ -2,6 +2,7 @@ from typing import Sequence, Tuple, Union
 
 import gin
 from flax import linen as nn
+
 from jax import numpy as jnp
 
 
@@ -11,7 +12,7 @@ from jax import numpy as jnp
 # very basic compared to the same one defined in dopamine.jax.networks, might
 # need refinement. main difference is the use of the hidden_features
 # parameters, borrowed from the flax tutorials
-@gin.configurable(denylist=["output_dim"])
+# @gin.configurable(denylist=["output_dim"])
 class ClassicControlDNNetwork(nn.Module):
     output_dim: int
     hidden_features: Sequence[int] = (512, 512)

@@ -12,10 +12,10 @@ from jax import numpy as jnp
 from jax import random as jrand
 
 
-@ft.partial(jax.jit, static_argnums=(1, 2, 3, 4, 5))
+@ft.partial(jax.jit, static_argnums=(0, 2, 3, 4, 5))
 def egreedy_action_selection(
-    rng: jnp.DeviceArray,
     q_net: nn.Module,
+    rng: jnp.DeviceArray,
     num_actions: int,
     eval_mode: bool,
     epsilon_train: float,

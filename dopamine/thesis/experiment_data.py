@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from typing import Optional
 
 import gin
-from dopamine.agents.dqn import dqn_agent
 from dopamine.jax import losses
 
 from thesis.jax import optimizers
@@ -20,7 +19,7 @@ class ExperimentData:
     epsilon_train: float = 0.01
     epsilon_eval: float = 0.001
     update_horizon: int = 1
-    stack_size: int = dqn_agent.NATURE_DQN_STACK_SIZE
+    stack_size: int = 1
     replay_capacity: int = int(1e6)
     batch_size: int = 32
     min_replay_history: int = 20000

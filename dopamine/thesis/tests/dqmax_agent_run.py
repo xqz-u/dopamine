@@ -1,15 +1,15 @@
 import time
-from functools import partial
 
 import gym
 from aim import Run
-from dopamine.discrete_domains import gym_lib
 from dopamine.jax import losses
 from jax import numpy as jnp
 from thesis import experiment_data as ed
 from thesis.jax import networks, optimizers
 from thesis.jax.agents.dqv_family import dqv_max_agent
 from thesis.tests import simple_runner as sr
+
+# from functools import partial
 
 
 def mse(x, y):
@@ -21,12 +21,12 @@ def mse(x, y):
 # loss_fn = mse
 loss_fn = losses.huber_loss
 opt = optimizers.sgd_optimizer
-
-net_def = partial(
-    networks.ClassicControlDNNetwork,
-    min_vals=gym_lib.CARTPOLE_MIN_VALS,
-    max_vals=gym_lib.CARTPOLE_MAX_VALS,
-)
+net_def = networks.ClassicControlDNNetwork
+# net_def = partial(
+#     networks.ClassicControlDNNetwork,
+#     min_vals=jnp.array(gym_lib.CARTPOLE_MIN_VALS),
+#     max_vals=jnp.array(gym_lib.CARTPOLE_MAX_VALS),
+# )
 
 
 env = gym.make("CartPole-v0")
@@ -39,6 +39,7 @@ exp_data = ed.ExperimentData(
 
 path = "/home/xqz-u/uni/thesis/resources/data/aim_mul_runs"
 # path = "/home/xqz-u/uni/dopamine/resources/data/aim_mul_runs_2"
+
 for i in range(10):
     run_log = Run(repo=path, experiment=f"dqv_max_cartpole_{i}")
     run_log["hparams"] = {
@@ -72,11 +73,33 @@ for i in range(10):
     print(f">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Run {i} time: {end}s")
 
 
-ag = dqv_max_agent.JaxDQVMaxAgent(
-    (4, 1),
-    2,
-    exp_data,
-    Q_network=net_def,
-    V_network=net_def,
-    summary_writer=run_log,
-)
+# ag = dqv_max_agent.JaxDQVMaxAgent(
+#     (4, 1),
+#     2,
+#     exp_data,
+#     Q_network=net_def,
+#     V_network=net_def,
+#     # summary_writer=run_log,
+# )
+
+# import jax.random as jrand
+# from thesis.jax_utils import PRNGKeyWrap
+
+# k = PRNGKeyWrap()
+# s = jrand.uniform(next(k), (4, 1, 1))
+
+# ag.Q_network.apply(ag.Q_online, s)
+
+
+# sr.run_exp(1000, 2200, ag, env)
+
+# # print(
+# #     ag.rng,
+# #     ag.Q_network,
+# #     ag.num_actions,
+# #     ag.eval_mode,
+# #     ag.exp_data.epsilon_train,
+# #     ag.exp_data.epsilon_eval,
+# #     ag.Q_online,
+# #     ag.state,
+# # )

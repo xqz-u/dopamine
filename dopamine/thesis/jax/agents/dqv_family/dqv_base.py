@@ -7,6 +7,7 @@ import jax
 import numpy as np
 import optax
 import tensorflow as tf
+from dopamine.discrete_domains import gym_lib
 from dopamine.replay_memory.circular_replay_buffer import OutOfGraphReplayBuffer
 from flax import linen as nn
 from flax.core.frozen_dict import FrozenDict
@@ -161,10 +162,16 @@ class DQV:
             self.exp_data.checkpoint_dir, self.exp_data.checkpoint_iterations
         )
 
+    # FIXME
+    # TODOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO eggidio
     def build_networks(self) -> Tuple[jnp.DeviceArray]:
         rng, k0, k1 = u_jax.force_devicearray_split(self.rng, 3)
-        self.V_network = self.V_network(output_dim=1)
-        self.Q_network = self.Q_network(output_dim=self.num_actions)
+        args = {
+            "min_vals": gym_lib.CARTPOLE_MIN_VALS,
+            "max_vals": gym_lib.CARTPOLE_MAX_VALS,
+        }
+        self.V_network = self.V_network(output_dim=1, **args)
+        self.Q_network = self.Q_network(output_dim=self.num_actions, **args)
         return rng, k0, k1
 
     def build_optimizer(self):
@@ -230,8 +237,8 @@ class DQV:
     def select_action(self, obs):
         self.update_state(obs)
         self.rng, self.action = exploration.egreedy_action_selection(
-            self.rng,
             self.Q_network,
+            self.rng,
             self.num_actions,
             self.eval_mode,
             self.exp_data.epsilon_train,
@@ -282,20 +289,6 @@ class DQV:
         #     ],
         #     self.training_steps,
         # )
-        # self.summary_writer.add_summary(
-        #     tf.compat.v1.Summary(
-        #         value=[
-        #             tf.compat.v1.Summary.Value(
-        #                 tag=f"V-{self.exp_data.loss_fn.__name__}", simple_value=v_loss
-        #             ),
-        #             tf.compat.v1.Summary.Value(
-        #                 tag=f"Q-{self.exp_data.loss_fn.__name__}", simple_value=q_loss
-        #             ),
-        #         ]
-        #     ),
-        #     self.training_steps,
-        # )
-        # self.summary_writer.flush()
 
     def bundle_and_checkpoint(
         self, checkpoint_dir, iteration_number, **additional_args
@@ -311,97 +304,3 @@ class DQV:
                 for k in ["state", "training_steps", "Q_optim_state", "V_optim_state"]
             },
         }
-
-        # if self.exp_data.update_period is None:
-        #     self.sample_memory()
-        #     q_loss, v_loss = self.agent_train_step()
-        #     print(f"{self.training_steps} V loss: {v_loss} Q_loss: {q_loss}")
-
-        # if (
-        #     self.summary_writer is not None
-        #     and self.training_steps > 0
-        #     and self.training_steps % self.summary_writing_freq == 0
-        # ):
-        #     self.save_summaries(v_loss, q_loss)
-        # if self.training_steps % self.exp_data.target_update_period == 0:
-        #     self.sync_weights()
-        #     print("synced weights...")
-        # else:
-
-        #     if self.training_steps % self.exp_data.update_period == 0:
-        #         self.sample_memory()
-        #         q_loss, v_loss = self.agent_train_step()
-        #         print(f"{self.training_steps} V loss: {v_loss} Q_loss: {q_loss}")
-        #     if (
-        #         self.summary_writer is not None
-        #         and self.training_steps > 0
-        #         and self.training_steps % self.summary_writing_freq == 0
-        #     ):
-        #         self.save_summaries(v_loss, q_loss)
-        #     if self.training_steps % self.exp_data.target_update_period == 0:
-        #         self.sync_weights()
-        #         print("synced weights...")
-
-    # def begin_episode(self, observation: np.ndarray) -> np.ndarray:
-    #     """
-    #     Perform the first action. This first trajectory will be recorded in the
-    #     next interaction step.
-    #     """
-    #     # print(f"eval_mode: {self.eval_mode}")
-    #     self._reset_state()
-    #     # initialize state with first observation
-    #     self.update_state(observation)
-    #     # print(f"state: {self.state}")
-    #     # train step
-    #     if not self.eval_mode:
-    #         self._train_step()
-    #     # action selection
-    #     self.rng, self.action = exploration.egreedy_action_selection(
-    #         self.rng,
-    #         self.Q_network,
-    #         self.num_actions,
-    #         self.eval_mode,
-    #         self.exp_data.epsilon_train,
-    #         self.exp_data.epsilon_eval,
-    #         self.Q_online,
-    #         self.state,
-    #     )
-    #     self.action = np.asarray(self.action)
-    #     return self.action
-
-    # # run_experiment takes care of interaction with env; here lives the rest,
-    # # and this routine returns the next action the agent will perform
-    # def step(self, reward: float, observation: np.ndarray) -> int:
-    #     # 1. update current state with observation
-    #     last_observation = self._observation
-    #     self.update_state(observation)
-    #     if not self.eval_mode:
-    #         # 2. store current trajectory in replay memory
-    #         self.record_trajectory(last_observation, self.action, reward, False)
-    #         # 3. train
-    #         self._train_step()
-    #     # finally, choose next action and return it
-    #     self.rng, self.action = exploration.egreedy_action_selection(
-    #         self.rng,
-    #         self.Q_network,
-    #         self.num_actions,
-    #         self.eval_mode,
-    #         self.exp_data.epsilon_train,
-    #         self.exp_data.epsilon_eval,
-    #         self.Q_online,
-    #         self.state,
-    #     )
-    #     self.action = np.asarray(self.action)
-    #     return self.action
-
-    # NOTE only invoked when hitting a terminal state, not when running out of
-    # time
-    # def end_episode(self, reward: float, terminal: bool):
-    #     """
-    #     Called by experiment runner when end of episode is detected.
-    #     Simply add this last transition to the memory and signal episode end.
-    #     """
-    #     if not self.eval_mode:
-    #         self.record_trajectory(
-    #             self._observation, self.action, reward, terminal, episode_end=True
-    #         )
