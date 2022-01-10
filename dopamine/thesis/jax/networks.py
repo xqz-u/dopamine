@@ -14,7 +14,7 @@ from jax import numpy as jnp
 # parameters, borrowed from the flax tutorials
 # @gin.configurable(denylist=["output_dim"])
 class ClassicControlDNNetwork(nn.Module):
-    output_dim: int
+    output_dim: int = None
     hidden_features: Sequence[int] = (512, 512)
     min_vals: Union[None, Tuple[float, ...]] = None
     max_vals: Union[None, Tuple[float, ...]] = None
@@ -22,6 +22,7 @@ class ClassicControlDNNetwork(nn.Module):
     activation_fn: callable = nn.relu
 
     def setup(self):
+        assert self.output_dim is not None
         if self.min_vals is not None:
             assert self.max_vals is not None
             self._min_vals = jnp.array(self.min_vals)
