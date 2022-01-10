@@ -1,47 +1,65 @@
 from typing import Sequence, Tuple, Union
 
-import gin
 from flax import linen as nn
 
 from jax import numpy as jnp
 
 
-# Basic classic control parent class network, to keep using the D*NNetworktype
-# named tuple defined in atari_lib and minimize code duplication.
-# NOTE this is
-# very basic compared to the same one defined in dopamine.jax.networks, might
-# need refinement. main difference is the use of the hidden_features
-# parameters, borrowed from the flax tutorials
-# @gin.configurable(denylist=["output_dim"])
-class ClassicControlDNNetwork(nn.Module):
-    output_dim: int = None
-    hidden_features: Sequence[int] = (512, 512)
+class Sequential(nn.Module):
+    layers: Sequence[nn.Module]
+
+    def __call__(self, x) -> jnp.DeviceArray:
+        for layer in self.layers:
+            x = layer(x)
+        return x
+
+    # TODO use some library function or such!
+    def __hash__(self) -> int:
+        return hash(".".join((str(hash(l)) for l in self.layers)))
+
+
+# NOTE setting _min_vals and _max_vals because of
+# https://flax.readthedocs.io/en/latest/flax.errors.html#flax.errors.SetAttributeInModuleSetupError
+class DensePreproc(nn.Dense):
     min_vals: Union[None, Tuple[float, ...]] = None
     max_vals: Union[None, Tuple[float, ...]] = None
-    kernel_initializer: callable = nn.initializers.xavier_uniform()
-    activation_fn: callable = nn.relu
+    inputs_preprocessed: bool = False
 
     def setup(self):
-        assert self.output_dim is not None
         if self.min_vals is not None:
             assert self.max_vals is not None
             self._min_vals = jnp.array(self.min_vals)
             self._max_vals = jnp.array(self.max_vals)
-        self.layers = [
-            nn.Dense(features=feat, kernel_init=self.kernel_initializer)
-            for feat in self.hidden_features
-        ]
-        self.final_layer = nn.Dense(
-            features=self.output_dim, kernel_init=self.kernel_initializer
-        )
 
-    def __call__(self, x):
-        x = x.reshape((-1))  # flatten
-        if self.min_vals is not None:
-            x -= self._min_vals
-            x /= self._max_vals - self._min_vals
-            x = 2.0 * x - 1.0  # Rescale in range [-1, 1].
-        for layer in self.layers:
-            x = layer(x)
-            x = self.activation_fn(x)
-        return self.final_layer(x)
+    def __call__(self, x) -> jnp.DeviceArray:
+        if not self.inputs_preprocessed:
+            x = x.reshape((-1))  # flatten
+            if self.min_vals is not None:
+                x -= self._min_vals
+                x /= self._max_vals - self._min_vals
+                x = 2.0 * x - 1.0  # Rescale in range [-1, 1].
+        return super().__call__(x)
+
+
+def mlp(
+    output_dim: int,
+    hiddens: Sequence[int] = [],
+    activation_fn: callable = nn.relu,
+    **dense_kwargs
+) -> Sequential:
+    return Sequential(
+        [
+            *[
+                v
+                for tup in zip(
+                    [
+                        DensePreproc(features=out_feat, **dense_kwargs)
+                        for out_feat in hiddens
+                    ],
+                    [activation_fn] * len(hiddens),
+                )
+                for v in tup
+            ],
+            DensePreproc(features=output_dim, **dense_kwargs),
+        ]
+    )

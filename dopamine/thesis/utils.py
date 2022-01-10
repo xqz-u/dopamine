@@ -1,4 +1,6 @@
+import dataclasses
 import functools as ft
+import inspect
 import os
 import time
 from itertools import groupby
@@ -101,3 +103,11 @@ def sample_replay_buffer(
             memory.sample_transition_batch(batch_size=batch_size, indices=indices),
         )
     )
+
+
+def dataclass_fields_d(dc: dataclasses.dataclass) -> dict:
+    return {field.name: getattr(dc, field.name) for field in dataclasses.fields(dc)}
+
+
+def argfinder(fn: callable, arg_coll: dict) -> dict:
+    return {k: v for k, v in arg_coll.items() if k in inspect.getfullargspec(fn).args}
