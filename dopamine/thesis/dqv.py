@@ -64,28 +64,26 @@ class DQVMaxAgent:
                 custom_pytrees.NetworkOptimWrap(net, optim, params, optim_state),
             )
         # copy initial weights between online and target policy network
-        # NOTE assign to vnet as well since action selection always use
-        # the online parameters, but these might be in different
-        # networks based on algorithm. Is this a correct design? Also
-        # because I am passing a lot of args not required by an action
-        # selection (e.g. target params, optim, optim state etc.),
-        # although it is true that these will always be the same and
-        # jit will write apprapriate code for each on the first call
         self.qnet.params = {"online": self.qnet.params, "target": self.qnet.params}
-        self.vnet.params = {"online": self.vnet.params, "target": None}
 
     def select_action(self) -> np.ndarray:
+        # self.update_state(obs)
         act_sel_fn = self.conf["exploration"]["fn"]
         act_sel_args = u.argfinder(
             act_sel_fn,
-            {
-                **self.conf["exploration"],
-                **u.dataclass_fields_d(self),
-            },
+            {**self.conf["exploration"], **u.dataclass_fields_d(self)},
         )
+        act_sel_args["params"] = self.qnet.params["online"]
+        act_sel_args["net"] = self.qnet.net
         self.rng, self.action = np.array(act_sel_fn(**act_sel_args))
         self.action = np.array(self.action)
         return self.action
+
+    def learn(self, obs: np.ndaray, reward: float, done: bool):
+        self.record_trajectory(self._observation, self.action, reward, done)
+        if done:
+            return
+        self._train_step()
 
 
 conf = {
@@ -103,14 +101,8 @@ conf = {
         "vnet": {"optim": {"learning_rate": 0.05}},
     },
     "exploration": {
-        # "fn": exploration.egreedy_linear_decay,
-        # "decay_period": 100,
-        # "warmup_steps": 800,
-        # "epsilon_train": 0.02,
-        "fn": exploration.egreedy,
-        "eval_mode": False,
-        "epsilon_train": 0.01,
-        "epsilon_eval": 0.001,
+        "fn": exploration.egreedy_linear_decay,
+        # "fn": exploration.egreedy,
     },
     # "experiment": {},
     # "logs": {},
