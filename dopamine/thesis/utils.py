@@ -10,8 +10,8 @@ import gin
 import tensorflow as tf
 from aim import Run
 from dopamine.replay_memory import circular_replay_buffer
-
 from jax import numpy as jnp
+
 from thesis import config
 from thesis.offline.replay_memory import offline_circular_replay_buffer
 
@@ -110,4 +110,4 @@ def dataclass_fields_d(dc: dataclasses.dataclass) -> dict:
 
 
 def argfinder(fn: callable, arg_coll: dict) -> dict:
-    return {k: v for k, v in arg_coll.items() if k in inspect.getfullargspec(fn).args}
+    return {k: v for k, v in arg_coll.items() if k in inspect.signature(fn).parameters}
