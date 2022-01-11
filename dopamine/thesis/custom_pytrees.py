@@ -4,10 +4,10 @@ from typing import Dict
 import optax
 from flax import linen as nn
 from flax.core.frozen_dict import FrozenDict
-
 from jax import random as jrand
 from jax import tree_util
-from thesis.jax import networks
+
+from thesis import networks
 
 
 @tree_util.register_pytree_node_class

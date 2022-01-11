@@ -1,15 +1,13 @@
 from dataclasses import dataclass
-from typing import Dict, Tuple, Union
+from typing import Tuple
 
 import numpy as np
 import optax
 from flax import linen as nn
 from flax.core.frozen_dict import FrozenDict
-
 from jax import numpy as jnp
-from thesis import custom_pytrees
+from thesis import custom_pytrees, exploration, networks
 from thesis import utils as u
-from thesis.jax import exploration, networks
 
 
 def build_net(
@@ -79,7 +77,7 @@ class DQVMaxAgent:
         self.action = np.array(self.action)
         return self.action
 
-    def learn(self, obs: np.ndaray, reward: float, done: bool):
+    def learn(self, obs: np.ndarray, reward: float, done: bool):
         self.record_trajectory(self._observation, self.action, reward, done)
         if done:
             return
@@ -110,6 +108,6 @@ conf = {
     # "agent": {},
 }
 
-# ag = DQVMaxAgent(conf)
-# ag.build_networks_and_optimizers()
-# x = ag.select_action()
+ag = DQVMaxAgent(conf)
+ag.build_networks_and_optimizers()
+x = ag.select_action()
