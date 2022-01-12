@@ -3,17 +3,13 @@ import inspect
 import os
 import time
 from itertools import groupby
-from typing import Any, Dict, Tuple, Union
+from typing import Any, Tuple, Union
 
-import attr
 import gin
 import tensorflow as tf
 from aim import Run
-from dopamine.replay_memory import circular_replay_buffer
-from jax import numpy as jnp
 
 from thesis import config
-from thesis.offline.replay_memory import offline_circular_replay_buffer
 
 
 # https://stackoverflow.com/questions/3844801/check-if-all-elements-in-a-list-are-identical
@@ -87,29 +83,6 @@ def add_aim_values(run_l: Run, reports, step):
                 "subset": "train",
             },
         )
-
-
-def sample_replay_buffer(
-    memory: Union[
-        circular_replay_buffer.OutOfGraphReplayBuffer,
-        offline_circular_replay_buffer.OfflineOutOfGraphReplayBuffer,
-    ],
-    batch_size: int = None,
-    indices: int = None,
-) -> Dict[str, jnp.DeviceArray]:
-    return dict(
-        zip(
-            [el.name for el in memory.get_transition_elements(batch_size=batch_size)],
-            memory.sample_transition_batch(batch_size=batch_size, indices=indices),
-        )
-    )
-
-
-def attr_fields_d(attr_class) -> dict:
-    return {
-        field.name: getattr(attr_class, field.name)
-        for field in attr.fields(type(attr_class))
-    }
 
 
 def argfinder(fn: callable, arg_coll: dict) -> dict:

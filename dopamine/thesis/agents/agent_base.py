@@ -3,33 +3,13 @@ from typing import Dict, Sequence, Tuple
 
 import attr
 import numpy as np
-import optax
 import tensorflow as tf
 from dopamine.replay_memory import circular_replay_buffer
 from flax import linen as nn
 from flax.core.frozen_dict import FrozenDict
 from jax import numpy as jnp
-from thesis import custom_pytrees, networks, utils
-
-
-def build_net(
-    out_dim: int,
-    inp_shape: Tuple[int],
-    key: custom_pytrees.PRNGKeyWrap,
-    class_: nn.Module = networks.mlp,
-    **kwargs,
-) -> Tuple[nn.Module, FrozenDict]:
-    net = class_(output_dim=out_dim, **kwargs)
-    params = net.init(next(key), jnp.ones(inp_shape))
-    return net, params
-
-
-def build_optim(
-    params: FrozenDict, class_: optax.GradientTransformation = optax.sgd, **kwargs
-) -> Tuple[optax.GradientTransformation, optax.OptState]:
-    optim = class_(**kwargs)
-    optim_state = optim.init(params)
-    return optim, optim_state
+from thesis import custom_pytrees, utils
+from thesis.agents import agent_utils
 
 
 # qnet: custom_pytrees.NetworkOptimWrap = None
@@ -71,7 +51,7 @@ class Agent(ABC):
 
     def select_args(self, fn: callable, top_level_key: str) -> dict:
         return utils.argfinder(
-            fn, {**self.conf[top_level_key], **utils.attr_fields_d(self)}
+            fn, {**self.conf[top_level_key], **agent_utils.attr_fields_d(self)}
         )
 
     def build_memory(self):
@@ -88,10 +68,10 @@ class Agent(ABC):
         for net_name, out_dim in zip(net_names, out_dims):
             model_spec = net_conf[net_name].get("model", {})
             optim_spec = net_conf[net_name].get("optim", {})
-            net, params = build_net(
+            net, params = agent_utils.build_net(
                 out_dim, self.observation_shape, self.rng, **model_spec
             )
-            optim, optim_state = build_optim(params, **optim_spec)
+            optim, optim_state = agent_utils.build_optim(params, **optim_spec)
             self.models[net_name] = custom_pytrees.NetworkOptimWrap(
                 net, optim, params, optim_state
             )
@@ -100,7 +80,7 @@ class Agent(ABC):
         self.memory.add(self._observation, self.action, reward, terminal)
 
     def sample_memory(self) -> dict:
-        return utils.sample_replay_buffer(self.memory)
+        return agent_utils.sample_replay_buffer(self.memory)
 
     # taken from dopamine.jax.agents.dqn.dqn_agent
     def update_state(self, obs: np.ndarray):
