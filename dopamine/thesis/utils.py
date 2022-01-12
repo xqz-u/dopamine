@@ -1,4 +1,3 @@
-import dataclasses
 import functools as ft
 import inspect
 import os
@@ -6,6 +5,7 @@ import time
 from itertools import groupby
 from typing import Any, Dict, Tuple, Union
 
+import attr
 import gin
 import tensorflow as tf
 from aim import Run
@@ -105,8 +105,11 @@ def sample_replay_buffer(
     )
 
 
-def dataclass_fields_d(dc: dataclasses.dataclass) -> dict:
-    return {field.name: getattr(dc, field.name) for field in dataclasses.fields(dc)}
+def attr_fields_d(attr_class) -> dict:
+    return {
+        field.name: getattr(attr_class, field.name)
+        for field in attr.fields(type(attr_class))
+    }
 
 
 def argfinder(fn: callable, arg_coll: dict) -> dict:
