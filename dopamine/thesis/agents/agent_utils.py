@@ -6,8 +6,7 @@ from dopamine.replay_memory import circular_replay_buffer
 from flax import linen as nn
 from flax.core.frozen_dict import FrozenDict
 from jax import numpy as jnp
-from thesis import custom_pytrees, networks
-from thesis.offline.replay_memory import offline_circular_replay_buffer
+from thesis import custom_pytrees, networks, offline_circular_replay_buffer
 
 
 def build_net(

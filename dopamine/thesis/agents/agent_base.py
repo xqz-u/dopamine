@@ -8,12 +8,10 @@ from dopamine.replay_memory import circular_replay_buffer
 from flax import linen as nn
 from flax.core.frozen_dict import FrozenDict
 from jax import numpy as jnp
-from thesis import custom_pytrees, utils
+from thesis import custom_pytrees, offline_circular_replay_buffer, utils
 from thesis.agents import agent_utils
 
 
-# qnet: custom_pytrees.NetworkOptimWrap = None
-# vnet: custom_pytrees.NetworkOptimWrap = None
 @attr.s(auto_attribs=True)
 class Agent(ABC):
     conf: dict
@@ -29,6 +27,7 @@ class Agent(ABC):
     net_sync_freq: int = 200
     min_replay_history: int = 5000
     train_freq: int = None
+    gamma: float = 0.99
     _observation: np.ndarray = None
 
     def __attrs_post_init__(self):
@@ -60,7 +59,15 @@ class Agent(ABC):
         )
         memory_args = self.select_args(memory_class, "memory")
         self.memory = memory_class(**memory_args)
+        if memory_class is offline_circular_replay_buffer.OfflineOutOfGraphReplayBuffer:
+            self.memory.load_buffers()
 
+    # NOTE should the static args to loss_metric be partialled?
+    # consider that it can be done before passing the function in the
+    # config at the very start...
+    # also it would be better to pass all args to NetworkOptimWrap
+    # as keywords, so it's more robust to initialization (params order
+    # is irrelevant)
     def _build_networks_and_optimizers(
         self, net_names: Sequence[str], out_dims: Sequence[int]
     ):
@@ -72,8 +79,13 @@ class Agent(ABC):
                 out_dim, self.observation_shape, self.rng, **model_spec
             )
             optim, optim_state = agent_utils.build_optim(params, **optim_spec)
+            args = [params, optim_state, net, optim]
             self.models[net_name] = custom_pytrees.NetworkOptimWrap(
-                net, optim, params, optim_state
+                *(
+                    args
+                    if (loss := net_conf[net_name].get("loss")) is None
+                    else [*args, loss]
+                )
             )
 
     def record_trajectory(self, reward: float, terminal: bool):
@@ -103,29 +115,33 @@ class Agent(ABC):
         self.action = np.array(self.action)
         return self.action
 
-    def learn(self, obs: np.ndarray, reward: float, done: bool):
+    def learn(
+        self, obs: np.ndarray, reward: float, done: bool
+    ) -> Dict[str, jnp.DeviceArray]:
+        # TODO do not do if offline!
         self.record_trajectory(reward, done)
         if done:
             self.state.fill(0)
             return
         if self.memory.add_count > self.min_replay_history:
             if self.train_freq is None or self.training_steps % self.train_freq == 0:
-                loss = self.agent_train_step(self.sample_memory())
+                losses = self.train(self.sample_memory())
                 # self.save_summaries(loss)
             if self.training_steps % self.net_sync_freq == 0:
                 self.sync_weights()
         self.training_steps += 1
+        return losses
 
     @abstractmethod
     def select_action(self, obs: np.ndarray) -> np.ndarray:
         pass
 
     @abstractmethod
-    def build_networks_and_optimizers(self):
+    def train(self, replay_elts: Dict[str, np.ndarray]) -> Dict[str, jnp.DeviceArray]:
         pass
 
     @abstractmethod
-    def agent_train_step(self):
+    def build_networks_and_optimizers(self):
         pass
 
     @abstractmethod

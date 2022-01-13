@@ -1,7 +1,8 @@
 from dataclasses import dataclass
-from typing import Dict
+from typing import Dict, Union
 
 import optax
+from dopamine.jax import losses
 from flax import linen as nn
 from flax.core.frozen_dict import FrozenDict
 from jax import random as jrand
@@ -13,18 +14,21 @@ from thesis import networks
 @tree_util.register_pytree_node_class
 @dataclass
 class NetworkOptimWrap:
+    params: Union[FrozenDict, Dict[str, FrozenDict]] = None
+    optim_state: optax.OptState = None
     net: nn.Module = networks.Sequential
     optim: optax.GradientTransformation = optax.sgd
-    # params: Union[FrozenDict, Dict[str, FrozenDict]] = None
-    params: Dict[str, FrozenDict] = None
-    opt_state: optax.OptState = None
+    loss_metric: callable = losses.mse_loss
 
     def tree_flatten(self) -> tuple:
-        return ((self.params, self.opt_state), (self.net, self.optim))
+        return (
+            (self.params, self.optim_state),
+            (self.net, self.optim, self.loss_metric),
+        )
 
     @classmethod
     def tree_unflatten(cls, treedef, leaves):
-        return cls(*treedef, *leaves)
+        return cls(*leaves, *treedef)
 
 
 # NOTE if using a dataclass, this happens:
