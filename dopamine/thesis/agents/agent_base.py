@@ -118,8 +118,9 @@ class Agent(ABC):
     def learn(
         self, obs: np.ndarray, reward: float, done: bool
     ) -> Dict[str, jnp.DeviceArray]:
-        # TODO do not do if offline!
+        # TODO don't if offline!
         self.record_trajectory(reward, done)
+        losses = None
         if done:
             self.state.fill(0)
             return

@@ -1,7 +1,6 @@
 from typing import Sequence, Tuple, Union
 
 from flax import linen as nn
-
 from jax import numpy as jnp
 
 
@@ -43,7 +42,7 @@ class DensePreproc(nn.Dense):
 
 def mlp(
     output_dim: int,
-    hiddens: Sequence[int] = [],
+    hiddens: Sequence[int] = (64, 64),
     activation_fn: callable = nn.relu,
     **dense_kwargs
 ) -> Sequential:
