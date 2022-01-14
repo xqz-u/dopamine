@@ -26,21 +26,31 @@ conf = {
         "fn": exploration.egreedy,
     },
     "memory": {"stack_size": 1},
-    "experiment": {
-        "seed": 4,
-        "steps": 2200,
-        "iterations": 1000,
-        "redundancy": 5,
-    },
     "agent": {
         "class_": dqv_max.DQVMaxAgent,
         "net_sync_freq": 1e4,
         "min_replay_history": 5e4,
     },
-    "logs": {
-        "path": "/home/xqz-u/uni/dopamine/resources/data/aim_mul_runs_new",
-        "summary_writing_freq": 500,
+    "runner": {
+        "base_dir": "...",
+        "experiment": {
+            "seed": 4,
+            "steps": 2200,
+            "iterations": 1000,
+            "redundancy": 5,
+        },
+        "env": {"name": "MountainCar-v0", "fn": "gym_lib.create_gym_env"},
+        "reporters": [
+            {
+                "class_": "reporters.AimReporter",
+                "repo_path": "/home/xqz-u/uni/dopamine/resources/data/aim_mul_runs_new",
+            }
+        ],
     },
+    # "logs": {
+    #     "path": "/home/xqz-u/uni/dopamine/resources/data/aim_mul_runs_new",
+    #     "summary_writing_freq": 500,
+    # },
 }
 
 
