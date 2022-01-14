@@ -44,7 +44,8 @@ conf = {
         "min_replay_history": 5e4,
     },
     "logs": {
-        "path": "/home/xqz-u/uni/dopamine/resources/data/aim_mul_runs_new",
+        # "path": "/home/xqz-u/uni/dopamine/resources/data/aim_mul_runs_new",
+        "path": "/home/xqz-u/uni/thesis/resources/data/aim_mul_runs_new",
         "summary_writing_freq": 500,
     },
 }
