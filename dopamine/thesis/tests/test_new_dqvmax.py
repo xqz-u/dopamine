@@ -48,6 +48,10 @@ conf = {
         # "call_": outofgraph...,
         "stack_size": 1
     },
+    # "logs": {
+    #     # "path": "/home/xqz-u/uni/dopamine/resources/data/aim_mul_runs_new",
+    #     "path": "/home/xqz-u/uni/thesis/resources/data/aim_mul_runs_new",
+    #     "summary_writing_freq": 500,
     "runner": {
         "base_dir": "...",
         # "schedule": "continuous_train_and_eval",
