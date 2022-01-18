@@ -16,18 +16,18 @@ def build_net(
     out_dim: int,
     inp_shape: Tuple[int],
     key: custom_pytrees.PRNGKeyWrap,
-    class_: nn.Module = networks.mlp,
+    call_: nn.Module = networks.mlp,
     **kwargs,
 ) -> Tuple[nn.Module, FrozenDict]:
-    net = class_(output_dim=out_dim, **kwargs)
+    net = call_(output_dim=out_dim, **kwargs)
     params = net.init(next(key), jnp.ones(inp_shape))
     return net, params
 
 
 def build_optim(
-    params: FrozenDict, class_: optax.GradientTransformation = optax.sgd, **kwargs
+    params: FrozenDict, call_: optax.GradientTransformation = optax.sgd, **kwargs
 ) -> Tuple[optax.GradientTransformation, optax.OptState]:
-    optim = class_(**kwargs)
+    optim = call_(**kwargs)
     optim_state = optim.init(params)
     return optim, optim_state
 

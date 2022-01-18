@@ -4,16 +4,25 @@ import aim
 import gym
 import jax
 import optax
+from dopamine.discrete_domains import gym_lib
 from dopamine.jax import losses
 from thesis import exploration
 from thesis.agents import dqv_max
+from thesis.runner import reporters
 from thesis.tests import simple_runner as sr
 
+# NOTE loss needs to be partialled right now if u want to pass args
 conf = {
     "nets": {
         "qnet": {
-            "model": {"hiddens": (512, 512)},
-            "optim": {"learning_rate": 0.001},
+            "model": {
+                # "call_": ...,
+                "hiddens": (512, 512),
+            },
+            "optim": {
+                # "call_": ...,
+                "learning_rate": 0.001
+            },
             "loss": losses.huber_loss,
         },
         "vnet": {
@@ -22,35 +31,40 @@ conf = {
             "loss": losses.huber_loss,
         },
     },
-    "exploration": {
-        "fn": exploration.egreedy,
-    },
-    "memory": {"stack_size": 1},
+    # "exploration": {"call_": exploration.egreedy},
+    "exploration": {},
     "agent": {
-        "class_": dqv_max.DQVMaxAgent,
+        "call_": dqv_max.DQVMaxAgent,
         "net_sync_freq": 1e4,
         "min_replay_history": 5e4,
+        "observation_shape": (4, 1),
+    },
+    "env": {
+        # "call_": gym_lib.create_gym_env,
+        "environment_name": "MountainCar",
+        "version": "v0",
+    },
+    "memory": {
+        # "call_": outofgraph...,
+        "stack_size": 1
     },
     "runner": {
         "base_dir": "...",
+        # "schedule": "continuous_train_and_eval",
+        # "resume": False,
         "experiment": {
-            "seed": 4,
+            # "seed": 4,
             "steps": 2200,
             "iterations": 1000,
             "redundancy": 5,
         },
-        "env": {"name": "MountainCar-v0", "fn": "gym_lib.create_gym_env"},
         "reporters": [
             {
-                "class_": "reporters.AimReporter",
+                "call_": reporters.AimReporter,
                 "repo_path": "/home/xqz-u/uni/dopamine/resources/data/aim_mul_runs_new",
             }
         ],
     },
-    # "logs": {
-    #     "path": "/home/xqz-u/uni/dopamine/resources/data/aim_mul_runs_new",
-    #     "summary_writing_freq": 500,
-    # },
 }
 
 
@@ -117,7 +131,7 @@ conf_cartpole = {**conf, "env": "CartPole-v0"}
 
 # run(conf_cartpole, "dqv_max_cartpole")
 
-run_mountaincar()
+# run_mountaincar()
 
 
 # off_mem = {

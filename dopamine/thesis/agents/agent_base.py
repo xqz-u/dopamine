@@ -8,7 +8,7 @@ from dopamine.replay_memory import circular_replay_buffer
 from flax import linen as nn
 from flax.core.frozen_dict import FrozenDict
 from jax import numpy as jnp
-from thesis import custom_pytrees, offline_circular_replay_buffer, utils
+from thesis import custom_pytrees, exploration, offline_circular_replay_buffer, utils
 from thesis.agents import agent_utils
 
 
@@ -21,32 +21,27 @@ class Agent(ABC):
     action: np.ndarray = None
     state: np.ndarray = None
     models: Dict[str, custom_pytrees.NetworkOptimWrap] = {}
-    memory: circular_replay_buffer.OutOfGraphReplayBuffer = None
     rng: custom_pytrees.PRNGKeyWrap = None
     training_steps: int = 0
     net_sync_freq: int = 200
     min_replay_history: int = 5000
     train_freq: int = None
     gamma: float = 0.99
+    memory: circular_replay_buffer.OutOfGraphReplayBuffer = (
+        circular_replay_buffer.OutOfGraphReplayBuffer
+    )
+    act_sel_fn: callable = exploration.egreedy
     _observation: np.ndarray = None
+    eval_mode: bool = False
 
     def __attrs_post_init__(self):
-        self.rng = (
-            custom_pytrees.PRNGKeyWrap()
-            if not (seed := self.conf["experiment"].get("seed"))
-            else custom_pytrees.PRNGKeyWrap(seed)
-        )
+        self.rng = self.rng or custom_pytrees.PRNGKeyWrap()
         self.state = jnp.ones(
             self.observation_shape + (self.conf["memory"]["stack_size"],)
         )
         self.build_memory()
         self.build_networks_and_optimizers()
-        # Set useful attributes such as weights syncing period etc.
-        # They could still be accessed from the configuration, but this
-        # way they are easier to access
-        for attrib, val in self.conf["agent"].items():
-            if attrib != "class_":
-                setattr(self, attrib, val)
+        self.act_sel_fn = self.conf["exploration"].get("call_", self.act_sel_fn)
 
     def select_args(self, fn: callable, top_level_key: str) -> dict:
         return utils.argfinder(
@@ -54,11 +49,8 @@ class Agent(ABC):
         )
 
     def build_memory(self):
-        memory_class = self.conf["memory"].get(
-            "class_", circular_replay_buffer.OutOfGraphReplayBuffer
-        )
-        memory_args = self.select_args(memory_class, "memory")
-        self.memory = memory_class(**memory_args)
+        memory_class = self.conf["memory"].get("call_", self.memory)
+        self.memory = memory_class(**self.select_args(memory_class, "memory"))
         if memory_class is offline_circular_replay_buffer.OfflineOutOfGraphReplayBuffer:
             self.memory.load_buffers()
 
@@ -107,10 +99,12 @@ class Agent(ABC):
         self, obs: np.ndarray, net: nn.Module, params: FrozenDict
     ) -> np.ndarray:
         self.update_state(obs)
-        act_sel_fn = self.conf["exploration"]["fn"]
-        act_sel_args = self.select_args(act_sel_fn, "exploration")
         self.rng, self.action = np.array(
-            act_sel_fn(**act_sel_args, net=net, params=params)
+            self.act_sel_fn(
+                **self.select_args(self.act_sel_fn, "exploration"),
+                net=net,
+                params=params,
+            )
         )
         self.action = np.array(self.action)
         return self.action
@@ -119,18 +113,19 @@ class Agent(ABC):
         self, obs: np.ndarray, reward: float, done: bool
     ) -> Dict[str, jnp.DeviceArray]:
         # TODO don't if offline!
-        self.record_trajectory(reward, done)
+        if not self.eval_mode:
+            self.record_trajectory(reward, done)
         losses = None
         if done:
             self.state.fill(0)
             return
-        if self.memory.add_count > self.min_replay_history:
+        if not self.eval_mode and self.memory.add_count > self.min_replay_history:
             if self.train_freq is None or self.training_steps % self.train_freq == 0:
                 losses = self.train(self.sample_memory())
                 # self.save_summaries(loss)
             if self.training_steps % self.net_sync_freq == 0:
                 self.sync_weights()
-        self.training_steps += 1
+            self.training_steps += 1
         return losses
 
     @abstractmethod
