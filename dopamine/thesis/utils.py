@@ -6,6 +6,7 @@ from itertools import groupby
 from typing import Any, Tuple, Union
 
 import gin
+import numpy as np
 import tensorflow as tf
 from aim import Run
 
@@ -73,16 +74,11 @@ def add_summary_v2(
     return status
 
 
-def add_aim_values(run_l: Run, reports, step):
+def add_aim_values(
+    run_l: Run, reports: list, step: int, epoch: int = None, context: dict = None
+):
     for tag, val in reports:
-        run_l.track(
-            val,
-            name=tag,
-            step=step,
-            context={
-                "subset": "train",
-            },
-        )
+        run_l.track(np.array(val), name=tag, step=step, epoch=epoch, context=context)
 
 
 def argfinder(fn: callable, arg_coll: dict) -> dict:

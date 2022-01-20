@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict, Sequence, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 import attr
 import numpy as np
@@ -25,7 +25,7 @@ class Agent(ABC):
     training_steps: int = 0
     net_sync_freq: int = 200
     min_replay_history: int = 5000
-    train_freq: int = None
+    train_freq: int = 1
     gamma: float = 0.99
     memory: circular_replay_buffer.OutOfGraphReplayBuffer = (
         circular_replay_buffer.OutOfGraphReplayBuffer
@@ -109,22 +109,22 @@ class Agent(ABC):
         self.action = np.array(self.action)
         return self.action
 
+    # TODO split in learn/eval (training/evaluation)
     def learn(
         self, obs: np.ndarray, reward: float, done: bool
-    ) -> Dict[str, jnp.DeviceArray]:
+    ) -> Optional[List[Tuple[str, jnp.DeviceArray]]]:
         # TODO don't if offline!
         if not self.eval_mode:
             self.record_trajectory(reward, done)
         losses = None
         if done:
             self.state.fill(0)
-            return
-        if not self.eval_mode and self.memory.add_count > self.min_replay_history:
-            if self.train_freq is None or self.training_steps % self.train_freq == 0:
-                losses = self.train(self.sample_memory())
-                # self.save_summaries(loss)
-            if self.training_steps % self.net_sync_freq == 0:
-                self.sync_weights()
+        elif not self.eval_mode:
+            if self.memory.add_count > self.min_replay_history:
+                if self.training_steps % self.train_freq == 0:
+                    losses = self.train(self.sample_memory())
+                if self.training_steps % self.net_sync_freq == 0:
+                    self.sync_weights()
             self.training_steps += 1
         return losses
 

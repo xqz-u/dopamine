@@ -1,9 +1,10 @@
 import logging
 from copy import deepcopy
-from typing import Tuple
+from typing import List, Tuple
 
 import attr
 import jax
+import numpy as np
 from dopamine.discrete_domains import (
     checkpointer,
     gym_lib,
@@ -11,6 +12,7 @@ from dopamine.discrete_domains import (
     logger,
 )
 from thesis import custom_pytrees, utils
+from thesis.runner import reporter
 
 # NOTE if you want to have start/stop/resume functionality when running
 # an experiment with redundancy, to restart a run correctly do:
@@ -24,11 +26,8 @@ def create_runner(conf: dict):
     return Runner(conf, **conf["runner"]["experiment"])
 
 
-# TODO reason whether run_experiment_with_redundancy should even exist
-# here, or whether it should be dealt with externally
 # TODO check if logger and iteration_statistics are necessary
-# TODO reporters
-# TODO save all raw values or compute intermediate aggregations?
+# TODO reason how to report losses and returns! aggregate or not?
 @attr.s(auto_attribs=True)
 class Runner:
     conf: dict
@@ -45,12 +44,14 @@ class Runner:
     _checkpointer: checkpointer.Checkpointer = attr.ib(init=False)
     _logger: logger.Logger = attr.ib(init=False)
     start_iteration: int = 0
+    curr_iteration: int = 0
+    reporters: List[reporter.Reporter] = attr.ib(factory=list)
 
     @property
     def hparams(self) -> dict:
         r = deepcopy(self.conf)
         r["env"].pop("call_", None)
-        for k in ["reporters", "base_dir", "try_resume"]:
+        for k in ["reporters", "base_dir", "resume"]:
             r["runner"].pop(k, None)
         return jax.tree_map(lambda v: f"<{v.__name__}>" if callable(v) else v, r)
 
@@ -76,6 +77,10 @@ class Runner:
         self._logger = logger.Logger(f"{self.base_dir}/logs")
         if self.conf["runner"].get("resume", True):
             self._initialize_checkpointer_and_maybe_resume()
+        # build reporters TODO better version with autobuild
+        for rep in self.conf["runner"].get("reporters"):
+            reporter_ = rep["call_"]
+            self.reporters.append(reporter_(**utils.argfinder(reporter_, rep)))
 
     def next_seeds(self):
         self.env.environment.seed(self.seed)
@@ -108,20 +113,31 @@ class Runner:
                     f"Reloaded checkpoint and will start from iteration {self.start_iteration}"
                 )
 
+    def report_metrics(self, run_mode: str, reports: list, **kwargs):
+        for reporter_ in self.reporters:
+            reporter_(
+                reports,
+                self.agent.training_steps,
+                epoch=self.curr_iteration,
+                context={"subset": run_mode, **kwargs},
+            )
+
     # NOTE no episode end for maximum episode duration (at least not
     # explicit to agent)
-    def run_one_episode(self) -> Tuple[int, float]:
+    def run_one_episode(self, mode: str) -> Tuple[int, float]:
         episode_steps, episode_reward, done = 0, 0.0, False
         observation = self.env.reset()
         while not done:
             action = self.agent.select_action(observation)
-            observation, reward, done = self.env.step(action)
-            # if self._clip_rewards:
-            #     # Perform reward clipping.
-            #     reward = np.clip(reward, -1, 1)
+            observation, reward, done, _ = self.env.step(action)
+            if self.conf["env"].get("clip_rewards", False):
+                reward = np.clip(reward, -1, 1)
             episode_reward += reward
             episode_steps += 1
-            losses = self.agent.learn(observation, reward, done)
+            reports = [("return", reward)] + (
+                self.agent.learn(observation, reward, done) or []
+            )
+            self.report_metrics(mode, reports)
         return episode_steps, episode_reward
 
     def run_episodes(
@@ -132,7 +148,7 @@ class Runner:
     ):
         n_episodes, tot_steps, tot_reward = 0, 0, 0.0
         while tot_steps < steps:
-            episode_steps, episode_reward = self.run_one_episode()
+            episode_steps, episode_reward = self.run_one_episode(mode)
             stats.append(
                 {
                     f"{mode}_episode_lengths": episode_steps,
@@ -146,35 +162,29 @@ class Runner:
         stats.append({f"{mode}_mean_return": mean_return})
         logging.info(f"Average undiscounted return per {mode} episode: {mean_return}")
 
-    def run_one_iteration(self, iteration: int, steps: int):
+    def run_one_iteration(self, steps: int) -> dict:
         stats = iteration_statistics.IterationStatistics()
-        logging.info(f"Starting iteration {iteration}")
+        logging.info(f"Starting iteration {self.curr_iteration}")
         self.agent.eval_mode = False
         self.run_episodes(steps, "train", stats)
-        self.agent.eval_mode = True
-        self.run_episodes(steps, "eval", stats)
-        # self._save_tensorboard_summaries(
-        #     iteration,
-        #     num_episodes_train,
-        #     average_reward_train,
-        #     num_episodes_eval,
-        #     average_reward_eval,
-        #     average_steps_per_second,
-        # )
-        # return statistics.data_lists
+        # self.agent.eval_mode = True
+        # self.run_episodes(steps, "eval", stats)
+        return stats.data_lists
 
     def run_experiment(self, steps: int, iterations: int):
-        if iterations <= self.start_iteration:
-            logging.warning(
-                f"iterations ({iterations}) < start_iteration({self.start_iteration})"
-            )
-            return
-        for i in range(self.start_iteration, iterations):
-            stats = self.run_one_iteration(i, steps)
-            self._log_experiment(i, stats)
-            self._checkpoint_experiment(i)
+        # FIXME
+        # if iterations <= self.start_iteration:
+        #     logging.warning(
+        #         f"iterations ({iterations}) < start_iteration({self.start_iteration})"
+        #     )
+        #     return
+        self.curr_iteration = self.start_iteration
+        while self.curr_iteration < iterations:
+            stats = self.run_one_iteration(steps)
+            # self._log_experiment(self.curr_iteration, stats)
+            # self._checkpoint_experiment(self.curr_iteration)
+            self.curr_iteration += 1
 
-    # TODO aim experiment name can be set here
     def run_experiment_with_redundancy(
         self, steps: int = None, iterations: int = None, redundancy: int = None
     ):
@@ -184,14 +194,16 @@ class Runner:
         for i in range(redundancy):
             logging.info(f"{i}: Beginning training...")
             self.next_seeds()
+            for reporter_ in self.reporters:
+                reporter_.setup(i)
             self.run_experiment(steps, iterations)
 
     def _log_experiment(self, iteration: int, statistics):
         self._logger[f"iteration_{iteration}"] = statistics
-        self._logger.log_to_file(self._logging_file_prefix, iteration)
+        self._logger.log_to_file(self.logging_file_prefix, iteration)
 
     def _checkpoint_experiment(self, iteration: int):
-        experiment_data = self._agent.bundle_and_checkpoint(
+        experiment_data = self.agent.bundle_and_checkpoint(
             self._checkpoint_dir, iteration
         )
         if experiment_data:

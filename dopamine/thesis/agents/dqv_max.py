@@ -1,5 +1,5 @@
 import functools as ft
-from typing import Dict, Tuple
+from typing import Dict, List, Tuple
 
 import attr
 import jax
@@ -53,8 +53,6 @@ def train_v_net(
 # @property es? or just do the latter without the first?
 @attr.s(auto_attribs=True)
 class DQVMaxAgent(agent_base.Agent):
-    _avg_loss: jnp.DeviceArray = jnp.array((0.0, 0.0))
-
     def build_networks_and_optimizers(self):
         net_names, out_dims = ["qnet", "vnet"], [self.num_actions, 1]
         self._build_networks_and_optimizers(net_names, out_dims)
@@ -72,20 +70,15 @@ class DQVMaxAgent(agent_base.Agent):
             self.models["qnet"].params["online"],
         )
 
-    # TODO provisional!! write runner and dump stats correctly
-    def train(self, replay_elts: Dict[str, np.ndarray]) -> Dict[str, float]:
-        losses = (self.train_v(replay_elts), self.train_q(replay_elts))
-        self._avg_loss = (self._avg_loss + jnp.array(losses)) / 2
+    def train(
+        self, replay_elts: Dict[str, np.ndarray]
+    ) -> List[Tuple[str, jnp.DeviceArray]]:
         return [
-            [f"{n}_{self.models[n].loss_metric.__name__}", v]
-            for n, v in zip(["vnet", "qnet"], losses)
+            (f"{n}_{self.models[n].loss_metric.__name__}", v)
+            for n, v in zip(
+                ["vnet", "qnet"], (self.train_v(replay_elts), self.train_q(replay_elts))
+            )
         ]
-        # return {
-        #     f"{n}_{self.models[n].loss_metric.__name__}": v
-        #     for n, v in zip(
-        #         ["vnet", "qnet"], [self.train_v(replay_elts), self.train_q(replay_elts)]
-        #     )
-        # }
 
     def train_v(self, replay_elts: Dict[str, np.ndarray]) -> jnp.DeviceArray:
         v_td_targets = agent_utils.td_error(

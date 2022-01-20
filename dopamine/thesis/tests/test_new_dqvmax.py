@@ -43,6 +43,7 @@ conf = {
         # "call_": gym_lib.create_gym_env,
         "environment_name": "MountainCar",
         "version": "v0",
+        # "clip_rewards": True
     },
     "memory": {
         # "call_": outofgraph...,
