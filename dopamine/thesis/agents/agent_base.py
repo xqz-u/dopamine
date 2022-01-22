@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Sequence, Tuple
+from typing import Dict, Optional, Sequence, Tuple
 
 import attr
 import numpy as np
@@ -12,6 +12,7 @@ from thesis import custom_pytrees, exploration, offline_circular_replay_buffer, 
 from thesis.agents import agent_utils
 
 
+# TODO use attr.ib to properly set fields
 @attr.s(auto_attribs=True)
 class Agent(ABC):
     conf: dict
@@ -33,6 +34,13 @@ class Agent(ABC):
     act_sel_fn: callable = exploration.egreedy
     _observation: np.ndarray = None
     eval_mode: bool = False
+    model_names: Tuple[str] = attr.ib(factory=list)
+
+    @property
+    def losses_names(self) -> Optional[Tuple[str]]:
+        return tuple(
+            f"{m}_{self.models[m].loss_metric.__name__}" for m in self.model_names
+        )
 
     def __attrs_post_init__(self):
         self.rng = self.rng or custom_pytrees.PRNGKeyWrap()
@@ -112,7 +120,7 @@ class Agent(ABC):
     # TODO split in learn/eval (training/evaluation)
     def learn(
         self, obs: np.ndarray, reward: float, done: bool
-    ) -> Optional[List[Tuple[str, jnp.DeviceArray]]]:
+    ) -> Optional[Tuple[Tuple[str], jnp.DeviceArray]]:
         # TODO don't if offline!
         if not self.eval_mode:
             self.record_trajectory(reward, done)
@@ -133,7 +141,7 @@ class Agent(ABC):
         pass
 
     @abstractmethod
-    def train(self, replay_elts: Dict[str, np.ndarray]) -> Dict[str, jnp.DeviceArray]:
+    def train(self, replay_elts: Dict[str, np.ndarray]) -> jnp.DeviceArray:
         pass
 
     @abstractmethod

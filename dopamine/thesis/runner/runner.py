@@ -11,6 +11,7 @@ from dopamine.discrete_domains import (
     iteration_statistics,
     logger,
 )
+from jax import numpy as jnp
 from thesis import custom_pytrees, utils
 from thesis.runner import reporter
 
@@ -47,6 +48,7 @@ class Runner:
     curr_iteration: int = 0
     reporters: List[reporter.Reporter] = attr.ib(factory=list)
 
+    # FIXME this way, defaults are never reported...
     @property
     def hparams(self) -> dict:
         r = deepcopy(self.conf)
@@ -113,18 +115,22 @@ class Runner:
                     f"Reloaded checkpoint and will start from iteration {self.start_iteration}"
                 )
 
-    def report_metrics(self, run_mode: str, reports: list, **kwargs):
+    def report_metrics(
+        self, run_mode: str, reports: dict, step=None, epoch=None, **kwargs
+    ):
         for reporter_ in self.reporters:
             reporter_(
                 reports,
-                self.agent.training_steps,
-                epoch=self.curr_iteration,
+                step=step,
+                epoch=epoch,
                 context={"subset": run_mode, **kwargs},
             )
 
     # NOTE no episode end for maximum episode duration (at least not
     # explicit to agent)
-    def run_one_episode(self, mode: str) -> Tuple[int, float]:
+    def run_one_episode(
+        self, mode: str, losses: jnp.DeviceArray
+    ) -> Tuple[int, float, jnp.DeviceArray]:
         episode_steps, episode_reward, done = 0, 0.0, False
         observation = self.env.reset()
         while not done:
@@ -134,11 +140,10 @@ class Runner:
                 reward = np.clip(reward, -1, 1)
             episode_reward += reward
             episode_steps += 1
-            reports = [("return", reward)] + (
-                self.agent.learn(observation, reward, done) or []
-            )
-            self.report_metrics(mode, reports)
-        return episode_steps, episode_reward
+            step_loss = self.agent.learn(observation, reward, done)
+            if step_loss is not None:
+                losses += step_loss
+        return episode_steps, episode_reward, losses
 
     def run_episodes(
         self,
@@ -146,21 +151,40 @@ class Runner:
         mode: str,
         stats: iteration_statistics.IterationStatistics,
     ):
+        loss_init = lambda: jnp.zeros((len(self.conf["nets"]), 1))
         n_episodes, tot_steps, tot_reward = 0, 0, 0.0
+        tot_loss, losses_start = loss_init(), None
         while tot_steps < steps:
-            episode_steps, episode_reward = self.run_one_episode(mode)
+            (
+                episode_steps,
+                episode_reward,
+                episode_losses,
+            ) = self.run_one_episode(mode, loss_init())
             stats.append(
                 {
                     f"{mode}_episode_lengths": episode_steps,
                     f"{mode}_episode_returns": episode_reward,
                 }
             )
+            if self.agent.training_steps >= self.agent.min_replay_history:
+                losses_start = n_episodes
             tot_reward += episode_reward
             tot_steps += episode_steps
             n_episodes += 1
+            tot_loss += episode_losses
         mean_return = tot_reward / n_episodes  # if num_episodes > 0 else 0.0
         stats.append({f"{mode}_mean_return": mean_return})
         logging.info(f"Average undiscounted return per {mode} episode: {mean_return}")
+        # NOTE if not enough steps are performed loss_tags is None and
+        # loss_vals 0's
+        metrics = {
+            "return": tot_reward,
+            "episodes": n_episodes,
+            "steps": tot_steps,
+            "loss_episodes": n_episodes - (losses_start or 0),
+            "losses": {k: float(v) for k, v in zip(self.agent.losses_names, tot_loss)},
+        }
+        self.report_metrics(mode, metrics, step=self.curr_iteration)
 
     def run_one_iteration(self, steps: int) -> dict:
         stats = iteration_statistics.IterationStatistics()
@@ -195,7 +219,7 @@ class Runner:
             logging.info(f"{i}: Beginning training...")
             self.next_seeds()
             for reporter_ in self.reporters:
-                reporter_.setup(i)
+                reporter_.setup(i, self.hparams)
             self.run_experiment(steps, iterations)
 
     def _log_experiment(self, iteration: int, statistics):

@@ -54,8 +54,9 @@ def train_v_net(
 @attr.s(auto_attribs=True)
 class DQVMaxAgent(agent_base.Agent):
     def build_networks_and_optimizers(self):
-        net_names, out_dims = ["qnet", "vnet"], [self.num_actions, 1]
-        self._build_networks_and_optimizers(net_names, out_dims)
+        self.model_names = ["qnet", "vnet"]
+        out_dims = [self.num_actions, 1]
+        self._build_networks_and_optimizers(self.model_names, out_dims)
         # initialize target q network weights with online ones
         qnet_params = self.models["qnet"].params
         self.models["qnet"].params = {
@@ -70,15 +71,10 @@ class DQVMaxAgent(agent_base.Agent):
             self.models["qnet"].params["online"],
         )
 
-    def train(
-        self, replay_elts: Dict[str, np.ndarray]
-    ) -> List[Tuple[str, jnp.DeviceArray]]:
-        return [
-            (f"{n}_{self.models[n].loss_metric.__name__}", v)
-            for n, v in zip(
-                ["vnet", "qnet"], (self.train_v(replay_elts), self.train_q(replay_elts))
-            )
-        ]
+    def train(self, replay_elts: Dict[str, np.ndarray]) -> jnp.DeviceArray:
+        return jnp.array(
+            (self.train_v(replay_elts), self.train_q(replay_elts))
+        ).reshape((2, 1))
 
     def train_v(self, replay_elts: Dict[str, np.ndarray]) -> jnp.DeviceArray:
         v_td_targets = agent_utils.td_error(
@@ -94,7 +90,7 @@ class DQVMaxAgent(agent_base.Agent):
         self.models["vnet"], v_loss = train_v_net(
             self.gamma, self.models["vnet"], replay_elts["state"], v_td_targets
         )
-        return float(v_loss)
+        return v_loss
 
     def train_q(self, replay_elts: Dict[str, np.ndarray]) -> jnp.DeviceArray:
         q_td_targets = agent_utils.td_error(
@@ -114,7 +110,7 @@ class DQVMaxAgent(agent_base.Agent):
             replay_elts["action"],
             q_td_targets,
         )
-        return float(q_loss)
+        return q_loss
 
     def sync_weights(self):
         self.models["qnet"].params["target"] = self.models["qnet"].params["online"]

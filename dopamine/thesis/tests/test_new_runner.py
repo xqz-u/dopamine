@@ -27,8 +27,8 @@ conf = {
     "exploration": {},
     "agent": {
         "call_": dqv_max.DQVMaxAgent,
-        "net_sync_freq": 1e4,
-        "min_replay_history": 5e4,
+        "net_sync_freq": int(1e4),
+        "min_replay_history": int(5e4),
         "observation_shape": (4, 1),
     },
     "env": {
@@ -54,7 +54,8 @@ conf = {
         "reporters": [
             {
                 "call_": reporter.AimReporter,
-                "repo": "/home/xqz-u/uni/thesis/resources/data/test_runner",
+                # "repo": "/home/xqz-u/uni/thesis/resources/data/test_runner",
+                "repo": "/home/xqz-u/uni/dopamine/resources/data/test_runner",
                 "experiment": "test_runner",
             }
         ],

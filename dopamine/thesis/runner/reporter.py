@@ -1,10 +1,9 @@
+import pprint
 from abc import ABC, abstractmethod
-from typing import List, Tuple, Union
+from typing import Dict, Union
 
 import aim
 import attr
-import numpy as np
-from jax import numpy as jnp
 
 
 @attr.s
@@ -18,7 +17,7 @@ class Reporter(ABC):
     @abstractmethod
     def __call__(
         self,
-        reports: list,
+        reports: dict,
         step: int,
         epoch: int = None,
         context: dict = None,
@@ -35,23 +34,35 @@ class AimReporter(Reporter):
     experiment: str
     writer: aim.Run = attr.ib(init=False)
 
-    def setup(self, iteration: int):
+    def setup(self, iteration: int, params: dict):
         self.experiment = f"{self.experiment}_{iteration}"
         self.writer = aim.Run(repo=self.repo, experiment=self.experiment)
+        self.writer["hparams"] = params
 
     def __call__(
         self,
-        reports: List[Tuple[str, Union[np.ndarray, jnp.DeviceArray]]],
+        reports: Dict[str, Union[float, Dict[str, float]]],
         step: int,
         epoch: int = None,
         context: dict = None,
     ):
-        if step % self.writing_freq == 0:
-            for tag, val in reports:
-                self.writer.track(
-                    float(val),
-                    name=tag,
-                    step=step,
-                    epoch=epoch,
-                    context=context,
-                )
+        if step % self.writing_freq:
+            return
+        losses = reports["losses"]
+        agg_reports = [
+            ("AvgEp_return", reports["return"] / reports["episodes"])
+        ] + list(
+            zip(
+                map(lambda t: f"AvgEp_{t}", losses.keys()),
+                [v / reports["loss_episodes"] for v in losses.values()],
+            )
+        )
+        pprint.pprint(agg_reports)
+        for tag, val in agg_reports:
+            self.writer.track(
+                val,
+                name=tag,
+                step=step,
+                epoch=epoch,
+                context=context,
+            )
