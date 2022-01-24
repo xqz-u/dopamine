@@ -28,7 +28,6 @@ def create_runner(conf: dict):
 
 
 # TODO check if logger and iteration_statistics are necessary
-# TODO reason how to report losses and returns! aggregate or not?
 @attr.s(auto_attribs=True)
 class Runner:
     conf: dict
@@ -153,7 +152,7 @@ class Runner:
     ):
         loss_init = lambda: jnp.zeros((len(self.conf["nets"]), 1))
         n_episodes, tot_steps, tot_reward = 0, 0, 0.0
-        tot_loss, losses_start = loss_init(), None
+        tot_loss, loss_steps = loss_init(), None
         while tot_steps < steps:
             (
                 episode_steps,
@@ -167,7 +166,7 @@ class Runner:
                 }
             )
             if self.agent.training_steps >= self.agent.min_replay_history:
-                losses_start = n_episodes
+                loss_steps = tot_steps
             tot_reward += episode_reward
             tot_steps += episode_steps
             n_episodes += 1
@@ -181,7 +180,7 @@ class Runner:
             "return": tot_reward,
             "episodes": n_episodes,
             "steps": tot_steps,
-            "loss_episodes": n_episodes - (losses_start or 0),
+            "loss_steps": tot_steps - (loss_steps or 0),
             "losses": {k: float(v) for k, v in zip(self.agent.losses_names, tot_loss)},
         }
         self.report_metrics(mode, metrics, step=self.curr_iteration)

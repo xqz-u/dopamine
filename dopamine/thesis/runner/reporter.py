@@ -54,7 +54,7 @@ class AimReporter(Reporter):
         ] + list(
             zip(
                 map(lambda t: f"AvgEp_{t}", losses.keys()),
-                [v / reports["loss_episodes"] for v in losses.values()],
+                [v / reports["loss_steps"] for v in losses.values()],
             )
         )
         pprint.pprint(agg_reports)
