@@ -30,6 +30,10 @@ class NetworkOptimWrap:
     def tree_unflatten(cls, treedef, leaves):
         return cls(*leaves, *treedef)
 
+    @property
+    def loss(self):
+        return self.loss_metric
+
 
 # NOTE if using a dataclass, this happens:
 # TypeError: __init__() takes from 1 to 4 positional arguments but 5 were given

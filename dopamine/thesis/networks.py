@@ -14,7 +14,7 @@ class Sequential(nn.Module):
 
     # TODO use some library function or such!
     def __hash__(self) -> int:
-        return hash(".".join((str(hash(l)) for l in self.layers)))
+        return hash(".".join(str(hash(l)) for l in self.layers))
 
 
 # NOTE setting _min_vals and _max_vals because of

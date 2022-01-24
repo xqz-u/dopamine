@@ -12,18 +12,12 @@ from thesis import custom_pytrees, exploration, offline_circular_replay_buffer, 
 from thesis.agents import agent_utils
 
 
-# TODO use attr.ib to properly set fields
 @attr.s(auto_attribs=True)
 class Agent(ABC):
     conf: dict
     num_actions: int
     observation_shape: Tuple[int]
     observation_dtype: np.dtype
-    action: np.ndarray = None
-    state: np.ndarray = None
-    models: Dict[str, custom_pytrees.NetworkOptimWrap] = {}
-    rng: custom_pytrees.PRNGKeyWrap = None
-    training_steps: int = 0
     net_sync_freq: int = 200
     min_replay_history: int = 5000
     train_freq: int = 1
@@ -32,10 +26,16 @@ class Agent(ABC):
         circular_replay_buffer.OutOfGraphReplayBuffer
     )
     act_sel_fn: callable = exploration.egreedy
-    _observation: np.ndarray = None
     eval_mode: bool = False
     model_names: Tuple[str] = attr.ib(factory=list)
+    models: Dict[str, custom_pytrees.NetworkOptimWrap] = attr.ib(factory=dict)
+    action: np.ndarray = None
+    state: np.ndarray = None
+    rng: custom_pytrees.PRNGKeyWrap = None
+    training_steps: int = 0
+    _observation: np.ndarray = None
 
+    # TODO hash class and cache this
     @property
     def losses_names(self) -> Optional[Tuple[str]]:
         return tuple(
@@ -44,30 +44,41 @@ class Agent(ABC):
 
     def __attrs_post_init__(self):
         self.rng = self.rng or custom_pytrees.PRNGKeyWrap()
+        self.conf["memory"]["stack_size"] = self.conf["memory"].get("stack_size", 1)
         self.state = jnp.ones(
             self.observation_shape + (self.conf["memory"]["stack_size"],)
         )
         self.build_memory()
         self.build_networks_and_optimizers()
         self.act_sel_fn = self.conf["exploration"].get("call_", self.act_sel_fn)
+        self.conf["exploration"] = {
+            "call_": self.act_sel_fn,
+            **utils.callable_defaults(self.act_sel_fn),
+        }
+        self.conf["exploration"].pop("eval_mode")
+        self.conf["agent"].update(
+            {
+                k: getattr(self, k)
+                for k in ["net_sync_freq", "min_replay_history", "train_freq", "gamma"]
+            }
+        )
 
     def select_args(self, fn: callable, top_level_key: str) -> dict:
         return utils.argfinder(
-            fn, {**self.conf[top_level_key], **agent_utils.attr_fields_d(self)}
+            fn, {**self.conf[top_level_key], **utils.attr_fields_d(self)}
         )
 
     def build_memory(self):
         memory_class = self.conf["memory"].get("call_", self.memory)
-        self.memory = memory_class(**self.select_args(memory_class, "memory"))
+        args = self.select_args(memory_class, "memory")
+        self.conf["memory"] = args
+        self.memory = memory_class(**args)
         if memory_class is offline_circular_replay_buffer.OfflineOutOfGraphReplayBuffer:
             self.memory.load_buffers()
 
     # NOTE should the static args to loss_metric be partialled?
     # consider that it can be done before passing the function in the
     # config at the very start...
-    # also it would be better to pass all args to NetworkOptimWrap
-    # as keywords, so it's more robust to initialization (params order
-    # is irrelevant)
     def _build_networks_and_optimizers(
         self, net_names: Sequence[str], out_dims: Sequence[int]
     ):
@@ -75,17 +86,18 @@ class Agent(ABC):
         for net_name, out_dim in zip(net_names, out_dims):
             model_spec = net_conf[net_name].get("model", {})
             optim_spec = net_conf[net_name].get("optim", {})
-            net, params = agent_utils.build_net(
+            net, params, net_conf[net_name]["model"] = agent_utils.build_net(
                 out_dim, self.observation_shape, self.rng, **model_spec
             )
-            optim, optim_state = agent_utils.build_optim(params, **optim_spec)
-            args = [params, optim_state, net, optim]
+            optim, optim_state, net_conf[net_name]["optim"] = agent_utils.build_optim(
+                params, **optim_spec
+            )
+            loss_fn = net_conf[net_name].get(
+                "loss", custom_pytrees.NetworkOptimWrap.loss
+            )
+            net_conf[net_name]["loss"] = loss_fn
             self.models[net_name] = custom_pytrees.NetworkOptimWrap(
-                *(
-                    args
-                    if (loss := net_conf[net_name].get("loss")) is None
-                    else [*args, loss]
-                )
+                params, optim_state, net, optim, loss_fn
             )
 
     def record_trajectory(self, reward: float, terminal: bool):

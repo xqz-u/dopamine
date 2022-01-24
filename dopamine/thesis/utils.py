@@ -6,10 +6,8 @@ import time
 from itertools import groupby
 from typing import Any, Tuple, Union
 
+import attr
 import gin
-import numpy as np
-import tensorflow as tf
-from aim import Run
 
 from thesis import config
 
@@ -61,29 +59,24 @@ def make_unique_data_dir(experiment_spec: list, base_dir: str = None) -> str:
     )
 
 
-def add_summary_v2(
-    summary_writer: tf.summary.SummaryWriter,
-    summaries: list,
-    step: int,
-    flush: bool = False,
-) -> bool:
-    with summary_writer.as_default():
-        for summ_type, *summ_args in summaries:
-            status = getattr(tf.summary, summ_type)(*summ_args, step=step)
-    if flush:
-        summary_writer.flush()
-    return status
-
-
-def add_aim_values(
-    run_l: Run, reports: list, step: int, epoch: int = None, context: dict = None
-):
-    for tag, val in reports:
-        run_l.track(np.array(val), name=tag, step=step, epoch=epoch, context=context)
+def attr_fields_d(attr_class: object) -> dict:
+    return {
+        field.name: getattr(attr_class, field.name)
+        for field in attr.fields(type(attr_class))
+    }
 
 
 def argfinder(fn: callable, arg_coll: dict) -> dict:
     return {k: v for k, v in arg_coll.items() if k in inspect.signature(fn).parameters}
+
+
+# https://stackoverflow.com/questions/12627118/get-a-function-arguments-default-value
+def callable_defaults(elt: callable) -> dict:
+    return {
+        k: default
+        for k, v in inspect.signature(elt).parameters.items()
+        if (default := v.default) is not inspect.Parameter.empty
+    }
 
 
 class ConsoleLogger(logging.Logger):
@@ -100,3 +93,17 @@ class ConsoleLogger(logging.Logger):
         ch.setFormatter(formatter)
         self.addHandler(ch)
         self.setLevel(level)
+
+
+# def add_summary_v2(
+#     summary_writer: tf.summary.SummaryWriter,
+#     summaries: list,
+#     step: int,
+#     flush: bool = False,
+# ) -> bool:
+#     with summary_writer.as_default():
+#         for summ_type, *summ_args in summaries:
+#             status = getattr(tf.summary, summ_type)(*summ_args, step=step)
+#     if flush:
+#         summary_writer.flush()
+#     return status

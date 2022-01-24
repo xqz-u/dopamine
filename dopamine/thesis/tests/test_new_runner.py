@@ -1,8 +1,9 @@
+import inspect
 import logging
+import pprint
 
 from dopamine.jax import losses
-
-# from thesis import exploration
+from thesis import exploration
 from thesis.agents import dqv_max
 from thesis.runner import reporter, runner
 
@@ -41,11 +42,11 @@ conf = {
     },
     "memory": {
         # "call_": outofgraph...,
-        "stack_size": 1
+        # "stack_size": 1
     },
     "runner": {
         "base_dir": "...",
-        # "schedule": "continuous_train_and_eval",
+        "schedule": "continuous_train_and_eval",
         # "log_level": logging.INFO,
         # "resume": False,
         "experiment": {
@@ -66,7 +67,8 @@ conf = {
 }
 
 
-runner = runner.Runner(conf, **conf["runner"]["experiment"])
+runner = runner.create_runner(conf)
+# pprint.pprint(runner.hparams)
 runner.run_experiment_with_redundancy()
 
 # runner.reporters[0].setup(0)

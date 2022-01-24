@@ -1,7 +1,6 @@
 import functools as ft
 from typing import Dict, Tuple, Union
 
-import attr
 import jax
 import numpy as np
 import optax
@@ -18,25 +17,20 @@ def build_net(
     key: custom_pytrees.PRNGKeyWrap,
     call_: nn.Module = networks.mlp,
     **kwargs,
-) -> Tuple[nn.Module, FrozenDict]:
+) -> Tuple[nn.Module, FrozenDict, dict]:
+    args = locals()
     net = call_(output_dim=out_dim, **kwargs)
     params = net.init(next(key), jnp.ones(inp_shape))
-    return net, params
+    return net, params, {"call_": args["call_"], **args["kwargs"]}
 
 
 def build_optim(
     params: FrozenDict, call_: optax.GradientTransformation = optax.sgd, **kwargs
-) -> Tuple[optax.GradientTransformation, optax.OptState]:
+) -> Tuple[optax.GradientTransformation, optax.OptState, dict]:
+    args = locals()
     optim = call_(**kwargs)
     optim_state = optim.init(params)
-    return optim, optim_state
-
-
-def attr_fields_d(attr_class) -> dict:
-    return {
-        field.name: getattr(attr_class, field.name)
-        for field in attr.fields(type(attr_class))
-    }
+    return optim, optim_state, {"call_": args["call_"], **args["kwargs"]}
 
 
 def sample_replay_buffer(

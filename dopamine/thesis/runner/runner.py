@@ -23,9 +23,16 @@ from thesis.runner import reporter
 # -> seed = 0 + |redundancies already done|
 
 
-# TODO differentiate on schedule
 def create_runner(conf: dict):
-    return Runner(conf, **conf["runner"]["experiment"])
+    conf["runner"]["schedule"] = conf["runner"].get("schedule", "train")
+    schedule = conf["runner"]["schedule"]
+    if schedule == "train":
+        runner = TrainRunner
+    elif schedule == "continuous_train_and_eval":
+        runner = Runner
+    else:
+        raise ValueError(f"Unknown runner schedule: {schedule}")
+    return runner(conf, **conf["runner"]["experiment"])
 
 
 # TODO check if logger and iteration_statistics are necessary
@@ -40,7 +47,6 @@ class Runner:
     logging_file_prefix: str = "log"
     env: object = gym_lib.create_gym_environment
     agent: object = attr.ib(init=False)
-    base_dir: str = attr.ib(init=False)
     _checkpoint_dir: str = attr.ib(init=False)
     _checkpointer: checkpointer.Checkpointer = attr.ib(init=False)
     _logger: logger.Logger = attr.ib(init=False)
@@ -49,19 +55,22 @@ class Runner:
     reporters: List[reporter.Reporter] = attr.ib(factory=list)
     console: utils.ConsoleLogger = attr.ib(init=False)
 
-    # FIXME this way, defaults are never reported...
     @property
     def hparams(self) -> dict:
         r = deepcopy(self.conf)
-        r["env"].pop("call_", None)
-        for k in ["reporters", "base_dir", "resume"]:
+        for k in ["reporters", "base_dir"]:
             r["runner"].pop(k, None)
-        return jax.tree_map(lambda v: f"<{v.__name__}>" if callable(v) else v, r)
+        return jax.tree_map(
+            lambda v: f"<{v.__name__}>"
+            if callable(v)
+            else (str(v) if isinstance(v, np.dtype) else v),
+            r,
+        )
 
     def __attrs_post_init__(self):
-        self.base_dir = self.conf["runner"]["base_dir"]
         env_ = self.conf["env"].get("call_", self.env)
         self.env = env_(**utils.argfinder(env_, self.conf["env"]))
+        self.conf["env"]["clip_rewards"] = self.conf.get("clip_rewards", False)
         agent_ = self.conf["agent"]["call_"]
         self.agent = agent_(
             **utils.argfinder(
@@ -76,21 +85,35 @@ class Runner:
                 },
             )
         )
+        self.conf["runner"]["experiment"].update(
+            {
+                k: getattr(self, k)
+                for k in ["seed", "steps", "iterations", "redundancy"]
+            },
+        )
+        self.setup_reporters()
+        self.setup_checkpoints()
+
+    def setup_reporters(self):
         self.console = utils.ConsoleLogger(
             level=self.conf["runner"].get("log_level", logging.DEBUG), name=__name__
         )
-        self._checkpoint_dir = f"{self.base_dir}/checkpoints"
-        self._logger = logger.Logger(f"{self.base_dir}/logs")
-        if self.conf["runner"].get("resume", True):
-            self._initialize_checkpointer_and_maybe_resume()
-        # build reporters TODO better version with autobuild
         for rep in self.conf["runner"].get("reporters"):
             reporter_ = rep["call_"]
             self.reporters.append(reporter_(**utils.argfinder(reporter_, rep)))
 
+    def setup_checkpoints(self):
+        base_dir = self.conf["runner"]["base_dir"]
+        self._checkpoint_dir = f"{base_dir}/checkpoints"
+        self._logger = logger.Logger(f"{base_dir}/logs")
+        self.conf["runner"]["resume"] = self.conf["runner"].get("resume", True)
+        if self.conf["runner"]["resume"]:
+            self._initialize_checkpointer_and_maybe_resume()
+
     def next_seeds(self):
         self.env.environment.seed(self.seed)
         self.agent.rng = custom_pytrees.PRNGKeyWrap(self.seed)
+        self.console.debug(f"Env seed: {self.seed} Agent seed: {self.agent.rng}")
         self.seed += 1
 
     def _initialize_checkpointer_and_maybe_resume(self):
@@ -140,7 +163,7 @@ class Runner:
         while not done:
             action = self.agent.select_action(observation)
             observation, reward, done, _ = self.env.step(action)
-            if self.conf["env"].get("clip_rewards", False):
+            if self.conf["env"]["clip_rewards"]:
                 reward = np.clip(reward, -1, 1)
             episode_reward += reward
             episode_steps += 1
@@ -196,8 +219,9 @@ class Runner:
         stats = iteration_statistics.IterationStatistics()
         self.agent.eval_mode = False
         self.run_episodes(steps, "train", stats)
-        # self.agent.eval_mode = True
-        # self.run_episodes(steps, "eval", stats)
+        self.agent.eval_mode = True
+        self.console.debug("Eval round...")
+        self.run_episodes(steps, "eval", stats)
         return stats.data_lists
 
     def run_experiment(self, steps: int, iterations: int):
@@ -210,6 +234,7 @@ class Runner:
         self.curr_iteration = self.start_iteration
         while self.curr_iteration < iterations:
             stats = self.run_one_iteration(steps)
+            # TODO
             # self._log_experiment(self.curr_iteration, stats)
             # self._checkpoint_experiment(self.curr_iteration)
             self.curr_iteration += 1
@@ -240,3 +265,12 @@ class Runner:
             experiment_data["current_iteration"] = iteration
             experiment_data["logs"] = self._logger.data
             self._checkpointer.save_checkpoint(iteration, experiment_data)
+
+
+@attr.s(auto_attribs=True)
+class TrainRunner(Runner):
+    def run_one_iteration(self, steps: int) -> dict:
+        stats = iteration_statistics.IterationStatistics()
+        self.agent.eval_mode = False
+        self.run_episodes(steps, "train", stats)
+        return stats.data_lists
