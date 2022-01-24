@@ -1,5 +1,6 @@
 import functools as ft
 import inspect
+import logging
 import os
 import time
 from itertools import groupby
@@ -83,3 +84,19 @@ def add_aim_values(
 
 def argfinder(fn: callable, arg_coll: dict) -> dict:
     return {k: v for k, v in arg_coll.items() if k in inspect.signature(fn).parameters}
+
+
+class ConsoleLogger(logging.Logger):
+    level: int
+    name: str
+
+    def __init__(self, level: int = logging.DEBUG, name: str = None, *args, **kwargs):
+        super().__init__(name, *args, **kwargs)
+        ch = logging.StreamHandler()
+        formatter = logging.Formatter(
+            "%(asctime)s:%(levelname)s:%(name)s\n%(message)s",
+            datefmt="%m/%d/%Y %I:%M:%S",
+        )
+        ch.setFormatter(formatter)
+        self.addHandler(ch)
+        self.setLevel(level)

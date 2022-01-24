@@ -1,3 +1,5 @@
+import logging
+
 from dopamine.jax import losses
 
 # from thesis import exploration
@@ -44,6 +46,7 @@ conf = {
     "runner": {
         "base_dir": "...",
         # "schedule": "continuous_train_and_eval",
+        # "log_level": logging.INFO,
         # "resume": False,
         "experiment": {
             # "seed": 4,

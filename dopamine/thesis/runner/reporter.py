@@ -1,4 +1,3 @@
-import pprint
 from abc import ABC, abstractmethod
 from typing import Dict, Union
 
@@ -57,7 +56,6 @@ class AimReporter(Reporter):
                 [v / reports["loss_steps"] for v in losses.values()],
             )
         )
-        pprint.pprint(agg_reports)
         for tag, val in agg_reports:
             self.writer.track(
                 val,

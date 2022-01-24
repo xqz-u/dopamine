@@ -1,4 +1,5 @@
 import logging
+import pprint
 from copy import deepcopy
 from typing import List, Tuple
 
@@ -46,6 +47,7 @@ class Runner:
     start_iteration: int = 0
     curr_iteration: int = 0
     reporters: List[reporter.Reporter] = attr.ib(factory=list)
+    console: utils.ConsoleLogger = attr.ib(init=False)
 
     # FIXME this way, defaults are never reported...
     @property
@@ -73,6 +75,9 @@ class Runner:
                     },
                 },
             )
+        )
+        self.console = utils.ConsoleLogger(
+            level=self.conf["runner"].get("log_level", logging.DEBUG), name=__name__
         )
         self._checkpoint_dir = f"{self.base_dir}/checkpoints"
         self._logger = logger.Logger(f"{self.base_dir}/logs")
@@ -110,7 +115,7 @@ class Runner:
                     assert "current_iteration" in experiment_data
                     self._logger.data = experiment_data["logs"]
                     self.start_iteration = experiment_data["current_iteration"] + 1
-                logging.info(
+                self.console.info(
                     f"Reloaded checkpoint and will start from iteration {self.start_iteration}"
                 )
 
@@ -173,7 +178,9 @@ class Runner:
             tot_loss += episode_losses
         mean_return = tot_reward / n_episodes  # if num_episodes > 0 else 0.0
         stats.append({f"{mode}_mean_return": mean_return})
-        logging.info(f"Average undiscounted return per {mode} episode: {mean_return}")
+        self.console.debug(
+            f"#{self.curr_iteration} #ep {n_episodes} #steps {tot_steps} mean rwd {mean_return}"
+        )
         # NOTE if not enough steps are performed loss_tags is None and
         # loss_vals 0's
         metrics = {
@@ -187,7 +194,6 @@ class Runner:
 
     def run_one_iteration(self, steps: int) -> dict:
         stats = iteration_statistics.IterationStatistics()
-        logging.info(f"Starting iteration {self.curr_iteration}")
         self.agent.eval_mode = False
         self.run_episodes(steps, "train", stats)
         # self.agent.eval_mode = True
@@ -214,8 +220,9 @@ class Runner:
         steps = steps or self.steps
         iterations = iterations or self.iterations
         redundancy = redundancy or self.redundancy
+        self.console.info(pprint.pformat(self.hparams))
         for i in range(redundancy):
-            logging.info(f"{i}: Beginning training...")
+            self.console.debug(f"Start redundancy {i}")
             self.next_seeds()
             for reporter_ in self.reporters:
                 reporter_.setup(i, self.hparams)
