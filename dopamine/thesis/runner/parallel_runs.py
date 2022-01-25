@@ -9,6 +9,8 @@ def run_experiment(conf: dict):
     manager.run_experiment_with_redundancy()
 
 
+# FIXME problem arises with Aim, I believe race condition on table
+# creation...
 def run_multiple_configs(configs: List[dict], n_workers: int = None):
     n_configs, cores = len(configs), mp.cpu_count()
     n_workers = n_workers or (n_configs if n_configs < cores else cores - 1)

@@ -22,6 +22,8 @@ from thesis.runner import reporter
 # -> redundancy = og redundancy - |redundancies already done|
 # -> seed = 0 + |redundancies already done|
 
+# TODO possible seed problem, check in build_net that the given seed is used!!
+
 
 def create_runner(conf: dict):
     conf["runner"]["schedule"] = conf["runner"].get("schedule", "train")

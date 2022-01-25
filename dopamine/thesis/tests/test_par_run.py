@@ -45,7 +45,7 @@ conf_cartpole = {
     "agent": {
         "call_": dqv_max.DQVMaxAgent,
         "net_sync_freq": int(1e4),
-        "min_replay_history": int(1e5),
+        "min_replay_history": int(5e4),
         "observation_shape": (4, 1),
     },
     "env": {
@@ -106,7 +106,7 @@ conf_acrobot = {
     "agent": {
         "call_": dqv_max.DQVMaxAgent,
         "net_sync_freq": int(1e4),
-        "min_replay_history": int(1e5),
+        "min_replay_history": int(5e4),
         "observation_shape": (6, 1),
     },
     "env": {
@@ -140,6 +140,6 @@ conf_acrobot = {
     },
 }
 
-parallel_runs.run_multiple_configs([conf_cartpole, conf_acrobot], 2)
+# parallel_runs.run_multiple_configs([conf_cartpole, conf_acrobot], 2)
 # parallel_runs.run_experiment(conf_cartpole)
-# parallel_runs.run_experiment(conf_acrobot)
+parallel_runs.run_experiment(conf_acrobot)
