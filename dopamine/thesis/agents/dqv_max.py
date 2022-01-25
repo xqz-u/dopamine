@@ -72,9 +72,7 @@ class DQVMaxAgent(agent_base.Agent):
         )
 
     def train(self, replay_elts: Dict[str, np.ndarray]) -> jnp.DeviceArray:
-        return jnp.array(
-            (self.train_v(replay_elts), self.train_q(replay_elts))
-        ).reshape((2, 1))
+        return jnp.array((self.train_v(replay_elts), self.train_q(replay_elts)))
 
     def train_v(self, replay_elts: Dict[str, np.ndarray]) -> jnp.DeviceArray:
         v_td_targets = agent_utils.td_error(

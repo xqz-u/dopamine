@@ -37,9 +37,20 @@ class Agent(ABC):
 
     # TODO hash class and cache this
     @property
-    def losses_names(self) -> Optional[Tuple[str]]:
+    def losses_names(self) -> Tuple[str]:
         return tuple(
             f"{m}_{self.models[m].loss_metric.__name__}" for m in self.model_names
+        )
+
+    @property
+    def rl_mode(self) -> bool:
+        return (
+            "offline"
+            if isinstance(
+                self.memory,
+                offline_circular_replay_buffer.OfflineOutOfGraphReplayBuffer,
+            )
+            else "online"
         )
 
     def __attrs_post_init__(self):
@@ -129,23 +140,31 @@ class Agent(ABC):
         self.action = np.array(self.action)
         return self.action
 
-    # TODO split in learn/eval (training/evaluation)
     def learn(
         self, obs: np.ndarray, reward: float, done: bool
-    ) -> Optional[Tuple[Tuple[str], jnp.DeviceArray]]:
-        # TODO don't if offline!
-        if not self.eval_mode:
-            self.record_trajectory(reward, done)
-        losses = None
+    ) -> Optional[jnp.DeviceArray]:
         if done:
             self.state.fill(0)
-        elif not self.eval_mode:
-            if self.memory.add_count > self.min_replay_history:
-                if self.training_steps % self.train_freq == 0:
-                    losses = self.train(self.sample_memory())
-                if self.training_steps % self.net_sync_freq == 0:
-                    self.sync_weights()
-            self.training_steps += 1
+        if self.eval_mode:
+            return
+        return getattr(self, f"learn_{self.rl_mode}")(obs, reward, done)
+
+    def learn_online(
+        self, obs: np.ndarray, reward: float, done: bool
+    ) -> Optional[jnp.DeviceArray]:
+        self.record_trajectory(reward, done)
+        return self.fit(obs, reward, done)
+
+    def fit(
+        self, obs: np.ndarray, reward: float, done: bool
+    ) -> Optional[jnp.DeviceArray]:
+        losses = None
+        if self.memory.add_count > self.min_replay_history:
+            if self.training_steps % self.train_freq == 0:
+                losses = self.train(self.sample_memory()).reshape((len(self.models), 1))
+            if self.training_steps % self.net_sync_freq == 0:
+                self.sync_weights()
+        self.training_steps += 1
         return losses
 
     def bundle_and_checkpoint(self, checkpoint_dir: str, iteration_number: int) -> dict:
