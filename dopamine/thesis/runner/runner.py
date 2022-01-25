@@ -1,7 +1,7 @@
 import logging
 import pprint
 from copy import deepcopy
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 import attr
 import jax
@@ -35,7 +35,6 @@ def create_runner(conf: dict):
     return runner(conf, **conf["runner"]["experiment"])
 
 
-# TODO check if logger and iteration_statistics are necessary
 @attr.s(auto_attribs=True)
 class Runner:
     conf: dict
@@ -52,6 +51,7 @@ class Runner:
     _logger: logger.Logger = attr.ib(init=False)
     start_iteration: int = 0
     curr_iteration: int = 0
+    global_steps: int = 0
     reporters: List[reporter.Reporter] = attr.ib(factory=list)
     console: utils.ConsoleLogger = attr.ib(init=False)
 
@@ -68,9 +68,19 @@ class Runner:
         )
 
     def __attrs_post_init__(self):
+        self.conf["runner"]["experiment"].update(
+            {
+                k: getattr(self, k)
+                for k in ["seed", "steps", "iterations", "redundancy"]
+            },
+        )
         env_ = self.conf["env"].get("call_", self.env)
         self.env = env_(**utils.argfinder(env_, self.conf["env"]))
         self.conf["env"]["clip_rewards"] = self.conf.get("clip_rewards", False)
+        self.setup_reporters()
+        self.setup_checkpoints_resume()
+
+    def create_agent(self):
         agent_ = self.conf["agent"]["call_"]
         self.agent = agent_(
             **utils.argfinder(
@@ -85,14 +95,6 @@ class Runner:
                 },
             )
         )
-        self.conf["runner"]["experiment"].update(
-            {
-                k: getattr(self, k)
-                for k in ["seed", "steps", "iterations", "redundancy"]
-            },
-        )
-        self.setup_reporters()
-        self.setup_checkpoints_resume()
 
     def setup_reporters(self):
         self.console = utils.ConsoleLogger(
@@ -111,9 +113,9 @@ class Runner:
             self._initialize_checkpointer_and_maybe_resume()
 
     def next_seeds(self):
-        self.env.environment.seed(self.seed)
+        env_seed, *_ = self.env.environment.seed(self.seed)
         self.agent.rng = custom_pytrees.PRNGKeyWrap(self.seed)
-        self.console.debug(f"Env seed: {self.seed} Agent seed: {self.agent.rng}")
+        self.console.debug(f"Env seed: {env_seed} Agent rng: {self.agent.rng}")
         self.seed += 1
 
     def _initialize_checkpointer_and_maybe_resume(self):
@@ -145,17 +147,18 @@ class Runner:
 
     def report_metrics(
         self, run_mode: str, reports: dict, step=None, epoch=None, **kwargs
-    ):
-        for reporter_ in self.reporters:
+    ) -> List[Dict[str, List[Tuple[str, float]]]]:
+        return [
             reporter_(
                 reports,
                 step=step,
                 epoch=epoch,
                 context={"subset": run_mode, **kwargs},
             )
+            for reporter_ in self.reporters
+        ]
 
-    # NOTE no episode end for maximum episode duration (at least not
-    # explicit to agent)
+    # NOTE no explicit episode end for maximum episode duration
     def run_one_episode(
         self, mode: str, losses: jnp.DeviceArray
     ) -> Tuple[int, float, jnp.DeviceArray]:
@@ -200,11 +203,9 @@ class Runner:
             tot_steps += episode_steps
             n_episodes += 1
             tot_loss += episode_losses
-        mean_return = tot_reward / n_episodes  # if num_episodes > 0 else 0.0
+        self.global_steps += tot_steps
+        mean_return = tot_reward / n_episodes if n_episodes != 0 else 0.0
         stats.append({f"{mode}_mean_return": mean_return})
-        self.console.debug(
-            f"#{self.curr_iteration} #ep {n_episodes} #steps {tot_steps} mean rwd {mean_return}"
-        )
         # NOTE if not enough steps are performed loss_tags is None and
         # loss_vals 0's
         metrics = {
@@ -214,7 +215,12 @@ class Runner:
             "loss_steps": tot_steps - (loss_steps or 0),
             "losses": {k: float(v) for k, v in zip(self.agent.losses_names, tot_loss)},
         }
-        self.report_metrics(mode, metrics, step=self.curr_iteration)
+        reported = self.report_metrics(
+            mode, metrics, step=self.global_steps, epoch=self.curr_iteration
+        )
+        self.console.debug(
+            f"#{self.curr_iteration} #ep {n_episodes} #steps {tot_steps}\n{pprint.pformat(reported)}"
+        )
 
     def run_one_iteration(self, steps: int) -> dict:
         stats = iteration_statistics.IterationStatistics()
@@ -226,13 +232,10 @@ class Runner:
         return stats.data_lists
 
     def run_experiment(self, steps: int, iterations: int):
-        # FIXME
-        # if iterations <= self.start_iteration:
-        #     logging.warning(
-        #         f"iterations ({iterations}) < start_iteration({self.start_iteration})"
-        #     )
-        #     return
         self.curr_iteration = self.start_iteration
+        self.create_agent()
+        self.next_seeds()
+        self.console.info(pprint.pformat(self.hparams))
         while self.curr_iteration < iterations:
             stats = self.run_one_iteration(steps)
             self._log_experiment(self.curr_iteration, stats)
@@ -245,13 +248,12 @@ class Runner:
         steps = steps or self.steps
         iterations = iterations or self.iterations
         redundancy = redundancy or self.redundancy
-        self.console.info(pprint.pformat(self.hparams))
         for i in range(redundancy):
-            self.console.debug(f"Start redundancy {i}")
-            self.next_seeds()
             for reporter_ in self.reporters:
                 reporter_.setup(i, self.hparams)
+            self.console.debug(f"Start redundancy {i}")
             self.run_experiment(steps, iterations)
+            self.global_steps = 0
 
     def _log_experiment(self, iteration: int, statistics):
         self._logger[f"iteration_{iteration}"] = statistics

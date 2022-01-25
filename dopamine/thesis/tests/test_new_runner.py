@@ -7,6 +7,9 @@ from thesis import exploration
 from thesis.agents import dqv_max
 from thesis.runner import reporter, runner
 
+test_path = "/home/xqz-u/uni/thesis/resources/data/test_runner"
+# test_path = "/home/xqz-u/uni/dopamine/resources/data/test_runner"
+
 conf = {
     "nets": {
         "qnet": {
@@ -31,7 +34,7 @@ conf = {
     "agent": {
         "call_": dqv_max.DQVMaxAgent,
         "net_sync_freq": int(1e4),
-        "min_replay_history": int(5e4),
+        "min_replay_history": int(1e4),
         "observation_shape": (4, 1),
     },
     "env": {
@@ -45,21 +48,20 @@ conf = {
         # "stack_size": 1
     },
     "runner": {
-        "base_dir": "...",
-        "schedule": "continuous_train_and_eval",
+        "base_dir": test_path,
+        # "schedule": "continuous_train_and_eval",
         # "log_level": logging.INFO,
         # "resume": False,
         "experiment": {
             # "seed": 4,
             "steps": 2000,
-            "iterations": 100,
+            "iterations": 10,
             "redundancy": 3,
         },
         "reporters": [
             {
                 "call_": reporter.AimReporter,
-                # "repo": "/home/xqz-u/uni/thesis/resources/data/test_runner",
-                "repo": "/home/xqz-u/uni/dopamine/resources/data/test_runner",
+                "repo": test_path,
                 "experiment": "test_runner",
             }
         ],
@@ -69,7 +71,7 @@ conf = {
 
 runner = runner.create_runner(conf)
 # pprint.pprint(runner.hparams)
-# runner.run_experiment_with_redundancy()
+runner.run_experiment_with_redundancy()
 
 # runner.reporters[0].setup(0)
 

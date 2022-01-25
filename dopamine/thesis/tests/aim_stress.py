@@ -36,3 +36,16 @@ for run in res.query_metrics(query).iter_runs():
     el = run.dataframe()
     if el is not None:
         df.append(el)
+
+
+# aim_logger = aim.Run(repo=path, experiment="pippo")
+# aim_logger.track(2, "ciccio", step=2002, epoch=1)
+# aim_logger.track(4, "ciccio", step=2002, epoch=2)
+
+# repo = aim.Repo(path)
+# query = "metric.name == 'ciccio'"
+# df = []
+# for run in repo.query_metrics(query).iter_runs():
+#     el = run.dataframe()
+#     if el is not None:
+#         df.append(el)

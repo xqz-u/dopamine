@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict, Union
+from typing import Dict, List, Tuple, Union
 
 import aim
 import attr
@@ -20,7 +20,7 @@ class Reporter(ABC):
         step: int,
         epoch: int = None,
         context: dict = None,
-    ):
+    ) -> Dict[str, List[Tuple[str, float]]]:
         pass
 
 
@@ -34,8 +34,8 @@ class AimReporter(Reporter):
     writer: aim.Run = attr.ib(init=False)
 
     def setup(self, iteration: int, params: dict):
-        self.experiment = f"{self.experiment}_{iteration}"
-        self.writer = aim.Run(repo=self.repo, experiment=self.experiment)
+        exp_name = f"{self.experiment}_{iteration}"
+        self.writer = aim.Run(repo=self.repo, experiment=exp_name)
         self.writer["hparams"] = params
 
     def __call__(
@@ -44,7 +44,7 @@ class AimReporter(Reporter):
         step: int,
         epoch: int = None,
         context: dict = None,
-    ):
+    ) -> Dict[str, List[Tuple[str, float]]]:
         if step % self.writing_freq:
             return
         losses = reports["losses"]
@@ -64,3 +64,4 @@ class AimReporter(Reporter):
                 epoch=epoch,
                 context=context,
             )
+        return {"aim_reports": agg_reports}
