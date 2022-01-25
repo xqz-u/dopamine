@@ -63,7 +63,7 @@ class Runner:
         return jax.tree_map(
             lambda v: f"<{v.__name__}>"
             if callable(v)
-            else (str(v) if isinstance(v, np.dtype) else v),
+            else (str(v) if not utils.is_builtin(v) else v),
             r,
         )
 
@@ -92,7 +92,7 @@ class Runner:
             },
         )
         self.setup_reporters()
-        self.setup_checkpoints()
+        self.setup_checkpoints_resume()
 
     def setup_reporters(self):
         self.console = utils.ConsoleLogger(
@@ -102,7 +102,7 @@ class Runner:
             reporter_ = rep["call_"]
             self.reporters.append(reporter_(**utils.argfinder(reporter_, rep)))
 
-    def setup_checkpoints(self):
+    def setup_checkpoints_resume(self):
         base_dir = self.conf["runner"]["base_dir"]
         self._checkpoint_dir = f"{base_dir}/checkpoints"
         self._logger = logger.Logger(f"{base_dir}/logs")
@@ -126,21 +126,22 @@ class Runner:
         latest_checkpoint_version = checkpointer.get_latest_checkpoint_number(
             self._checkpoint_dir
         )
-        if latest_checkpoint_version >= 0:
-            experiment_data = self._checkpointer.load_checkpoint(
-                latest_checkpoint_version
-            )
-            if self.agent.unbundle(
-                self._checkpoint_dir, latest_checkpoint_version, experiment_data
-            ):
-                if experiment_data is not None:
-                    assert "logs" in experiment_data
-                    assert "current_iteration" in experiment_data
-                    self._logger.data = experiment_data["logs"]
-                    self.start_iteration = experiment_data["current_iteration"] + 1
-                self.console.info(
-                    f"Reloaded checkpoint and will start from iteration {self.start_iteration}"
-                )
+        if latest_checkpoint_version < 0:
+            return
+        experiment_data = self._checkpointer.load_checkpoint(latest_checkpoint_version)
+        if not self.agent.unbundle(
+            self._checkpoint_dir, latest_checkpoint_version, experiment_data
+        ):
+            return
+        self.console.info(
+            f"Reloaded checkpoint and will start from iteration {self.start_iteration}"
+        )
+        if experiment_data is None:
+            return
+        assert "logs" in experiment_data
+        assert "current_iteration" in experiment_data
+        self._logger.data = experiment_data["logs"]
+        self.start_iteration = experiment_data["current_iteration"] + 1
 
     def report_metrics(
         self, run_mode: str, reports: dict, step=None, epoch=None, **kwargs
@@ -234,9 +235,8 @@ class Runner:
         self.curr_iteration = self.start_iteration
         while self.curr_iteration < iterations:
             stats = self.run_one_iteration(steps)
-            # TODO
-            # self._log_experiment(self.curr_iteration, stats)
-            # self._checkpoint_experiment(self.curr_iteration)
+            self._log_experiment(self.curr_iteration, stats)
+            self._checkpoint_experiment(self.curr_iteration)
             self.curr_iteration += 1
 
     def run_experiment_with_redundancy(

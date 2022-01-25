@@ -148,6 +148,37 @@ class Agent(ABC):
             self.training_steps += 1
         return losses
 
+    def bundle_and_checkpoint(self, checkpoint_dir: str, iteration_number: int) -> dict:
+        if not tf.io.gfile.exists(checkpoint_dir):
+            return
+        # Checkpoint the out-of-graph replay buffer.
+        self.memory.save(checkpoint_dir, iteration_number)
+        return {
+            "state": self.state,
+            "training_steps": self.training_steps,
+            "models": {
+                model: self.models[model].checkpointable_elements
+                for model in self.model_names
+            },
+        }
+
+    def unbundle(self, checkpoint_dir, iteration_number, bundle_dictionary) -> bool:
+        try:
+            self.memory.load(checkpoint_dir, iteration_number)
+        except tf.errors.NotFoundError:
+            pass
+            # logging.warning("Unable to reload replay buffer!")
+        if bundle_dictionary is None:
+            # logging.warning("Unable to reload the agent's parameters!")
+            return False
+        self.state = bundle_dictionary["state"]
+        self.training_steps = bundle_dictionary["training_steps"]
+        for model_name, model in bundle_dictionary["models"].items():
+            for field_name, val in model.items():
+                assert model_name in self.model_names
+                setattr(self.models[model_name], field_name, val)
+        return True
+
     @abstractmethod
     def select_action(self, obs: np.ndarray) -> np.ndarray:
         pass
@@ -163,56 +194,3 @@ class Agent(ABC):
     @abstractmethod
     def sync_weights(self):
         pass
-
-    @abstractmethod
-    def bundle_and_checkpoint(self, checkpoint_dir: str, iteration_number: int) -> dict:
-        if not tf.io.gfile.exists(checkpoint_dir):
-            return
-        # Checkpoint the out-of-graph replay buffer.
-        self.memory.save(checkpoint_dir, iteration_number)
-        return {"state": self.state, "training_steps": self.training_steps}
-
-    @abstractmethod
-    def unbundle(self, checkpoint_dir, iteration_number, bundle_dictionary):
-        pass
-        # try:
-        #     # self._replay.load() will throw a NotFoundError if it does not find all
-        #     # the necessary files.
-        #     self._replay.load(checkpoint_dir, iteration_number)
-        # except tf.errors.NotFoundError:
-        #     if not self.allow_partial_reload:
-        #         # If we don't allow partial reloads, we will return False.
-        #         return False
-        #     logging.warning("Unable to reload replay buffer!")
-        # if bundle_dictionary is not None:
-        #     self.state = bundle_dictionary["state"]
-        #     self.training_steps = bundle_dictionary["training_steps"]
-        #     if isinstance(bundle_dictionary["online_params"], core.FrozenDict):
-        #         self.online_params = bundle_dictionary["online_params"]
-        #         self.target_network_params = bundle_dictionary["target_params"]
-        #     else:  # Load pre-linen checkpoint.
-        #         self.online_params = core.FrozenDict(
-        #             {
-        #                 "params": checkpoints.convert_pre_linen(
-        #                     bundle_dictionary["online_params"]
-        #                 ).unfreeze()
-        #             }
-        #         )
-        #         self.target_network_params = core.FrozenDict(
-        #             {
-        #                 "params": checkpoints.convert_pre_linen(
-        #                     bundle_dictionary["target_params"]
-        #                 ).unfreeze()
-        #             }
-        #         )
-        #     # We recreate the optimizer with the new online weights.
-        #     self.optimizer = create_optimizer(self._optimizer_name)
-        #     if "optimizer_state" in bundle_dictionary:
-        #         self.optimizer_state = bundle_dictionary["optimizer_state"]
-        #     else:
-        #         self.optimizer_state = self.optimizer.init(self.online_params)
-        # elif not self.allow_partial_reload:
-        #     return False
-        # else:
-        #     logging.warning("Unable to reload the agent's parameters!")
-        # return True

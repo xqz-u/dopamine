@@ -69,7 +69,7 @@ conf = {
 
 runner = runner.create_runner(conf)
 # pprint.pprint(runner.hparams)
-runner.run_experiment_with_redundancy()
+# runner.run_experiment_with_redundancy()
 
 # runner.reporters[0].setup(0)
 

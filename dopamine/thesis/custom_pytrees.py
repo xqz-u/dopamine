@@ -34,6 +34,10 @@ class NetworkOptimWrap:
     def loss(self):
         return self.loss_metric
 
+    @property
+    def checkpointable_elements(self) -> dict:
+        return {"params": self.params, "optim_state": self.optim_state}
+
 
 # NOTE if using a dataclass, this happens:
 # TypeError: __init__() takes from 1 to 4 positional arguments but 5 were given

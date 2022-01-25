@@ -114,27 +114,3 @@ class DQVMaxAgent(agent_base.Agent):
 
     def sync_weights(self):
         self.models["qnet"].params["target"] = self.models["qnet"].params["online"]
-
-    # TODO modify unbundle and what else the runner uses to allow for
-    # nested dictionaries, also because I do not think the unbundle
-    # agent_base method can deal with them correctly rn
-    def bundle_and_checkpoint(self, checkpoint_dir: str, iteration_number: int) -> dict:
-        q_params = self.models["qnet"].params
-        q_dict = {
-            "q_params_online": q_params["online"],
-            "q_params_target": q_params["target"],
-            "q_opt_state": self.models["qnet"].opt_state,
-        }
-        v_dict = {
-            "v_params": self.models["vnet"].params,
-            "v_opt_state": self.models["vnet"].opt_state,
-        }
-        return {
-            **q_dict,
-            **v_dict,
-            **super().bundle_and_checkpoint(checkpoint_dir, iteration_number),
-        }
-
-    def unbundle(self):
-        # do something here
-        pass
