@@ -12,6 +12,10 @@ import gin
 from thesis import config
 
 
+def is_builtin(elt) -> bool:
+    return elt.__class__.__module__ == "builtins"
+
+
 # https://stackoverflow.com/questions/3844801/check-if-all-elements-in-a-list-are-identical
 def all_equal(iterable):
     g = groupby(iterable)
