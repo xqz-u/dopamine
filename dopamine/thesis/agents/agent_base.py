@@ -98,7 +98,7 @@ class Agent(ABC):
             model_spec = net_conf[net_name].get("model", {})
             optim_spec = net_conf[net_name].get("optim", {})
             net, params, net_conf[net_name]["model"] = agent_utils.build_net(
-                out_dim, self.observation_shape, self.rng, **model_spec
+                out_dim, self.state, self.rng, **model_spec
             )
             optim, optim_state, net_conf[net_name]["optim"] = agent_utils.build_optim(
                 params, **optim_spec

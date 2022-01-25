@@ -13,14 +13,14 @@ from thesis import custom_pytrees, networks, offline_circular_replay_buffer
 
 def build_net(
     out_dim: int,
-    inp_shape: Tuple[int],
+    example_inp: jnp.DeviceArray,
     key: custom_pytrees.PRNGKeyWrap,
     call_: nn.Module = networks.mlp,
     **kwargs,
 ) -> Tuple[nn.Module, FrozenDict, dict]:
     args = locals()
     net = call_(output_dim=out_dim, **kwargs)
-    params = net.init(next(key), jnp.ones(inp_shape))
+    params = net.init(next(key), example_inp)
     return net, params, {"call_": args["call_"], **args["kwargs"]}
 
 
