@@ -35,7 +35,7 @@ class Agent(ABC):
     training_steps: int = 0
     _observation: np.ndarray = None
 
-    # TODO hash class and cache this
+    # TODO hash args and cache this
     @property
     def losses_names(self) -> Tuple[str]:
         return tuple(
