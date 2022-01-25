@@ -1,6 +1,7 @@
 from typing import Sequence, Tuple, Union
 
 from flax import linen as nn
+
 from jax import numpy as jnp
 
 
@@ -40,6 +41,7 @@ class DensePreproc(nn.Dense):
         return super().__call__(x)
 
 
+# TODO handle preprocessing properly, with no need to have 2 Dense...
 def mlp(
     output_dim: int,
     hiddens: Sequence[int] = (64, 64),
@@ -48,17 +50,17 @@ def mlp(
 ) -> Sequential:
     return Sequential(
         [
+            DensePreproc(features=hiddens[0], **dense_kwargs),
             *[
                 v
                 for tup in zip(
                     [
-                        DensePreproc(features=out_feat, **dense_kwargs)
-                        for out_feat in hiddens
+                        nn.Dense(features=out_feat)
+                        for out_feat in hiddens[1:] + (output_dim,)
                     ],
                     [activation_fn] * len(hiddens),
                 )
                 for v in tup
             ],
-            DensePreproc(features=output_dim, **dense_kwargs),
         ]
     )
