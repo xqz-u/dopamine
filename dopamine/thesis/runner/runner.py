@@ -85,17 +85,10 @@ class Runner:
     def create_agent(self):
         agent_ = self.conf["agent"]["call_"]
         self.agent = agent_(
-            **utils.argfinder(
-                agent_,
-                {
-                    **self.conf["agent"],
-                    **{
-                        "conf": self.conf,
-                        "num_actions": self.env.action_space.n,
-                        "observation_dtype": self.env.observation_space.dtype,
-                    },
-                },
-            )
+            conf=self.conf,
+            num_actions=self.env.action_space.n,
+            observation_dtype=self.env.observation_space.dtype,
+            **utils.argfinder(agent_, {**self.conf["agent"], **self.conf["memory"]}),
         )
 
     def setup_reporters(self):
@@ -221,7 +214,7 @@ class Runner:
             mode, metrics, step=self.global_steps, epoch=self.curr_iteration
         )
         self.console.debug(
-            f"#{self.curr_iteration} #ep {n_episodes} #steps {tot_steps}\n{pprint.pformat(reported)}"
+            f"#{self.curr_iteration} #ep {n_episodes} #steps {tot_steps} #global {self.global_steps}\n{pprint.pformat(reported)}"
         )
 
     def run_one_iteration(self, steps: int) -> dict:
