@@ -86,13 +86,21 @@ class Runner:
 
     def create_agent(self):
         agent_ = self.conf["agent"]["call_"]
-        self.agent = agent_(
-            conf=self.conf,
-            num_actions=self.env.action_space.n,
-            observation_shape=self.conf["env"]["observation_shape"],
-            observation_dtype=self.env.observation_space.dtype,
+        # After a first run, conf is enriched with missing defaults
+        # for hparams reporting; some keys get added e.g.
+        # conf["memory"]["observation_shape"], which conflict with args
+        # passed as keywords. Merging the dictionaries like this
+        # eliminates duplicates, and it is safe because same keys share
+        # same values.
+        agent_args = {
+            "conf": self.conf,
+            "num_actions": self.env.action_space.n,
+            "observation_shape": self.conf["env"]["observation_shape"],
+            "observation_dtype": self.env.observation_space.dtype,
+            "rng": custom_pytrees.PRNGKeyWrap(self.seed),
             **utils.argfinder(agent_, {**self.conf["agent"], **self.conf["memory"]}),
-        )
+        }
+        self.agent = agent_(**agent_args)
 
     def setup_reporters(self):
         self.console = utils.ConsoleLogger(
@@ -110,11 +118,10 @@ class Runner:
         if self.conf["runner"]["resume"]:
             self._initialize_checkpointer_and_maybe_resume()
 
-    def next_seeds(self):
-        env_seed, *_ = self.env.environment.seed(self.seed)
-        self.agent.rng = custom_pytrees.PRNGKeyWrap(self.seed)
-        self.console.debug(f"Env seed: {env_seed} Agent rng: {self.agent.rng}")
+    def next_seeds(self) -> List[int]:
+        env_seed = self.env.environment.seed(self.seed)
         self.seed += 1
+        return env_seed
 
     def _initialize_checkpointer_and_maybe_resume(self):
         self._checkpointer = checkpointer.Checkpointer(
@@ -232,13 +239,14 @@ class Runner:
     def run_experiment(self, steps: int, iterations: int):
         self.curr_iteration = self.start_iteration
         self.create_agent()
-        self.next_seeds()
+        env_seed = self.next_seeds()
+        self.console.debug(f"Env seeds: {env_seed} Agent rng: {self.agent.rng}")
         self.console.info(pprint.pformat(self.hparams))
-        while self.curr_iteration < iterations:
-            stats = self.run_one_iteration(steps)
-            self._log_experiment(self.curr_iteration, stats)
-            self._checkpoint_experiment(self.curr_iteration)
-            self.curr_iteration += 1
+        # while self.curr_iteration < iterations:
+        #     stats = self.run_one_iteration(steps)
+        #     self._log_experiment(self.curr_iteration, stats)
+        #     self._checkpoint_experiment(self.curr_iteration)
+        #     self.curr_iteration += 1
 
     def run_experiment_with_redundancy(
         self, steps: int = None, iterations: int = None, redundancy: int = None
