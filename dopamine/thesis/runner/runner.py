@@ -62,6 +62,7 @@ class Runner:
         r = deepcopy(self.conf)
         for k in ["reporters", "base_dir"]:
             r["runner"].pop(k, None)
+        r["env"].pop("preproc", None)
         return jax.tree_map(
             lambda v: f"<{v.__name__}>"
             if callable(v)
@@ -163,7 +164,7 @@ class Runner:
         while not done:
             action = self.agent.select_action(observation)
             observation, reward, done, _ = self.env.step(action)
-            done = done and episode_steps < self.env.environment.spec.max_episode_steps
+            done = done or episode_steps >= self.env.environment.spec.max_episode_steps
             if self.conf["env"]["clip_rewards"]:
                 reward = np.clip(reward, -1, 1)
             episode_reward += reward
