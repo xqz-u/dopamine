@@ -49,12 +49,13 @@ def train_v_net(
     return net_optim, loss
 
 
-# TODO agnostic on networks names? and then set them as derived class
-# @property es? or just do the latter without the first?
 @attr.s(auto_attribs=True)
 class DQVMaxAgent(agent_base.Agent):
+    @property
+    def model_names(self) -> Tuple[str]:
+        return ("qnet", "vnet")
+
     def build_networks_and_optimizers(self):
-        self.model_names = ["qnet", "vnet"]
         out_dims = [self.num_actions, 1]
         self._build_networks_and_optimizers(self.model_names, out_dims)
         # initialize target q network weights with online ones

@@ -13,7 +13,7 @@ from dopamine.discrete_domains import (
     logger,
 )
 from jax import numpy as jnp
-from thesis import custom_pytrees, utils
+from thesis import constants, custom_pytrees, utils
 from thesis.runner import reporter
 
 # NOTE if you want to have start/stop/resume functionality when running
@@ -78,6 +78,7 @@ class Runner:
         )
         env_ = self.conf["env"].get("call_", self.env)
         self.env = env_(**utils.argfinder(env_, self.conf["env"]))
+        self.conf["env"].update(constants.env_info(**self.conf["env"]))
         self.conf["env"]["clip_rewards"] = self.conf.get("clip_rewards", False)
         self.setup_reporters()
         self.setup_checkpoints_resume()
@@ -87,6 +88,7 @@ class Runner:
         self.agent = agent_(
             conf=self.conf,
             num_actions=self.env.action_space.n,
+            observation_shape=self.conf["env"]["observation_shape"],
             observation_dtype=self.env.observation_space.dtype,
             **utils.argfinder(agent_, {**self.conf["agent"], **self.conf["memory"]}),
         )
@@ -153,7 +155,6 @@ class Runner:
             for reporter_ in self.reporters
         ]
 
-    # NOTE no explicit episode end for maximum episode duration
     def run_one_episode(
         self, mode: str, losses: jnp.DeviceArray
     ) -> Tuple[int, float, jnp.DeviceArray]:
@@ -162,6 +163,7 @@ class Runner:
         while not done:
             action = self.agent.select_action(observation)
             observation, reward, done, _ = self.env.step(action)
+            done = done and episode_steps < self.env.environment.spec.max_episode_steps
             if self.conf["env"]["clip_rewards"]:
                 reward = np.clip(reward, -1, 1)
             episode_reward += reward

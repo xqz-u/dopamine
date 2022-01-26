@@ -27,7 +27,6 @@ class Agent(ABC):
     )
     act_sel_fn: callable = exploration.egreedy
     eval_mode: bool = False
-    model_names: Tuple[str] = attr.ib(factory=list)
     models: Dict[str, custom_pytrees.NetworkOptimWrap] = attr.ib(factory=dict)
     action: np.ndarray = None
     state: np.ndarray = None
@@ -86,7 +85,10 @@ class Agent(ABC):
     ):
         net_conf = self.conf["nets"]
         for net_name, out_dim in zip(net_names, out_dims):
-            model_spec = net_conf[net_name].get("model", {})
+            model_spec = {
+                **net_conf[net_name].get("model", {}),
+                **self.conf["env"].get("preproc", {}),
+            }
             optim_spec = net_conf[net_name].get("optim", {})
             net, params, net_conf[net_name]["model"] = agent_utils.build_net(
                 out_dim, self.state, self.rng, **model_spec
@@ -186,6 +188,11 @@ class Agent(ABC):
                 assert model_name in self.model_names
                 setattr(self.models[model_name], field_name, val)
         return True
+
+    @property
+    @abstractmethod
+    def model_names(self) -> Sequence[str]:
+        pass
 
     @abstractmethod
     def select_action(self, obs: np.ndarray) -> np.ndarray:
