@@ -10,7 +10,7 @@ class Reporter(ABC):
     writing_freq: int = attr.ib(default=1, kw_only=True)
 
     @abstractmethod
-    def setup(self, iteration: int):
+    def setup(self, params: dict):
         pass
 
     @abstractmethod
@@ -32,11 +32,13 @@ class AimReporter(Reporter):
     repo: str
     experiment: str
     writer: aim.Run = attr.ib(init=False)
+    iteration: int = 0
 
-    def setup(self, iteration: int, params: dict):
-        exp_name = f"{self.experiment}_{iteration}"
+    def setup(self, params: dict):
+        exp_name = f"{self.experiment}_{self.iteration}"
         self.writer = aim.Run(repo=self.repo, experiment=exp_name)
         self.writer["hparams"] = params
+        self.iteration += 1
 
     def __call__(
         self,

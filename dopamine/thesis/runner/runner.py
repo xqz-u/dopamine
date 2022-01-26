@@ -22,8 +22,6 @@ from thesis.runner import reporter
 # -> redundancy = og redundancy - |redundancies already done|
 # -> seed = 0 + |redundancies already done|
 
-# TODO possible seed problem, check in build_net that the given seed is used!!
-
 
 def create_runner(conf: dict):
     conf["runner"]["schedule"] = conf["runner"].get("schedule", "train")
@@ -241,12 +239,14 @@ class Runner:
         self.create_agent()
         env_seed = self.next_seeds()
         self.console.debug(f"Env seeds: {env_seed} Agent rng: {self.agent.rng}")
+        for reporter_ in self.reporters:
+            reporter_.setup(self.hparams)
         self.console.info(pprint.pformat(self.hparams))
-        # while self.curr_iteration < iterations:
-        #     stats = self.run_one_iteration(steps)
-        #     self._log_experiment(self.curr_iteration, stats)
-        #     self._checkpoint_experiment(self.curr_iteration)
-        #     self.curr_iteration += 1
+        while self.curr_iteration < iterations:
+            stats = self.run_one_iteration(steps)
+            self._log_experiment(self.curr_iteration, stats)
+            self._checkpoint_experiment(self.curr_iteration)
+            self.curr_iteration += 1
 
     def run_experiment_with_redundancy(
         self, steps: int = None, iterations: int = None, redundancy: int = None
@@ -255,8 +255,6 @@ class Runner:
         iterations = iterations or self.iterations
         redundancy = redundancy or self.redundancy
         for i in range(redundancy):
-            for reporter_ in self.reporters:
-                reporter_.setup(i, self.hparams)
             self.console.debug(f"Start redundancy {i}")
             self.run_experiment(steps, iterations)
             self.global_steps = 0
