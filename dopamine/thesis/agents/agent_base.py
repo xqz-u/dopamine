@@ -34,23 +34,13 @@ class Agent(ABC):
     rng: custom_pytrees.PRNGKeyWrap = None
     training_steps: int = 0
     _observation: np.ndarray = None
+    rl_mode: str = "online"
 
     # TODO hash args and cache this
     @property
     def losses_names(self) -> Tuple[str]:
         return tuple(
             f"{m}_{self.models[m].loss_metric.__name__}" for m in self.model_names
-        )
-
-    @property
-    def rl_mode(self) -> bool:
-        return (
-            "offline"
-            if isinstance(
-                self.memory,
-                offline_circular_replay_buffer.OfflineOutOfGraphReplayBuffer,
-            )
-            else "online"
         )
 
     def __attrs_post_init__(self):
@@ -86,6 +76,7 @@ class Agent(ABC):
         self.memory = memory_class(**args)
         if memory_class is offline_circular_replay_buffer.OfflineOutOfGraphReplayBuffer:
             self.memory.load_buffers()
+            self.rl_mode = "offline"
 
     # NOTE should the static args to loss_metric be partialled?
     # consider that it can be done before passing the function in the
@@ -130,12 +121,10 @@ class Agent(ABC):
         self, obs: np.ndarray, net: nn.Module, params: FrozenDict
     ) -> np.ndarray:
         self.update_state(obs)
-        self.rng, self.action = np.array(
-            self.act_sel_fn(
-                **self.select_args(self.act_sel_fn, "exploration"),
-                net=net,
-                params=params,
-            )
+        self.rng, self.action = self.act_sel_fn(
+            **self.select_args(self.act_sel_fn, "exploration"),
+            net=net,
+            params=params,
         )
         self.action = np.array(self.action)
         return self.action
@@ -153,9 +142,9 @@ class Agent(ABC):
         self, obs: np.ndarray, reward: float, done: bool
     ) -> Optional[jnp.DeviceArray]:
         self.record_trajectory(reward, done)
-        return self.fit(obs, reward, done)
+        return self.learn_offline(obs, reward, done)
 
-    def fit(
+    def learn_offline(
         self, obs: np.ndarray, reward: float, done: bool
     ) -> Optional[jnp.DeviceArray]:
         losses = None
