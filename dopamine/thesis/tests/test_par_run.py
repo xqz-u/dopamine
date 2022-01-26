@@ -6,7 +6,8 @@ from thesis import exploration
 from thesis.agents import dqv_max
 from thesis.runner import parallel_runs, reporter
 
-repo = "/home/xqz-u/uni/thesis/resources/data/test_par_runner"
+# repo = "/home/xqz-u/uni/thesis/resources/data/test_par_runner_1"
+repo = "/home/xqz-u/dopamine/thesis/resources/data/test_par_runner_1"
 cartpole_path = "CartPole-DQVMax"
 acrobot_path = "Acrobot-DQVMax"
 cartpole_preprocs = {
@@ -61,7 +62,7 @@ conf_cartpole = {
     "runner": {
         "base_dir": f"{repo}/{cartpole_path}",
         # "schedule": "continuous_train_and_eval",
-        "log_level": logging.INFO,
+        # "log_level": logging.INFO,
         # "resume": False,
         "experiment": {
             "seed": 4,
@@ -142,4 +143,4 @@ conf_acrobot = {
 
 # parallel_runs.run_multiple_configs([conf_cartpole, conf_acrobot], 2)
 # parallel_runs.run_experiment(conf_cartpole)
-parallel_runs.run_experiment(conf_acrobot)
+# parallel_runs.run_experiment(conf_acrobot)
