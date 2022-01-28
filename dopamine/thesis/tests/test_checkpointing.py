@@ -3,7 +3,7 @@ from thesis.agents import dqv_max
 from thesis.runner import reporter, runner
 
 repo = "/home/xqz-u/uni/dopamine/resources/data/test_checkpointing_2"
-# cartpole_path = "CartPole-DQVMax"
+cartpole_path = "CartPole-DQVMax"
 
 conf_cartpole = {
     "nets": {
@@ -36,21 +36,15 @@ conf_cartpole = {
             "iterations": 100,
             "redundancy": 3,
         },
-        # "reporters": [
-        #     {
-        #         "call_": reporter.AimReporter,
-        #         "repo": repo,
-        #         "experiment": cartpole_path,
-        #     }
-        # ],
+        "reporters": [
+            {
+                "call_": reporter.AimReporter,
+                "repo": repo,
+                "experiment": cartpole_path,
+            }
+        ],
     },
 }
 
 run = runner.create_runner(conf_cartpole)
 run.run_experiment_with_redundancy()
-
-
-# from thesis.runner import checkpointing
-
-# ck = checkpointing.Checkpointer(repo)
-# agent_data = ck.load_checkpoint(*checkpointing.get_latest_ckpt_number(ck.ckpt_dir))

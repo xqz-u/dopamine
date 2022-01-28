@@ -10,7 +10,7 @@ class Reporter(ABC):
     writing_freq: int = attr.ib(default=1, kw_only=True)
 
     @abstractmethod
-    def setup(self, params: dict):
+    def setup(self, params: dict, run_number: int):
         pass
 
     @abstractmethod
@@ -24,21 +24,17 @@ class Reporter(ABC):
         pass
 
 
-# NOTE it would be ideal to extend aim.Run too, but inheritance will not
-# play nicely since it is not attr'd (you can still attr a class you do
-# not own, but need to specify the fields which should be attr.ib'd)
+# NOTE giving a Run a hash allows to resume it
 @attr.s(auto_attribs=True)
 class AimReporter(Reporter):
     repo: str
     experiment: str
     writer: aim.Run = attr.ib(init=False)
-    iteration: int = 0
 
-    def setup(self, params: dict):
-        exp_name = f"{self.experiment}_{self.iteration}"
-        self.writer = aim.Run(repo=self.repo, experiment=exp_name)
+    def setup(self, params: dict, run_number: int):
+        exp_name = f"{self.experiment}_{run_number}"
+        self.writer = aim.Run(run_hash=exp_name, repo=self.repo, experiment=exp_name)
         self.writer["hparams"] = params
-        self.iteration += 1
 
     def __call__(
         self,

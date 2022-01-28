@@ -67,8 +67,9 @@ class Runner:
         self.conf["env"].update(constants.env_info(**self.conf["env"]))
         self.conf["env"]["clip_rewards"] = self.conf.get("clip_rewards", False)
         self.setup_reporters()
-        ckpt_dir = os.path.join(self.conf["runner"]["base_dir"], "checkpoints")
-        self._checkpointer = patcher.Checkpointer(ckpt_dir)
+        self._checkpointer = patcher.Checkpointer(
+            os.path.join(self.conf["runner"]["base_dir"], "checkpoints")
+        )
         if not self.try_resuming():
             self.create_agent()
 
@@ -93,16 +94,15 @@ class Runner:
         }
         self.agent = agent_(**agent_args)
 
-    # TODO take restarting into account
     # TODO move self.console out of class? should still initilize name
     # and level
     def setup_reporters(self):
         self.console = utils.ConsoleLogger(
             level=self.conf["runner"].get("log_level", logging.DEBUG), name=__name__
         )
-        # for rep in self.conf["runner"].get("reporters"):
-        #     reporter_ = rep["call_"]
-        #     self.reporters.append(reporter_(**utils.argfinder(reporter_, rep)))
+        for rep in self.conf["runner"].get("reporters"):
+            reporter_ = rep["call_"]
+            self.reporters.append(reporter_(**utils.argfinder(reporter_, rep)))
 
     def try_resuming(self) -> bool:
         # Check if checkpoint exists. Note that the existence of
@@ -221,9 +221,10 @@ class Runner:
         env_seed = self.next_seeds()
         self.console.debug(f"Env seeds: {env_seed} Agent rng: {self.agent.rng}")
         for reporter_ in self.reporters:
-            reporter_.setup(self.hparams)
+            reporter_.setup(self.hparams, self.curr_redundancy)
         self.console.info(pprint.pformat(self.hparams))
         while self.curr_iteration < self.iterations:
+            self.run_one_iteration()
             self._checkpoint_experiment()
             self.curr_iteration += 1
 
