@@ -2,7 +2,7 @@ from dopamine.jax import losses
 from thesis.agents import dqv_max
 from thesis.runner import reporter, runner
 
-repo = "/home/xqz-u/uni/dopamine/resources/data/test_checkpointing"
+repo = "/home/xqz-u/uni/dopamine/resources/data/test_checkpointing_2"
 # cartpole_path = "CartPole-DQVMax"
 
 conf_cartpole = {

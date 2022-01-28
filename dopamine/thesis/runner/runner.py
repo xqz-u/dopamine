@@ -1,4 +1,5 @@
 import logging
+import os
 import pprint
 from copy import deepcopy
 from typing import Dict, List, Tuple
@@ -6,11 +7,10 @@ from typing import Dict, List, Tuple
 import attr
 import jax
 import numpy as np
-from dopamine.discrete_domains import gym_lib  # checkpointer,; logger,
-from dopamine.discrete_domains import iteration_statistics
+from dopamine.discrete_domains import gym_lib
 from jax import numpy as jnp
-from thesis import constants, custom_pytrees, utils
-from thesis.runner import checkpointing, reporter
+from thesis import constants, custom_pytrees, patcher, utils
+from thesis.runner import reporter
 
 
 def create_runner(conf: dict):
@@ -39,8 +39,7 @@ class Runner:
     global_steps: int = attr.ib(init=False, default=0)
     reporters: List[reporter.Reporter] = attr.ib(factory=list)
     console: utils.ConsoleLogger = attr.ib(init=False)
-    _checkpointer: checkpointing.Checkpointer = attr.ib(init=False)
-    _logger: checkpointing.Logger = attr.ib(init=False)
+    _checkpointer: patcher.Checkpointer = attr.ib(init=False)
 
     @property
     def hparams(self) -> dict:
@@ -68,9 +67,8 @@ class Runner:
         self.conf["env"].update(constants.env_info(**self.conf["env"]))
         self.conf["env"]["clip_rewards"] = self.conf.get("clip_rewards", False)
         self.setup_reporters()
-        base_dir = self.conf["runner"]["base_dir"]
-        self._logger = checkpointing.Logger(base_dir)
-        self._checkpointer = checkpointing.Checkpointer(base_dir)
+        ckpt_dir = os.path.join(self.conf["runner"]["base_dir"], "checkpoints")
+        self._checkpointer = patcher.Checkpointer(ckpt_dir)
         if not self.try_resuming():
             self.create_agent()
 
@@ -110,11 +108,13 @@ class Runner:
         # Check if checkpoint exists. Note that the existence of
         # checkpoint 0 means that we have finished iteration 0 (so we
         # will start from iteration 1).
-        latest_ckpts = checkpointing.get_latest_ckpt_number(self._checkpointer.ckpt_dir)
+        latest_ckpts = patcher.get_latest_ckpt_number(
+            self._checkpointer._base_directory
+        )
         if latest_ckpts == -1:
             return False
         redundancy, iteration = latest_ckpts
-        agent_data = self._checkpointer.load_checkpoint(redundancy, iteration)
+        agent_data = self._checkpointer._load_checkpoint(redundancy, iteration)
         if agent_data is None:
             self.console.warning("Unable to reload the agent's parameters!")
             return False
@@ -128,8 +128,9 @@ class Runner:
         self.seed = agent_data["seed"]
         self.create_agent(agent_data["n_splits"])
         self.agent.unbundle(
-            self._checkpointer.ckpt_dir, redundancy, iteration, agent_data
+            self._checkpointer._base_directory, redundancy, iteration, agent_data
         )
+
         for key in ["curr_redundancy", "curr_iteration", "global_steps"]:
             assert key in agent_data, f"{key} not in agent data."
             setattr(self, key, agent_data[key])
@@ -138,7 +139,6 @@ class Runner:
         )
         self.curr_iteration += 1
         self.curr_redundancy += self.curr_iteration == self.iterations
-        self._logger.data = agent_data["logs"]
         return True
 
     def next_seeds(self) -> List[int]:
@@ -177,7 +177,7 @@ class Runner:
                 losses += step_loss
         return episode_steps, episode_reward, losses
 
-    def run_episodes(self, mode: str, stats: iteration_statistics.IterationStatistics):
+    def run_episodes(self, mode: str):
         loss_init = lambda: jnp.zeros((len(self.conf["nets"]), 1))
         n_episodes, tot_steps, tot_reward = 0, 0, 0.0
         tot_loss, loss_steps = loss_init(), None
@@ -187,12 +187,6 @@ class Runner:
                 episode_reward,
                 episode_losses,
             ) = self.run_one_episode(mode, loss_init())
-            stats.append(
-                {
-                    f"{mode}_episode_lengths": episode_steps,
-                    f"{mode}_episode_returns": episode_reward,
-                }
-            )
             if self.agent.training_steps >= self.agent.min_replay_history:
                 loss_steps = tot_steps
             tot_reward += episode_reward
@@ -200,8 +194,6 @@ class Runner:
             n_episodes += 1
             tot_loss += episode_losses
         self.global_steps += tot_steps
-        mean_return = tot_reward / n_episodes if n_episodes != 0 else 0.0
-        stats.append({f"{mode}_mean_return": mean_return})
         # NOTE if not enough steps are performed loss_tags is None and
         # loss_vals 0's
         metrics = {
@@ -218,14 +210,12 @@ class Runner:
             f"#{self.curr_iteration} #ep {n_episodes} #steps {tot_steps} #global {self.global_steps}\n{pprint.pformat(reported)}"
         )
 
-    def run_one_iteration(self) -> dict:
-        stats = iteration_statistics.IterationStatistics()
+    def run_one_iteration(self):
         self.agent.eval_mode = False
-        self.run_episodes("train", stats)
+        self.run_episodes("train")
         self.agent.eval_mode = True
         self.console.debug("Eval round...")
-        self.run_episodes("eval", stats)
-        return stats.data_lists
+        self.run_episodes("eval")
 
     def run_experiment(self):
         env_seed = self.next_seeds()
@@ -234,8 +224,6 @@ class Runner:
             reporter_.setup(self.hparams)
         self.console.info(pprint.pformat(self.hparams))
         while self.curr_iteration < self.iterations:
-            stats = self.run_one_iteration()
-            self._log_experiment(stats)
             self._checkpoint_experiment()
             self.curr_iteration += 1
 
@@ -250,30 +238,30 @@ class Runner:
             if self.curr_redundancy != self.redundancy:
                 self.create_agent()
 
-    def _log_experiment(self, statistics: dict):
-        redundancy_key = f"redundancy_{self.curr_redundancy}"
-        self._logger[redundancy_key] = self._logger.get(redundancy_key, {})
-        self._logger[redundancy_key][f"iteration_{self.curr_iteration}"] = statistics
-        self._logger.log_to_file(self.curr_redundancy, self.curr_iteration)
-
     def _checkpoint_experiment(self):
         agent_data = self.agent.bundle_and_checkpoint(
-            self._checkpointer.ckpt_dir, self.curr_redundancy, self.curr_iteration
+            self._checkpointer._base_directory,
+            self.curr_redundancy,
+            self.curr_iteration,
         )
         if not agent_data:
             return
-        agent_data["logs"] = self._logger.data
         for key in ["curr_redundancy", "curr_iteration", "global_steps"]:
             agent_data[key] = getattr(self, key)
-        self._checkpointer.save_checkpoint(
+        self._checkpointer._save_checkpoint(
             self.curr_redundancy, self.curr_iteration, agent_data
         )
 
 
 @attr.s(auto_attribs=True)
 class TrainRunner(Runner):
-    def run_one_iteration(self) -> dict:
-        stats = iteration_statistics.IterationStatistics()
+    def run_one_iteration(self):
         self.agent.eval_mode = False
-        self.run_episodes("train", stats)
-        return stats.data_lists
+        self.run_episodes("train")
+
+
+# def _log_experiment(self, statistics: dict):
+#     redundancy_key = f"redundancy_{self.curr_redundancy}"
+#     self._logger[redundancy_key] = self._logger.get(redundancy_key, {})
+#     self._logger[redundancy_key][f"iteration_{self.curr_iteration}"] = statistics
+#     self._logger.log_to_file(self.curr_redundancy, self.curr_iteration)

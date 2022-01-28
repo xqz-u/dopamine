@@ -4,11 +4,16 @@ from typing import Dict, Optional, Sequence, Tuple
 import attr
 import numpy as np
 import tensorflow as tf
-from dopamine.replay_memory import circular_replay_buffer
 from flax import linen as nn
 from flax.core.frozen_dict import FrozenDict
 from jax import numpy as jnp
-from thesis import custom_pytrees, exploration, offline_circular_replay_buffer, utils
+from thesis import (
+    custom_pytrees,
+    exploration,
+    offline_circular_replay_buffer,
+    patcher,
+    utils,
+)
 from thesis.agents import agent_utils
 
 
@@ -22,9 +27,7 @@ class Agent(ABC):
     min_replay_history: int = 5000
     train_freq: int = 1
     gamma: float = 0.99
-    memory: circular_replay_buffer.OutOfGraphReplayBuffer = (
-        circular_replay_buffer.OutOfGraphReplayBuffer
-    )
+    memory: patcher.OutOfGraphReplayBuffer = patcher.OutOfGraphReplayBuffer
     act_sel_fn: callable = exploration.egreedy
     eval_mode: bool = False
     models: Dict[str, custom_pytrees.NetworkOptimWrap] = attr.ib(factory=dict)
@@ -158,14 +161,13 @@ class Agent(ABC):
         self.training_steps += 1
         return losses
 
-    # TODO checkpoint memory
     def bundle_and_checkpoint(
         self, ckpt_dir: str, redundancy: int, iteration: int
     ) -> dict:
         if not tf.io.gfile.exists(ckpt_dir):
             return
         # Checkpoint the replay buffer.
-        # self.memory.save(checkpoint_dir, iteration_number)
+        self.memory._save(ckpt_dir, redundancy, iteration)
         # NOTE checkpointing happens after a full iteration, when state
         # is reset to 0s, so no use in saving it
         return {
@@ -180,11 +182,11 @@ class Agent(ABC):
     def unbundle(
         self, ckpt_dir: str, redundancy: int, iteration: int, bundle_dict: dict
     ):
-        # try:
-        #     self.memory.load(ckpt_dir, redundancy, iteration)
-        # except tf.errors.NotFoundError:
-        #     pass
-        # logging.warning("Unable to reload replay buffer!")
+        try:
+            self.memory._load(ckpt_dir, redundancy, iteration)
+        except tf.errors.NotFoundError:
+            # logging.warning("Unable to reload replay buffer!")
+            pass
         self.training_steps = bundle_dict["training_steps"]
         for model_name, model in bundle_dict["models"].items():
             for field_name, val in model.items():
