@@ -79,3 +79,9 @@ class PRNGKeyWrap:
     @classmethod
     def tree_unflatten(cls, _, leaves):
         return cls(*leaves)
+
+    @property
+    def checkpointable_elements(self) -> dict:
+        # cast to int: when going through a jitted function, a PyTree's
+        # attributes are concretized/traced and lose original type
+        return {"seed": int(self.seed), "n_splits": int(self.n_splits)}

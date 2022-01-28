@@ -34,8 +34,9 @@ conf_cartpole = {
     "runner": {
         "base_dir": f"{repo}/{cartpole_path}",
         # "schedule": "continuous_train_and_eval",
+        # 'logging_file_prefix': "pippo",
+        # 'ckpt_file_prefix': "pippo",
         "log_level": logging.INFO,
-        # "resume": False,
         "experiment": {
             "seed": 4,
             "steps": 1000,
@@ -91,7 +92,6 @@ conf_acrobot = {
         "base_dir": f"{repo}/{acrobot_path}",
         # "schedule": "continuous_train_and_eval",
         "log_level": logging.INFO,
-        # "resume": False,
         "experiment": {
             "seed": 10,
             "steps": 1000,

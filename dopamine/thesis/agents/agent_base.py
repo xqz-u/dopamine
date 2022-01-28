@@ -158,36 +158,38 @@ class Agent(ABC):
         self.training_steps += 1
         return losses
 
-    def bundle_and_checkpoint(self, checkpoint_dir: str, iteration_number: int) -> dict:
-        if not tf.io.gfile.exists(checkpoint_dir):
+    # TODO checkpoint memory
+    def bundle_and_checkpoint(
+        self, ckpt_dir: str, redundancy: int, iteration: int
+    ) -> dict:
+        if not tf.io.gfile.exists(ckpt_dir):
             return
-        # Checkpoint the out-of-graph replay buffer.
-        self.memory.save(checkpoint_dir, iteration_number)
+        # Checkpoint the replay buffer.
+        # self.memory.save(checkpoint_dir, iteration_number)
+        # NOTE checkpointing happens after a full iteration, when state
+        # is reset to 0s, so no use in saving it
         return {
-            "state": self.state,
             "training_steps": self.training_steps,
             "models": {
                 model: self.models[model].checkpointable_elements
                 for model in self.model_names
             },
+            **self.rng.checkpointable_elements,
         }
 
-    def unbundle(self, checkpoint_dir, iteration_number, bundle_dictionary) -> bool:
-        try:
-            self.memory.load(checkpoint_dir, iteration_number)
-        except tf.errors.NotFoundError:
-            pass
-            # logging.warning("Unable to reload replay buffer!")
-        if bundle_dictionary is None:
-            # logging.warning("Unable to reload the agent's parameters!")
-            return False
-        self.state = bundle_dictionary["state"]
-        self.training_steps = bundle_dictionary["training_steps"]
-        for model_name, model in bundle_dictionary["models"].items():
+    def unbundle(
+        self, ckpt_dir: str, redundancy: int, iteration: int, bundle_dict: dict
+    ):
+        # try:
+        #     self.memory.load(ckpt_dir, redundancy, iteration)
+        # except tf.errors.NotFoundError:
+        #     pass
+        # logging.warning("Unable to reload replay buffer!")
+        self.training_steps = bundle_dict["training_steps"]
+        for model_name, model in bundle_dict["models"].items():
             for field_name, val in model.items():
                 assert model_name in self.model_names
                 setattr(self.models[model_name], field_name, val)
-        return True
 
     @property
     @abstractmethod

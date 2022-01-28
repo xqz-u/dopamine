@@ -6,21 +6,11 @@ from typing import Dict, List, Tuple
 import attr
 import jax
 import numpy as np
-from dopamine.discrete_domains import (
-    checkpointer,
-    gym_lib,
-    iteration_statistics,
-    logger,
-)
+from dopamine.discrete_domains import gym_lib  # checkpointer,; logger,
+from dopamine.discrete_domains import iteration_statistics
 from jax import numpy as jnp
 from thesis import constants, custom_pytrees, utils
-from thesis.runner import reporter
-
-# NOTE if you want to have start/stop/resume functionality when running
-# an experiment with redundancy, to restart a run correctly do:
-# -> iterations = og iterations - max checkpointed experiment iteration
-# -> redundancy = og redundancy - |redundancies already done|
-# -> seed = 0 + |redundancies already done|
+from thesis.runner import checkpointing, reporter
 
 
 def create_runner(conf: dict):
@@ -42,23 +32,20 @@ class Runner:
     steps: int = 500
     iterations: int = 1000
     redundancy: int = 1
-    checkpoint_file_prefix: str = "ckpt"
-    logging_file_prefix: str = "log"
     env: object = gym_lib.create_gym_environment
     agent: object = attr.ib(init=False)
-    _checkpoint_dir: str = attr.ib(init=False)
-    _checkpointer: checkpointer.Checkpointer = attr.ib(init=False)
-    _logger: logger.Logger = attr.ib(init=False)
-    start_iteration: int = 0
-    curr_iteration: int = 0
-    global_steps: int = 0
+    curr_iteration: int = attr.ib(init=False, default=0)
+    curr_redundancy: int = attr.ib(init=False, default=0)
+    global_steps: int = attr.ib(init=False, default=0)
     reporters: List[reporter.Reporter] = attr.ib(factory=list)
     console: utils.ConsoleLogger = attr.ib(init=False)
+    _checkpointer: checkpointing.Checkpointer = attr.ib(init=False)
+    _logger: checkpointing.Logger = attr.ib(init=False)
 
     @property
     def hparams(self) -> dict:
         r = deepcopy(self.conf)
-        for k in ["reporters", "base_dir"]:
+        for k in ["reporters", "base_dir", "ckpt_file_prefix", "logging_file_prefix"]:
             r["runner"].pop(k, None)
         r["env"].pop("preproc", None)
         return jax.tree_map(
@@ -69,6 +56,7 @@ class Runner:
         )
 
     def __attrs_post_init__(self):
+        # add values to config if it had defaults
         self.conf["runner"]["experiment"].update(
             {
                 k: getattr(self, k)
@@ -80,9 +68,16 @@ class Runner:
         self.conf["env"].update(constants.env_info(**self.conf["env"]))
         self.conf["env"]["clip_rewards"] = self.conf.get("clip_rewards", False)
         self.setup_reporters()
-        self.setup_checkpoints_resume()
+        base_dir = self.conf["runner"]["base_dir"]
+        self._logger = checkpointing.Logger(base_dir)
+        self._checkpointer = checkpointing.Checkpointer(base_dir)
+        if not self.try_resuming():
+            self.create_agent()
 
-    def create_agent(self):
+    def create_agent(self, seed_splits: int = 0):
+        rng = custom_pytrees.PRNGKeyWrap(self.seed)
+        for _ in range(seed_splits):
+            next(rng)
         agent_ = self.conf["agent"]["call_"]
         # After a first run, conf is enriched with missing defaults
         # for hparams reporting; some keys get added e.g.
@@ -95,58 +90,61 @@ class Runner:
             "num_actions": self.env.action_space.n,
             "observation_shape": self.conf["env"]["observation_shape"],
             "observation_dtype": self.env.observation_space.dtype,
-            "rng": custom_pytrees.PRNGKeyWrap(self.seed),
+            "rng": rng,
             **utils.argfinder(agent_, {**self.conf["agent"], **self.conf["memory"]}),
         }
         self.agent = agent_(**agent_args)
 
+    # TODO take restarting into account
+    # TODO move self.console out of class? should still initilize name
+    # and level
     def setup_reporters(self):
         self.console = utils.ConsoleLogger(
             level=self.conf["runner"].get("log_level", logging.DEBUG), name=__name__
         )
-        for rep in self.conf["runner"].get("reporters"):
-            reporter_ = rep["call_"]
-            self.reporters.append(reporter_(**utils.argfinder(reporter_, rep)))
+        # for rep in self.conf["runner"].get("reporters"):
+        #     reporter_ = rep["call_"]
+        #     self.reporters.append(reporter_(**utils.argfinder(reporter_, rep)))
 
-    def setup_checkpoints_resume(self):
-        base_dir = self.conf["runner"]["base_dir"]
-        self._checkpoint_dir = f"{base_dir}/checkpoints"
-        self._logger = logger.Logger(f"{base_dir}/logs")
-        self.conf["runner"]["resume"] = self.conf["runner"].get("resume", True)
-        if self.conf["runner"]["resume"]:
-            self._initialize_checkpointer_and_maybe_resume()
+    def try_resuming(self) -> bool:
+        # Check if checkpoint exists. Note that the existence of
+        # checkpoint 0 means that we have finished iteration 0 (so we
+        # will start from iteration 1).
+        latest_ckpts = checkpointing.get_latest_ckpt_number(self._checkpointer.ckpt_dir)
+        if latest_ckpts == -1:
+            return False
+        redundancy, iteration = latest_ckpts
+        agent_data = self._checkpointer.load_checkpoint(redundancy, iteration)
+        if agent_data is None:
+            self.console.warning("Unable to reload the agent's parameters!")
+            return False
+        # FIXME not optimal; would be better to:
+        # - handle this agent.unbundle, so might require agent's not to
+        #   bulid networks
+        # - or, when bundling, save the full rng: there could have been
+        #   millions of splits
+        # restore agent with previous rng
+        # NOTE this overwrites seed if, in the config, it changed
+        self.seed = agent_data["seed"]
+        self.create_agent(agent_data["n_splits"])
+        self.agent.unbundle(
+            self._checkpointer.ckpt_dir, redundancy, iteration, agent_data
+        )
+        for key in ["curr_redundancy", "curr_iteration", "global_steps"]:
+            assert key in agent_data, f"{key} not in agent data."
+            setattr(self, key, agent_data[key])
+        self.console.info(
+            f"Reloaded checkpoint: {self.curr_redundancy}-{self.curr_iteration}"
+        )
+        self.curr_iteration += 1
+        self.curr_redundancy += self.curr_iteration == self.iterations
+        self._logger.data = agent_data["logs"]
+        return True
 
     def next_seeds(self) -> List[int]:
         env_seed = self.env.environment.seed(self.seed)
         self.seed += 1
         return env_seed
-
-    def _initialize_checkpointer_and_maybe_resume(self):
-        self._checkpointer = checkpointer.Checkpointer(
-            self._checkpoint_dir, self.checkpoint_file_prefix
-        )
-        # Check if checkpoint exists. Note that the existence of
-        # checkpoint 0 means that we have finished iteration 0 (so we
-        # will start from iteration 1).
-        latest_checkpoint_version = checkpointer.get_latest_checkpoint_number(
-            self._checkpoint_dir
-        )
-        if latest_checkpoint_version < 0:
-            return
-        experiment_data = self._checkpointer.load_checkpoint(latest_checkpoint_version)
-        if not self.agent.unbundle(
-            self._checkpoint_dir, latest_checkpoint_version, experiment_data
-        ):
-            return
-        self.console.info(
-            f"Reloaded checkpoint and will start from iteration {self.start_iteration}"
-        )
-        if experiment_data is None:
-            return
-        assert "logs" in experiment_data
-        assert "current_iteration" in experiment_data
-        self._logger.data = experiment_data["logs"]
-        self.start_iteration = experiment_data["current_iteration"] + 1
 
     def report_metrics(
         self, run_mode: str, reports: dict, step=None, epoch=None, **kwargs
@@ -179,16 +177,11 @@ class Runner:
                 losses += step_loss
         return episode_steps, episode_reward, losses
 
-    def run_episodes(
-        self,
-        steps: int,
-        mode: str,
-        stats: iteration_statistics.IterationStatistics,
-    ):
+    def run_episodes(self, mode: str, stats: iteration_statistics.IterationStatistics):
         loss_init = lambda: jnp.zeros((len(self.conf["nets"]), 1))
         n_episodes, tot_steps, tot_reward = 0, 0, 0.0
         tot_loss, loss_steps = loss_init(), None
-        while tot_steps < steps:
+        while tot_steps < self.steps:
             (
                 episode_steps,
                 episode_reward,
@@ -225,58 +218,62 @@ class Runner:
             f"#{self.curr_iteration} #ep {n_episodes} #steps {tot_steps} #global {self.global_steps}\n{pprint.pformat(reported)}"
         )
 
-    def run_one_iteration(self, steps: int) -> dict:
+    def run_one_iteration(self) -> dict:
         stats = iteration_statistics.IterationStatistics()
         self.agent.eval_mode = False
-        self.run_episodes(steps, "train", stats)
+        self.run_episodes("train", stats)
         self.agent.eval_mode = True
         self.console.debug("Eval round...")
-        self.run_episodes(steps, "eval", stats)
+        self.run_episodes("eval", stats)
         return stats.data_lists
 
-    def run_experiment(self, steps: int, iterations: int):
-        self.curr_iteration = self.start_iteration
-        self.create_agent()
+    def run_experiment(self):
         env_seed = self.next_seeds()
         self.console.debug(f"Env seeds: {env_seed} Agent rng: {self.agent.rng}")
         for reporter_ in self.reporters:
             reporter_.setup(self.hparams)
         self.console.info(pprint.pformat(self.hparams))
-        while self.curr_iteration < iterations:
-            stats = self.run_one_iteration(steps)
-            self._log_experiment(self.curr_iteration, stats)
-            self._checkpoint_experiment(self.curr_iteration)
+        while self.curr_iteration < self.iterations:
+            stats = self.run_one_iteration()
+            self._log_experiment(stats)
+            self._checkpoint_experiment()
             self.curr_iteration += 1
 
-    def run_experiment_with_redundancy(
-        self, steps: int = None, iterations: int = None, redundancy: int = None
-    ):
-        steps = steps or self.steps
-        iterations = iterations or self.iterations
-        redundancy = redundancy or self.redundancy
-        for i in range(redundancy):
-            self.console.debug(f"Start redundancy {i}")
-            self.run_experiment(steps, iterations)
-            self.global_steps = 0
+    def run_experiment_with_redundancy(self):
+        while self.curr_redundancy < self.redundancy:
+            self.console.debug(
+                f"Start: redundancy {self.curr_redundancy} iteration: {self.curr_iteration}"
+            )
+            self.run_experiment()
+            self.curr_redundancy += 1
+            self.curr_iteration, self.global_steps = 0, 0
+            if self.curr_redundancy != self.redundancy:
+                self.create_agent()
 
-    def _log_experiment(self, iteration: int, statistics):
-        self._logger[f"iteration_{iteration}"] = statistics
-        self._logger.log_to_file(self.logging_file_prefix, iteration)
+    def _log_experiment(self, statistics: dict):
+        redundancy_key = f"redundancy_{self.curr_redundancy}"
+        self._logger[redundancy_key] = self._logger.get(redundancy_key, {})
+        self._logger[redundancy_key][f"iteration_{self.curr_iteration}"] = statistics
+        self._logger.log_to_file(self.curr_redundancy, self.curr_iteration)
 
-    def _checkpoint_experiment(self, iteration: int):
-        experiment_data = self.agent.bundle_and_checkpoint(
-            self._checkpoint_dir, iteration
+    def _checkpoint_experiment(self):
+        agent_data = self.agent.bundle_and_checkpoint(
+            self._checkpointer.ckpt_dir, self.curr_redundancy, self.curr_iteration
         )
-        if experiment_data:
-            experiment_data["current_iteration"] = iteration
-            experiment_data["logs"] = self._logger.data
-            self._checkpointer.save_checkpoint(iteration, experiment_data)
+        if not agent_data:
+            return
+        agent_data["logs"] = self._logger.data
+        for key in ["curr_redundancy", "curr_iteration", "global_steps"]:
+            agent_data[key] = getattr(self, key)
+        self._checkpointer.save_checkpoint(
+            self.curr_redundancy, self.curr_iteration, agent_data
+        )
 
 
 @attr.s(auto_attribs=True)
 class TrainRunner(Runner):
-    def run_one_iteration(self, steps: int) -> dict:
+    def run_one_iteration(self) -> dict:
         stats = iteration_statistics.IterationStatistics()
         self.agent.eval_mode = False
-        self.run_episodes(steps, "train", stats)
+        self.run_episodes("train", stats)
         return stats.data_lists
