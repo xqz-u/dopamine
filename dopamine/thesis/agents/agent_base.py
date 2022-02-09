@@ -36,7 +36,6 @@ class Agent(ABC):
     rng: custom_pytrees.PRNGKeyWrap = None
     training_steps: int = 0
     _observation: np.ndarray = None
-    rl_mode: str = "online"
 
     # TODO hash args and cache this
     @property
@@ -44,6 +43,10 @@ class Agent(ABC):
         return tuple(
             f"{m}_{self.models[m].loss_metric.__name__}" for m in self.model_names
         )
+
+    @property
+    def trainable(self) -> bool:
+        return self.memory.add_count > self.min_replay_history
 
     def __attrs_post_init__(self):
         self.rng = self.rng or custom_pytrees.PRNGKeyWrap()
@@ -78,7 +81,6 @@ class Agent(ABC):
         self.memory = memory_class(**args)
         if memory_class is offline_circular_replay_buffer.OfflineOutOfGraphReplayBuffer:
             self.memory.load_buffers()
-            self.rl_mode = "offline"
 
     # NOTE should the static args to loss_metric be partialled?
     # consider that it can be done before passing the function in the
@@ -134,26 +136,9 @@ class Agent(ABC):
         self.action = np.array(self.action)
         return self.action
 
-    def learn(
-        self, obs: np.ndarray, reward: float, done: bool
-    ) -> Optional[jnp.DeviceArray]:
-        if done:
-            self.state.fill(0)
-        if self.eval_mode:
-            return
-        return getattr(self, f"learn_{self.rl_mode}")(obs, reward, done)
-
-    def learn_online(
-        self, obs: np.ndarray, reward: float, done: bool
-    ) -> Optional[jnp.DeviceArray]:
-        self.record_trajectory(reward, done)
-        return self.learn_offline(obs, reward, done)
-
-    def learn_offline(
-        self, obs: np.ndarray, reward: float, done: bool
-    ) -> Optional[jnp.DeviceArray]:
+    def learn(self) -> Optional[jnp.DeviceArray]:
         losses = None
-        if self.memory.add_count > self.min_replay_history:
+        if self.trainable:
             if self.training_steps % self.train_freq == 0:
                 losses = self.train(self.sample_memory()).reshape((len(self.models), 1))
             if self.training_steps % self.net_sync_freq == 0:
