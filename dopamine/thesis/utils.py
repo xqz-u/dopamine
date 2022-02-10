@@ -99,6 +99,10 @@ class ConsoleLogger(logging.Logger):
         self.setLevel(level)
 
 
+def bind_instance_method(instance: object, name: str, method: callable):
+    setattr(instance, name, lambda *args, **kwargs: method(instance, *args, **kwargs))
+
+
 # def add_summary_v2(
 #     summary_writer: tf.summary.SummaryWriter,
 #     summaries: list,

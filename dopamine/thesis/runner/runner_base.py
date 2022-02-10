@@ -83,11 +83,11 @@ class Runner(ABC):
         }
         self.agent = agent_(**agent_args)
 
-    # TODO move self.console out of class? should still initilize name
-    # and level
+    # TODO move self.console out of class?
     def setup_reporters(self):
         self.console = utils.ConsoleLogger(
-            level=self.conf["runner"].get("log_level", logging.DEBUG), name=__name__
+            level=self.conf["runner"].get("log_level", logging.DEBUG),
+            name=self.console_name,
         )
         for rep in self.conf["runner"].get("reporters"):
             reporter_ = rep["call_"]
@@ -134,9 +134,6 @@ class Runner(ABC):
         env_seed = self.env.environment.seed(self.seed)
         self.seed += 1
         return env_seed
-
-    def init_loss(self) -> jnp.DeviceArray:
-        return jnp.zeros((len(self.conf["nets"]), 1))
 
     def step_environment(
         self, action: int, episode_steps: int
@@ -234,4 +231,9 @@ class Runner(ABC):
 
     @abstractmethod
     def run_episodes(self) -> dict:
+        pass
+
+    @property
+    @abstractmethod
+    def console_name(self):
         pass

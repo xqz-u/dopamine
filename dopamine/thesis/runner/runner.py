@@ -12,6 +12,12 @@ def train_iteration(self):
     self._run_episodes("train")
 
 
+# schedule:
+# - train (default)
+# - continuous_train_and_eval
+# rl_mode:
+# - online (default)
+# - offline
 def create_runner(
     conf: dict,
 ) -> Union[online_runner.OnlineRunner, offline_runner.OfflineRunner]:
@@ -38,7 +44,7 @@ def run_experiment(args: Tuple[dict, int]):
     conf, wait_time = args
     time.sleep(wait_time)
     mp_print("starting...")
-    manager = create_runner(conf)
+    manager = create_runner(conf)(conf, **conf["runner"]["experiment"])
     manager.run_experiment_with_redundancy()
     mp_print("done!")
 

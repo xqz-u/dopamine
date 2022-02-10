@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict, Optional, Sequence, Tuple
+from typing import Dict, Sequence, Tuple
 
 import attr
 import numpy as np
@@ -109,8 +109,12 @@ class Agent(ABC):
                 params, optim_state, net, optim, loss_fn
             )
 
+    def init_loss(self) -> jnp.DeviceArray:
+        return jnp.zeros((len(self.conf["nets"]), 1))
+
     def record_trajectory(self, reward: float, terminal: bool):
-        self.memory.add(self._observation, self.action, reward, terminal)
+        if not self.eval_mode:
+            self.memory.add(self._observation, self.action, reward, terminal)
 
     def sample_memory(self) -> dict:
         return agent_utils.sample_replay_buffer(self.memory)
@@ -136,8 +140,10 @@ class Agent(ABC):
         self.action = np.array(self.action)
         return self.action
 
-    def learn(self) -> Optional[jnp.DeviceArray]:
-        losses = None
+    def learn(self) -> jnp.DeviceArray:
+        if self.eval_mode:
+            return
+        losses = self.init_loss()
         if self.trainable:
             if self.training_steps % self.train_freq == 0:
                 losses = self.train(self.sample_memory()).reshape((len(self.models), 1))

@@ -80,6 +80,7 @@ def optimize(
     return optax.apply_updates(params, updates), optim_state
 
 
-def uniform_action_selection(agent, *_) -> np.ndarray:
+def uniform_action_selection(agent, obs: np.ndarray) -> np.ndarray:
+    agent.update_state(obs)
     agent.action = np.array(jrand.randint(next(agent.rng), (), 0, agent.num_actions))
     return agent.action

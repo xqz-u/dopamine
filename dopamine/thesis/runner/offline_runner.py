@@ -2,6 +2,7 @@ from typing import Tuple
 
 import attr
 from jax import numpy as jnp
+from thesis import utils
 from thesis.agents import agent_utils
 from thesis.runner import runner_base
 
@@ -20,7 +21,7 @@ class OfflineRunner(runner_base.Runner):
         return episode_steps, episode_reward
 
     def fit(self, train_steps: int) -> jnp.DeviceArray:
-        loss = self.init_loss()
+        loss = self.agent.init_loss()
         for _ in range(train_steps):
             loss += self.agent.learn()
         return loss
@@ -46,9 +47,18 @@ class OfflineRunner(runner_base.Runner):
         }
 
     def run_loops(self):
-        agent_act_sel = self.agent.action_selection
-        self.agent.action_selection = agent_utils.uniform_action_selection
+        agent_act_sel = self.agent.select_action.__func__
+        utils.bind_instance_method(
+            self.agent, "select_action", agent_utils.uniform_action_selection
+        )
+        switched = False
         while self.curr_iteration < self.iterations:
             self.run_one_iteration_wrapped()
-            if self.agent.trainable:
-                self.agent.action_selection = agent_act_sel
+            if self.agent.trainable and not switched:
+                utils.bind_instance_method(self.agent, "select_action", agent_act_sel)
+                self.console.info("Switched action selection policy back to original")
+                switched = True
+
+    @property
+    def console_name(self):
+        return __name__

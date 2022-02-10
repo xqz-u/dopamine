@@ -8,23 +8,21 @@ from thesis.runner import runner_base
 @attr.s(auto_attribs=True)
 class OnlineRunner(runner_base.Runner):
     def run_one_episode(self, mode: str) -> Tuple[int, float, jnp.DeviceArray]:
-        losses = self.init_loss()
+        loss = self.agent.init_loss()
         episode_steps, episode_reward, done = 0, 0.0, False
         observation = self.env.reset()
         while not done:
             action = self.agent.select_action(observation)
             observation, reward, done, _ = self.step_environment(action, episode_steps)
             self.agent.record_trajectory(reward, done)
-            step_loss = self.agent.learn()
-            if step_loss is not None:
-                losses += step_loss
+            loss += self.agent.learn()
             episode_reward += reward
             episode_steps += 1
-        return episode_steps, episode_reward, losses
+        return episode_steps, episode_reward, loss
 
     def run_episodes(self, mode: str) -> dict:
         n_episodes, tot_steps, tot_reward = 0, 0, 0.0
-        tot_loss, loss_steps = self.init_loss(), 0
+        tot_loss, loss_steps = self.agent.init_loss(), 0
         while tot_steps < self.steps:
             (
                 episode_steps,
@@ -44,3 +42,7 @@ class OnlineRunner(runner_base.Runner):
             "loss_steps": loss_steps,
             "losses": tot_loss,
         }
+
+    @property
+    def console_name(self):
+        return __name__
