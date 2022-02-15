@@ -4,8 +4,6 @@ import attr
 from jax import numpy as jnp
 from thesis.runner import Runner
 
-# TODO checkpoints are not following the redundancy scheme!
-
 
 @attr.s(auto_attribs=True)
 class GrowingBatchRunner(Runner.Runner):
