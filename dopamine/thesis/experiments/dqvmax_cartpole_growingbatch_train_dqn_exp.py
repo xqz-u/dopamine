@@ -5,22 +5,21 @@ from thesis.experiments import dqvmax_cartpole_growingbatch_train as dqvmax_gb
 from thesis.runner import runner
 
 
+# TODO problem: OfflineOutOfGraphReplayBuffer calls memory_gen_filename
+# in patcher.py before a redundancy value is set (done by the runner
+# itself) and so it fails. In general, probably need a better redesign
+# of the OfflineOutOfGraphReplayBuffer...
 def main():
     exp_name = "growingbatch_train_dqn_experience"
-    conf = dqvmax_gb.make_config(exp_name)
-    # TODO iterations
-    conf["memory"].update(
-        {
-            "call_": offline_circular_replay_buffer.OfflineOutOfGraphReplayBuffer,
-            "checkpoint_dir": os.path.join(
-                config.data_dir,
-                "CartPole-v0",
-                "JaxDQNAgent",
-                "online_train",
-                "checkpoints",
-            ),
-        }
+    dqn_logdir = os.path.join(
+        config.data_dir, "CartPole-v0", "JaxDQNAgent", "online_train", "checkpoints"
     )
-    utils.data_dir_from_conf(exp_name, dqvmax_gb.conf)
-    run = runner.create_runner(dqvmax_gb.conf)
+    conf = dqvmax_gb.make_config(exp_name)
+    conf["memory"] = {
+        "call_": offline_circular_replay_buffer.OfflineOutOfGraphReplayBuffer,
+        "checkpoint_dir": dqn_logdir,
+        "iterations": list(range(496, 500)),
+    }
+    utils.data_dir_from_conf(exp_name, conf)
+    run = runner.create_runner(conf)
     run.run_experiment_with_redundancy()
