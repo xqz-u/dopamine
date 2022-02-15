@@ -7,7 +7,6 @@ from itertools import groupby
 from typing import Any, Tuple, Union
 
 import attr
-import gin
 
 from thesis import config
 
@@ -51,16 +50,27 @@ def mget(d, *keys):
     return [d[k] for k in keys]
 
 
-# experiment_spec = [agent name, network name, environment name, *]
-@gin.configurable
-def make_unique_data_dir(experiment_spec: list, base_dir: str = None) -> str:
-    agent, net, env_name, *args = experiment_spec
-    if not base_dir:
-        base_dir = os.path.join(config.base_dir, "data_collection")
-    return os.path.join(
-        base_dir,
-        f"{agent.__name__}_{net.__name__}_{env_name}_{'_'.join(map(str, args))}_{int(time.time())}",
+# default folder structure:
+# basedir/ENVIRONMENT/AGENT/exp_name
+# the paths in caps lock can be omitted with build_hierarchy=True
+def data_dir_from_conf(
+    exp_name: str, conf: dict, basedir: str = None, build_hierarchy: bool = True
+) -> str:
+    intermediate_dirs = (
+        ""
+        if not build_hierarchy
+        else os.path.join(
+            "-".join(conf["env"].values()), conf["agent"]["call_"].__name__
+        )
     )
+    full_path = os.path.join(
+        basedir or config.data_dir,
+        intermediate_dirs,
+        exp_name,
+    )
+    os.makedirs(full_path, exist_ok=True)
+    conf["runner"]["base_dir"] = full_path
+    return full_path
 
 
 def attr_fields_d(attr_class: object) -> dict:
