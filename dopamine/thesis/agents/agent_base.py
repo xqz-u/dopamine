@@ -140,17 +140,18 @@ class Agent(ABC):
         self.action = np.array(self.action)
         return self.action
 
-    def learn(self) -> jnp.DeviceArray:
-        if self.eval_mode:
-            return
-        losses = self.init_loss()
-        if self.trainable:
+    def learn(self) -> Tuple[jnp.DeviceArray, bool]:
+        loss = self.init_loss()
+        training = not self.eval_mode
+        training_started = False
+        if training and self.trainable:
+            training_started = True
             if self.training_steps % self.train_freq == 0:
-                losses = self.train(self.sample_memory()).reshape((len(self.models), 1))
+                loss = self.train(self.sample_memory()).reshape((len(self.models), 1))
             if self.training_steps % self.net_sync_freq == 0:
                 self.sync_weights()
-        self.training_steps += 1
-        return losses
+        self.training_steps += training
+        return loss, training_started
 
     def bundle_and_checkpoint(
         self, ckpt_dir: str, redundancy: int, iteration: int

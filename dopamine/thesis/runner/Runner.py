@@ -9,9 +9,11 @@ import attr
 import jax
 import numpy as np
 from dopamine.discrete_domains import gym_lib
-from jax import numpy as jnp
 from thesis import constants, custom_pytrees, patcher, utils
 from thesis.runner import reporter
+
+# NOTE to do evaluation the way the runner works right now, the agent
+# models must be reloaded
 
 
 @attr.s(auto_attribs=True)
@@ -82,6 +84,9 @@ class Runner(ABC):
             **utils.argfinder(agent_, {**self.conf["agent"], **self.conf["memory"]}),
         }
         self.agent = agent_(**agent_args)
+        self.agent.eval_mode = (
+            True if self.conf["runner"]["schedule"] == "eval" else False
+        )
 
     # TODO move self.console out of class?
     def setup_reporters(self):
@@ -146,31 +151,30 @@ class Runner(ABC):
 
     # NOTE maybe can be united with do_reports
     def report_metrics(
-        self, run_mode: str, reports: dict, step=None, epoch=None, **kwargs
+        self, reports: dict, step=None, epoch=None, **kwargs
     ) -> List[Dict[str, List[Tuple[str, float]]]]:
         return [
             reporter_(
                 reports,
                 step=step,
                 epoch=epoch,
-                context={"subset": run_mode, **kwargs},
+                context={"subset": self.conf["runner"]["schedule"], **kwargs},
             )
             for reporter_ in self.reporters
         ]
 
-    def do_reports(self, mode: str, metrics: dict):
+    def do_reports(self, metrics: dict):
         reported = self.report_metrics(
-            mode,
             metrics,
             step=self.global_steps,
             epoch=self.curr_iteration,
         )
         self.console.debug(
-            f"#{self.curr_iteration} #ep {metrics['episodes']} #steps {metrics['steps']} #global {self.global_steps}\n{pprint.pformat(reported)}"
+            f"{self.conf['runner']['schedule']}: #{self.curr_iteration} #ep {metrics['episodes']} #steps {metrics['steps']} #loss_steps {metrics['loss_steps']} #global {self.global_steps}\n{pprint.pformat(reported)}"
         )
 
-    def _run_episodes(self, mode: str):
-        metrics = self.run_episodes(mode)
+    def _run_episodes(self):
+        metrics = self.run_episodes()
         self.global_steps += metrics["steps"]
         # to avoid possible division by 0 errors when training has not
         # started yet
@@ -178,23 +182,18 @@ class Runner(ABC):
         metrics["losses"] = {
             k: float(v) for k, v in zip(self.agent.losses_names, metrics["losses"])
         }
-        self.do_reports(mode, metrics)
+        self.do_reports(metrics)
 
     def run_one_iteration(self):
-        self.agent.eval_mode = False
-        self._run_episodes("train")
-        self.agent.eval_mode = True
-        self.console.debug("Eval round...")
-        self._run_episodes("eval")
-
-    def run_one_iteration_wrapped(self):
-        self.run_one_iteration()
+        self._run_episodes()
         self._checkpoint_experiment()
         self.curr_iteration += 1
 
+    # NOTE this method exists to provide a default, but should be
+    # overridden in derived classes if necessary
     def run_loops(self):
         while self.curr_iteration < self.iterations:
-            self.run_one_iteration_wrapped()
+            self.run_one_iteration()
 
     def run_experiment(self):
         env_seed = self.next_seeds()

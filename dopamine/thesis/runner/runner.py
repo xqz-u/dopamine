@@ -4,34 +4,21 @@ import os
 import time
 from typing import List, Tuple, Union
 
-from thesis.runner import offline_runner, online_runner
-
-
-def train_iteration(self):
-    self.agent.eval_mode = False
-    self._run_episodes("train")
+from thesis.runner.FixedBatchRunner import FixedBatchRunner
+from thesis.runner.GrowingBatchRunner import GrowingBatchRunner
+from thesis.runner.OnlineRunner import OnlineRunner
 
 
 # schedule:
 # - train (default)
-# - continuous_train_and_eval
-# rl_mode:
-# - online (default)
-# - offline
+# - eval
 def create_runner(
     conf: dict,
-) -> Union[online_runner.OnlineRunner, offline_runner.OfflineRunner]:
+) -> Union[OnlineRunner, GrowingBatchRunner, FixedBatchRunner]:
     # set some defaults
-    for key, default in [["schedule", "train"], ["rl_mode", "online"]]:
+    for key, default in [["schedule", "train"], ["call_", OnlineRunner]]:
         conf["runner"][key] = conf["runner"].get(key, default)
-    # give correct runner
-    if conf["runner"]["rl_mode"] == "online":
-        if conf["runner"]["schedule"] == "train":
-            online_runner.OnlineRunner.run_one_iteration = train_iteration
-        return online_runner.OnlineRunner
-    if conf["runner"]["schedule"] == "train":
-        offline_runner.OfflineRunner.run_one_iteration = train_iteration
-    return offline_runner.OfflineRunner
+    return conf["runner"]["call_"](conf, **conf["runner"]["experiment"])
 
 
 def mp_print(s: str):
@@ -44,7 +31,7 @@ def run_experiment(args: Tuple[dict, int]):
     conf, wait_time = args
     time.sleep(wait_time)
     mp_print("starting...")
-    manager = create_runner(conf)(conf, **conf["runner"]["experiment"])
+    manager = create_runner(conf)
     manager.run_experiment_with_redundancy()
     mp_print("done!")
 

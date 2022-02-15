@@ -5,10 +5,10 @@ from thesis.agents import dqv_max
 from thesis.runner import reporter, runner
 
 # repo = "/home/xqz-u/uni/thesis/resources/data/offline_runner"
-# repo = "/home/xqz-u/uni/dopamine/resources/data/train_cartpole_online"
-# repo = "/home/xqz-u/uni/dopamine/resources/data/eval_cartpole_online"
-repo = "/home/xqz-u/uni/dopamine/resources/data/train_cartpole_offline"
-# repo = "/home/xqz-u/uni/dopamine/resources/data/eval_cartpole_offline"
+# repo = "/home/xqz-u/uni/thesis/resources/data/train_cartpole_online"
+# repo = "/home/xqz-u/uni/thesis/resources/data/eval_cartpole_online"
+repo = "/home/xqz-u/uni/thesis/resources/data/train_cartpole_offline"
+# repo = "/home/xqz-u/uni/thesis/resources/data/eval_cartpole_offline"
 cartpole_path = "CartPole-DQVMax"
 
 conf_cartpole = {
@@ -33,11 +33,10 @@ conf_cartpole = {
     "env": {"environment_name": "CartPole", "version": "v0"},
     "memory": {"replay_capacity": int(5e4)},
     "runner": {
+        "call_": runner.GrowingBatchRunner,
         "base_dir": f"{repo}/{cartpole_path}",
-        # "rl_mode": "online",
-        "rl_mode": "offline",
-        "schedule": "train",
-        # "schedule": "continuous_train_and_eval",
+        # "schedule": "train",
+        # "schedule": "eval",
         # 'logging_file_prefix': "pippo",
         # 'ckpt_file_prefix': "pippo",
         "log_level": logging.DEBUG,
@@ -45,7 +44,8 @@ conf_cartpole = {
             "seed": 4,
             "steps": 600,
             "iterations": 1000,
-            "redundancy": 5,
+            "redundancy": 3,
+            # "fitting_steps": 599,
         },
         "reporters": [
             {
@@ -57,8 +57,10 @@ conf_cartpole = {
     },
 }
 
+run = runner.create_runner(conf_cartpole)
+run.run_experiment_with_redundancy()
 
-runner.run_multiple_configs([conf_cartpole])
+# runner.run_multiple_configs([conf_cartpole])
 
 # run = runner.create_runner(conf_cartpole)(
 #     conf_cartpole, **conf_cartpole["runner"]["experiment"]
