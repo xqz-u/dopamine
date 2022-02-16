@@ -42,14 +42,6 @@ def timer(want_time=False):
     return decorator
 
 
-def dict_pop(d, k):
-    return (d, d.pop(k))[0]
-
-
-def mget(d, *keys):
-    return [d[k] for k in keys]
-
-
 # default folder structure:
 # basedir/ENVIRONMENT/AGENT/exp_name
 # the paths in caps lock can be omitted with build_hierarchy=True

@@ -1,65 +1,41 @@
 import os
+from pathlib import Path
 from typing import Tuple
 
-import tensorflow as tf
+from dopamine.discrete_domains import checkpointer
 from dopamine.discrete_domains.checkpointer import Checkpointer
-from dopamine.replay_memory.circular_replay_buffer import OutOfGraphReplayBuffer
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Checkpointer
 
 
-def get_latest_ckpt_number(base_directory: str) -> Tuple[int]:
-    def extract_iteration(x: str):
-        return tuple(map(int, x[x.rfind(".") + 1 :].split("_")))
-
-    try:
-        checkpoint_files = tf.io.gfile.glob(
-            os.path.join(base_directory, "sentinel_checkpoint_complete.*")
-        )
-    except tf.errors.NotFoundError:
-        return -1
-    try:
-        return max(extract_iteration(x) for x in checkpoint_files)
-    except ValueError:
-        return -1
+def get_latest_ckpt_number(base_directory: str) -> Tuple[int, int]:
+    redundancy_dirs = Path(base_directory).glob("redundancy_*")
+    redundancies = [int(r.split("_")[1]) for r in (x.name for x in redundancy_dirs)]
+    if not redundancies:
+        return -1, -1
+    latest_redundancy = max(redundancies)
+    return (
+        latest_redundancy,
+        checkpointer.get_latest_checkpoint_number(
+            os.path.join(base_directory, f"redundancy_{latest_redundancy}")
+        ),
+    )
 
 
-def checkpoint_gen_filename(self, prefix: str, iteration: int) -> str:
-    return os.path.join(self._base_directory, f"{prefix}.{self.redundancy}_{iteration}")
+def setup_redundancy(self, redund: int):
+    # -1 is given when the experiment just started and signals that no
+    # reloading can be performed
+    redund = 0 if redund == -1 else redund
+    self._base_directory = os.path.join(self.ckpt_dir, f"redundancy_{redund}")
+    os.makedirs(self._base_directory, exist_ok=True)
 
 
-def _save_checkpoint(self, redundancy: int, iteration: int, data: dict):
-    self.redundancy = redundancy
-    return self.save_checkpoint(iteration, data)
+def init(self, *args, **kwargs):
+    og_init(self, *args, **kwargs)
+    self.ckpt_dir = self._base_directory
 
 
-def _load_checkpoint(self, redundancy: int, iteration: int) -> dict:
-    self.redundancy = redundancy
-    return self.load_checkpoint(iteration)
-
-
-Checkpointer._generate_filename = checkpoint_gen_filename
-Checkpointer._save_checkpoint = _save_checkpoint
-Checkpointer._load_checkpoint = _load_checkpoint
-
-
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> OutOfGraphReplayBuffer
-
-
-def memory_gen_filename(self, ckpt_dir: str, name: str, suffix: str) -> str:
-    return os.path.join(ckpt_dir, f"{name}_ckpt.{self.redundancy}_{suffix}.gz")
-
-
-def _save(self, ckpt_dir: str, redundancy: int, iteration: int):
-    self.redundancy = redundancy
-    return self.save(ckpt_dir, iteration)
-
-
-def _load(self, ckpt_dir: str, redundancy: int, iteration: int):
-    self.redundancy = redundancy
-    return self.load(ckpt_dir, iteration)
-
-
-OutOfGraphReplayBuffer._generate_filename = memory_gen_filename
-OutOfGraphReplayBuffer._save = _save
-OutOfGraphReplayBuffer._load = _load
+Checkpointer.ckpt_dir: str = ""
+og_init = Checkpointer.__init__
+Checkpointer.__init__ = init
+Checkpointer.setup_redundancy = setup_redundancy

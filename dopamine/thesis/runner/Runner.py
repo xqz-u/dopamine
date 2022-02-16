@@ -102,28 +102,24 @@ class Runner(ABC):
         # Check if checkpoint exists. Note that the existence of
         # checkpoint 0 means that we have finished iteration 0 (so we
         # will start from iteration 1).
-        latest_ckpts = patcher.get_latest_ckpt_number(
+        latest_redund, latest_ckpt = patcher.get_latest_ckpt_number(
             self._checkpointer._base_directory
         )
-        if latest_ckpts == -1:
+        self._checkpointer.setup_redundancy(latest_redund)
+        if latest_redund == -1 or latest_ckpt == -1:
             return False
-        redundancy, iteration = latest_ckpts
-        agent_data = self._checkpointer._load_checkpoint(redundancy, iteration)
+        agent_data = self._checkpointer.load_checkpoint(latest_ckpt)
         if agent_data is None:
             self.console.warning("Unable to reload the agent's parameters!")
             return False
         # FIXME not optimal; would be better to:
-        # - handle this agent.unbundle, so might require agent's not to
-        #   bulid networks
-        # - or, when bundling, save the full rng: there could have been
+        # - when bundling, save the full rng: there could have been
         #   millions of splits
         # restore agent with previous rng
         # NOTE this overwrites seed if it changed in the config
         self.seed = agent_data["seed"]
         self.create_agent(agent_data["n_splits"])
-        self.agent.unbundle(
-            self._checkpointer._base_directory, redundancy, iteration, agent_data
-        )
+        self.agent.unbundle(self._checkpointer._base_directory, latest_ckpt, agent_data)
 
         for key in ["curr_redundancy", "curr_iteration", "global_steps"]:
             assert key in agent_data, f"{key} not in agent data."
@@ -210,6 +206,7 @@ class Runner(ABC):
             )
             self.run_experiment()
             self.curr_redundancy += 1
+            self._checkpointer.setup_redundancy(self.curr_redundancy)
             self.curr_iteration, self.global_steps = 0, 0
             if self.curr_redundancy != self.redundancy:
                 self.create_agent()
@@ -217,16 +214,13 @@ class Runner(ABC):
     def _checkpoint_experiment(self):
         agent_data = self.agent.bundle_and_checkpoint(
             self._checkpointer._base_directory,
-            self.curr_redundancy,
             self.curr_iteration,
         )
         if not agent_data:
             return
         for key in ["curr_redundancy", "curr_iteration", "global_steps"]:
             agent_data[key] = getattr(self, key)
-        self._checkpointer._save_checkpoint(
-            self.curr_redundancy, self.curr_iteration, agent_data
-        )
+        self._checkpointer.save_checkpoint(self.curr_iteration, agent_data)
 
     @abstractmethod
     def run_episodes(self) -> dict:
