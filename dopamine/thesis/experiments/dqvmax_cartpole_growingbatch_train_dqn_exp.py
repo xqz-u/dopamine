@@ -1,6 +1,6 @@
 import os
 
-from thesis import config, offline_circular_replay_buffer, utils
+from thesis import config, offline_circular_replay_buffer
 from thesis.experiments import dqvmax_cartpole_growingbatch_train as dqvmax_gb
 from thesis.runner import runner
 
@@ -16,9 +16,7 @@ def main():
         "checkpoint_dir": dqn_logdir,
         "iterations": list(range(496, 500)),
     }
-    utils.data_dir_from_conf(exp_name, conf)
-    run = runner.create_runner(conf)
-    run.run_experiment_with_redundancy()
+    runner.run_multiple_configs([conf])
 
 
 # main()

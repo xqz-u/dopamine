@@ -43,11 +43,12 @@ def fb_dqn_exp_conf():
 
 
 def main():
-    all_configs = [
-        conf_maker()
-        for conf_maker in [online_conf, gb_conf, gb_dqn_exp_conf, fb_dqn_exp_conf]
-    ]
+    all_configs = [online_conf()]
+    # all_configs = [
+    #     conf_maker()
+    #     for conf_maker in [online_conf, gb_conf, gb_dqn_exp_conf, fb_dqn_exp_conf]
+    # ]
     runner.run_multiple_configs(all_configs)
 
 
-main()
+# main()

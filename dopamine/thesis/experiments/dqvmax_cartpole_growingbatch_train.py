@@ -1,7 +1,7 @@
 import logging
 
 from dopamine.jax import losses
-from thesis import config, utils
+from thesis import config
 from thesis.agents.DQVMaxAgent import DQVMaxAgent
 from thesis.runner import reporter, runner
 
@@ -45,7 +45,7 @@ make_config = lambda exp_name: {
 def main():
     exp_name = "growingbatch_train"
     conf = make_config(exp_name)
-    conf["runner"]["log_level"] = logging.DEBUG
-    utils.data_dir_from_conf(exp_name, conf)
-    run = runner.create_runner(conf)
-    run.run_experiment_with_redundancy()
+    runner.run_multiple_configs([conf])
+
+
+# main()
