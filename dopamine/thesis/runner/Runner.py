@@ -9,6 +9,7 @@ import attr
 import jax
 import numpy as np
 from dopamine.discrete_domains import gym_lib
+from jax import numpy as jnp
 from thesis import constants, custom_pytrees, patcher, utils
 from thesis.runner import reporter
 
@@ -44,6 +45,10 @@ class Runner(ABC):
             else (str(v) if not utils.is_builtin(v) else v),
             r,
         )
+
+    @property
+    def current_schedule(self) -> str:
+        return "train" if not self.agent.eval_mode else "eval"
 
     def __attrs_post_init__(self):
         # add values to config if it had defaults
@@ -81,12 +86,10 @@ class Runner(ABC):
             "observation_shape": self.conf["env"]["observation_shape"],
             "observation_dtype": self.env.observation_space.dtype,
             "rng": rng,
+            "eval_mode": True if self.conf["runner"]["schedule"] == "eval" else False,
             **utils.argfinder(agent_, {**self.conf["agent"], **self.conf["memory"]}),
         }
         self.agent = agent_(**agent_args)
-        self.agent.eval_mode = (
-            True if self.conf["runner"]["schedule"] == "eval" else False
-        )
 
     # TODO move self.console out of class?
     def setup_reporters(self):
@@ -153,7 +156,7 @@ class Runner(ABC):
                 reports,
                 step=step,
                 epoch=epoch,
-                context={"subset": self.conf["runner"]["schedule"], **kwargs},
+                context={"subset": self.current_schedule, **kwargs},
             )
             for reporter_ in self.reporters
         ]
@@ -165,8 +168,11 @@ class Runner(ABC):
             epoch=self.curr_iteration,
         )
         self.console.debug(
-            f"{self.conf['runner']['schedule']}: #{self.curr_iteration} #ep {metrics['episodes']} #steps {metrics['steps']} #loss_steps {metrics['loss_steps']} #global {self.global_steps}\n{pprint.pformat(reported)}"
+            f"{self.current_schedule}: #{self.curr_iteration} #ep {metrics['episodes']} #steps {metrics['steps']} #loss_steps {metrics['loss_steps']} #global {self.global_steps}\n{pprint.pformat(reported)}"
         )
+
+    def model_losses(self, losses: jnp.DeviceArray) -> dict:
+        return {k: float(v) for k, v in zip(self.agent.losses_names, losses)}
 
     def _run_episodes(self):
         metrics = self.run_episodes()
@@ -174,9 +180,7 @@ class Runner(ABC):
         # to avoid possible division by 0 errors when training has not
         # started yet
         metrics["loss_steps"] = metrics["loss_steps"] or 1
-        metrics["losses"] = {
-            k: float(v) for k, v in zip(self.agent.losses_names, metrics["losses"])
-        }
+        metrics["losses"] = self.model_losses(metrics["losses"])
         self.do_reports(metrics)
 
     def run_one_iteration(self):

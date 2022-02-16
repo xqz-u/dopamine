@@ -42,6 +42,10 @@ class AimReporter(Reporter):
         # be able to differentiate on redundancy
         self.writer["hparams", "runner", "run_number"] = run_number
 
+    # TODO do not require dict keys unconditionally! it's a waste when
+    # some values do not need reporting/are not available. One fix idea
+    # can be to define a "report view" for an agent/runner, and to use
+    # that here
     def __call__(
         self,
         reports: Dict[str, Union[float, Dict[str, float]]],

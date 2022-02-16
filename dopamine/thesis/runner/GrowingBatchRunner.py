@@ -29,10 +29,6 @@ class GrowingBatchRunner(Runner.Runner):
             loss_steps += training_started
         return loss, loss_steps
 
-    # TODO abstract away common structure: the return dict is
-    # basically the same across online and offline runners, maybe
-    # the base runner can pass a common context or smth like that
-    # around?
     def run_episodes(self) -> dict:
         n_episodes, tot_steps, tot_reward = 0, 0, 0.0
         while tot_steps < self.steps:
