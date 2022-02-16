@@ -6,6 +6,7 @@ from thesis.agents.DQVMaxAgent import DQVMaxAgent
 from thesis.runner import reporter, runner
 
 make_config = lambda exp_name: {
+    "experiment_name": f"dqvmax_{exp_name}",
     "nets": {
         "qnet": {
             "model": {"hiddens": (512, 512)},
@@ -29,20 +30,14 @@ make_config = lambda exp_name: {
     "runner": {
         "call_": runner.GrowingBatchRunner,
         "schedule": "train",
-        "log_level": logging.DEBUG,
+        "log_level": logging.INFO,
         "experiment": {
             "seed": 4,
             "steps": 600,
             "iterations": 1000,
             "redundancy": 3,
         },
-        "reporters": [
-            {
-                "call_": reporter.AimReporter,
-                "repo": config.aim_dir,
-                "experiment": f"dqvmax_{exp_name}",
-            }
-        ],
+        "reporters": [{"call_": reporter.AimReporter, "repo": config.aim_dir}],
     },
 }
 
@@ -50,6 +45,7 @@ make_config = lambda exp_name: {
 def main():
     exp_name = "growingbatch_train"
     conf = make_config(exp_name)
+    conf["runner"]["log_level"] = logging.DEBUG
     utils.data_dir_from_conf(exp_name, conf)
     run = runner.create_runner(conf)
     run.run_experiment_with_redundancy()

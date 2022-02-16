@@ -36,6 +36,7 @@ class Runner(ABC):
     @property
     def hparams(self) -> dict:
         r = deepcopy(self.conf)
+        r.pop("experiment_name", None)
         for k in ["reporters", "base_dir", "ckpt_file_prefix", "logging_file_prefix"]:
             r["runner"].pop(k, None)
         r["env"].pop("preproc", None)
@@ -99,7 +100,12 @@ class Runner(ABC):
         )
         for rep in self.conf["runner"].get("reporters"):
             reporter_ = rep["call_"]
-            self.reporters.append(reporter_(**utils.argfinder(reporter_, rep)))
+            self.reporters.append(
+                reporter_(
+                    experiment=self.conf["experiment_name"],
+                    **utils.argfinder(reporter_, rep),
+                )
+            )
 
     def try_resuming(self) -> bool:
         # Check if checkpoint exists. Note that the existence of

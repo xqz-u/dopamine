@@ -17,7 +17,7 @@ def nstep_termination(self, iteration_limit: int = 1000) -> bool:
 class FixedBatchRunner(Runner.Runner):
     termination_criterion: callable = nstep_termination
     termination_args: dict = attr.ib(factory=dict)
-    eval_period: int = int(1e4)
+    eval_period: int = int(1e3)
     eval_episodes: int = 10
 
     def __attrs_post_init__(self):
