@@ -4,16 +4,11 @@ from typing import Dict, Sequence, Tuple
 import attr
 import numpy as np
 import tensorflow as tf
+from dopamine.replay_memory import circular_replay_buffer
 from flax import linen as nn
 from flax.core.frozen_dict import FrozenDict
 from jax import numpy as jnp
-from thesis import (
-    custom_pytrees,
-    exploration,
-    offline_circular_replay_buffer,
-    patcher,
-    utils,
-)
+from thesis import custom_pytrees, exploration, offline_circular_replay_buffer, utils
 from thesis.agents import agent_utils
 
 
@@ -27,7 +22,9 @@ class Agent(ABC):
     min_replay_history: int = 5000
     train_freq: int = 1
     gamma: float = 0.99
-    memory: patcher.OutOfGraphReplayBuffer = patcher.OutOfGraphReplayBuffer
+    memory: circular_replay_buffer.OutOfGraphReplayBuffer = (
+        circular_replay_buffer.OutOfGraphReplayBuffer
+    )
     act_sel_fn: callable = exploration.egreedy
     eval_mode: bool = False
     models: Dict[str, custom_pytrees.NetworkOptimWrap] = attr.ib(factory=dict)
@@ -153,13 +150,11 @@ class Agent(ABC):
         self.training_steps += training
         return loss, training_started
 
-    def bundle_and_checkpoint(
-        self, ckpt_dir: str, redundancy: int, iteration: int
-    ) -> dict:
+    def bundle_and_checkpoint(self, ckpt_dir: str, iteration: int) -> dict:
         if not tf.io.gfile.exists(ckpt_dir):
             return
         # Checkpoint the replay buffer.
-        self.memory._save(ckpt_dir, redundancy, iteration)
+        self.memory.save(ckpt_dir, iteration)
         # NOTE checkpointing happens after a full iteration, when state
         # is reset to 0s, so no use in saving it
         return {
@@ -171,11 +166,9 @@ class Agent(ABC):
             **self.rng.checkpointable_elements,
         }
 
-    def unbundle(
-        self, ckpt_dir: str, redundancy: int, iteration: int, bundle_dict: dict
-    ):
+    def unbundle(self, ckpt_dir: str, iteration: int, bundle_dict: dict):
         try:
-            self.memory._load(ckpt_dir, redundancy, iteration)
+            self.memory.load(ckpt_dir, iteration)
         except tf.errors.NotFoundError:
             # logging.warning("Unable to reload replay buffer!")
             pass

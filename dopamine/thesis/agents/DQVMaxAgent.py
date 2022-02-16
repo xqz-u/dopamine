@@ -6,7 +6,8 @@ import jax
 import numpy as np
 from jax import numpy as jnp
 from thesis import custom_pytrees
-from thesis.agents import agent_base, agent_utils
+from thesis.agents import agent_utils
+from thesis.agents.Agent import Agent
 
 
 @ft.partial(jax.jit, static_argnums=(0))
@@ -50,7 +51,7 @@ def train_v_net(
 
 
 @attr.s(auto_attribs=True)
-class DQVMaxAgent(agent_base.Agent):
+class DQVMaxAgent(Agent):
     @property
     def model_names(self) -> Tuple[str]:
         return ("qnet", "vnet")

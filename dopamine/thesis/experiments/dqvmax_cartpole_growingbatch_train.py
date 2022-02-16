@@ -2,7 +2,7 @@ import logging
 
 from dopamine.jax import losses
 from thesis import config, utils
-from thesis.agents import dqv_max
+from thesis.agents.DQVMaxAgent import DQVMaxAgent
 from thesis.runner import reporter, runner
 
 make_config = lambda exp_name: {
@@ -20,7 +20,7 @@ make_config = lambda exp_name: {
     },
     "exploration": {},
     "agent": {
-        "call_": dqv_max.DQVMaxAgent,
+        "call_": DQVMaxAgent,
         "net_sync_freq": int(1e4),
         "min_replay_history": int(5e3),
     },
