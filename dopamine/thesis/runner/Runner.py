@@ -57,12 +57,12 @@ class Runner(ABC):
         self.env = env_(**utils.argfinder(env_, self.conf["env"]))
         self.conf["env"].update(constants.env_info(**self.conf["env"]))
         self.conf["env"]["clip_rewards"] = self.conf.get("clip_rewards", False)
-        self.setup_reporters()
         self._checkpointer = patcher.Checkpointer(
             os.path.join(self.conf["runner"]["base_dir"], "checkpoints")
         )
         if not self.try_resuming():
             self.create_agent()
+        self.setup_reporters()
 
     def create_agent(self, seed_splits: int = 0):
         rng = custom_pytrees.PRNGKeyWrap(self.seed)

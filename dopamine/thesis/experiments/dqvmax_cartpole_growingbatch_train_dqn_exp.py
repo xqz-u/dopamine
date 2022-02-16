@@ -18,5 +18,7 @@ def main():
     }
     utils.data_dir_from_conf(exp_name, conf)
     run = runner.create_runner(conf)
-    return run
-    # run.run_experiment_with_redundancy()
+    run.run_experiment_with_redundancy()
+
+
+# main()

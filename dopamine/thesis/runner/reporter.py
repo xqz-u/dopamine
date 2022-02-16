@@ -32,9 +32,15 @@ class AimReporter(Reporter):
     writer: aim.Run = attr.ib(init=False)
 
     def setup(self, params: dict, run_number: int):
-        exp_name = f"{self.experiment}_{run_number}"
-        self.writer = aim.Run(run_hash=exp_name, repo=self.repo, experiment=exp_name)
+        self.writer = aim.Run(
+            run_hash=f"{self.experiment}_{run_number}",
+            repo=self.repo,
+            experiment=self.experiment,
+        )
         self.writer["hparams"] = params
+        # save a run_number to group experiments by name but to still
+        # be able to differentiate on redundancy
+        self.writer["hparams", "runner", "run_number"] = run_number
 
     def __call__(
         self,
