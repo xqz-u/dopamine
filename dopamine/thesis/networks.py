@@ -1,6 +1,7 @@
 from typing import Sequence, Tuple, Union
 
 from flax import linen as nn
+
 from jax import numpy as jnp
 
 
@@ -12,9 +13,8 @@ class Sequential(nn.Module):
             x = layer(x)
         return x
 
-    # TODO use some library function or such!
     def __hash__(self) -> int:
-        return hash(".".join(str(hash(l)) for l in self.layers))
+        return hash(tuple(self.layers))
 
 
 # NOTE setting _min_vals and _max_vals because of

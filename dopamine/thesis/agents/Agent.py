@@ -32,14 +32,8 @@ class Agent(ABC):
     state: np.ndarray = None
     rng: custom_pytrees.PRNGKeyWrap = None
     training_steps: int = 0
+    losses_names: Tuple[str] = None
     _observation: np.ndarray = None
-
-    # TODO hash args and cache this
-    @property
-    def losses_names(self) -> Tuple[str]:
-        return tuple(
-            f"{m}_{self.models[m].loss_metric.__name__}" for m in self.model_names
-        )
 
     @property
     def trainable(self) -> bool:
@@ -53,6 +47,9 @@ class Agent(ABC):
         )
         self.build_memory()
         self.build_networks_and_optimizers()
+        self.losses_names = tuple(
+            f"{m}_{self.models[m].loss_metric.__name__}" for m in self.model_names
+        )
         self.act_sel_fn = self.conf["exploration"].get("call_", self.act_sel_fn)
         self.conf["exploration"] = {
             "call_": self.act_sel_fn,

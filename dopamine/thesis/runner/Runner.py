@@ -112,7 +112,7 @@ class Runner(ABC):
         if agent_data is None:
             self.console.warning("Unable to reload the agent's parameters!")
             return False
-        # FIXME not optimal; would be better to:
+        # TODO not optimal; would be better to:
         # - when bundling, save the full rng: there could have been
         #   millions of splits
         # restore agent with previous rng

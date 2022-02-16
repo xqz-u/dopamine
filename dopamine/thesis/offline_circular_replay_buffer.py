@@ -5,6 +5,7 @@ from concurrent import futures
 
 import numpy as np
 from dopamine.replay_memory import circular_replay_buffer
+
 from thesis import utils
 
 
@@ -27,7 +28,7 @@ def _merge_replay_buffers(self, other):
 
 
 # TODO dataclass
-# TODO document this hazy thing
+# TODO documentation
 class OfflineOutOfGraphReplayBuffer(circular_replay_buffer.OutOfGraphReplayBuffer):
     def __init__(
         self,
