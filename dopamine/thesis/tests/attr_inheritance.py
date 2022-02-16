@@ -13,8 +13,9 @@ class A:
 class B(A):
     b: int = 3
 
-    # def __attrs_post_init__(self):
-    #     print(f"B: {self.b}")
+    def __attrs_post_init__(self):
+        super().__attrs_post_init__()
+        print(f"B: {self.b}")
 
 
 x = B(a=4)

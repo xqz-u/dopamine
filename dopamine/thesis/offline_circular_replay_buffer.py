@@ -37,7 +37,7 @@ class OfflineOutOfGraphReplayBuffer(circular_replay_buffer.OutOfGraphReplayBuffe
         checkpoint_dir: str,
         iterations: list,
         batch_size: int = 32,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             observation_shape,
@@ -75,6 +75,10 @@ class OfflineOutOfGraphReplayBuffer(circular_replay_buffer.OutOfGraphReplayBuffe
             raise ValueError(
                 "There is not enough capacity to cover "
                 "update_horizon and stack_size."
+            )
+        if self._replay_capacity < self._batch_size:
+            raise ValueError(
+                f"Not enough trajectories are available for sampling: capacity {self._replay_capacity}, batch size: {self._batch_size}"
             )
 
     def load_single_buffer(self, suffix: int):

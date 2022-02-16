@@ -60,9 +60,9 @@ class Runner(ABC):
         self._checkpointer = patcher.Checkpointer(
             os.path.join(self.conf["runner"]["base_dir"], "checkpoints")
         )
+        self.setup_reporters()
         if not self.try_resuming():
             self.create_agent()
-        self.setup_reporters()
 
     def create_agent(self, seed_splits: int = 0):
         rng = custom_pytrees.PRNGKeyWrap(self.seed)
@@ -120,7 +120,6 @@ class Runner(ABC):
         self.seed = agent_data["seed"]
         self.create_agent(agent_data["n_splits"])
         self.agent.unbundle(self._checkpointer._base_directory, latest_ckpt, agent_data)
-
         for key in ["curr_redundancy", "curr_iteration", "global_steps"]:
             assert key in agent_data, f"{key} not in agent data."
             setattr(self, key, agent_data[key])
