@@ -42,9 +42,6 @@ class FixedBatchRunner(Runner.Runner):
         self.conf["runner"]["experiment"]["termination_args"] = self.termination_args
         super().__attrs_post_init__()
         assert self.agent.min_replay_history == 0
-        utils.bind_instance_method(
-            self, "termination_criterion", self.termination_criterion
-        )
 
     def eval_round(self):
         self.agent.eval_mode = True
@@ -84,7 +81,7 @@ class FixedBatchRunner(Runner.Runner):
         }
 
     def run_loops(self):
-        while not self.termination_criterion(**self.termination_args):
+        while not self.termination_criterion(self, **self.termination_args):
             self.do_reports(self.run_episodes())
             self._checkpoint_experiment()
             self.curr_iteration += 1
