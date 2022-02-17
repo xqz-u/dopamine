@@ -1,24 +1,20 @@
 import logging
 
+import optax
 from dopamine.jax import losses
 from thesis import config
 from thesis.agents.DQVMaxAgent import DQVMaxAgent
 from thesis.runner import reporter, runner
 
+model_conf = {
+    "model": {"hiddens": (512, 512)},
+    "optim": {"call_": optax.adam, "learning_rate": 0.001},
+    "loss": losses.huber_loss,
+}
+
 make_config = lambda exp_name: {
     "experiment_name": f"dqvmax_{exp_name}",
-    "nets": {
-        "qnet": {
-            "model": {"hiddens": (512, 512)},
-            "optim": {"learning_rate": 0.001},
-            "loss": losses.huber_loss,
-        },
-        "vnet": {
-            "model": {"hiddens": (512, 512)},
-            "optim": {"learning_rate": 0.001},
-            "loss": losses.huber_loss,
-        },
-    },
+    "nets": {"qnet": model_conf, "vnet": model_conf},
     "exploration": {},
     "agent": {
         "call_": DQVMaxAgent,

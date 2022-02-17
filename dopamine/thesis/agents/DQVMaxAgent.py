@@ -69,9 +69,7 @@ class DQVMaxAgent(Agent):
 
     def select_action(self, obs: np.ndarray) -> np.ndarray:
         return self._select_action(
-            obs,
-            self.models["qnet"].net,
-            self.models["qnet"].params["online"],
+            obs, self.models["qnet"].net, self.models["qnet"].params["online"]
         )
 
     def train(self, replay_elts: Dict[str, np.ndarray]) -> Tuple[jnp.DeviceArray]:
