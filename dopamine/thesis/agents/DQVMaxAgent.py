@@ -4,67 +4,68 @@ from typing import Dict, Tuple
 import attr
 import jax
 import numpy as np
+from flax.core.frozen_dict import FrozenDict
 from jax import numpy as jnp
 from thesis import custom_pytrees
 from thesis.agents import agent_utils
 from thesis.agents.Agent import Agent
 
 
+# TODO organize so that there is no need to pass both the
+# NetworkOptimWrap and the FrozenDict parameters...
+@ft.partial(jax.jit, static_argnums=(0))
+def train_v_net(
+    discount: float,
+    net_optim: custom_pytrees.NetworkOptimWrap,
+    train_params: FrozenDict,
+    states: np.ndarray,
+    td_targets: jnp.DeviceArray,
+) -> Tuple[custom_pytrees.NetworkOptimWrap, FrozenDict, jnp.DeviceArray]:
+    def loss_fn(params, targets) -> jnp.DeviceArray:
+        estimates = agent_utils.batch_net_eval(net_optim.net, params, states)
+        return jnp.mean(jax.vmap(net_optim.loss_metric)(targets, estimates))
+
+    grad_fn = jax.value_and_grad(loss_fn)
+    loss, grads = grad_fn(train_params, td_targets)
+    train_params, net_optim.optim_state = agent_utils.optimize(
+        net_optim.optim, grads, train_params, net_optim.optim_state
+    )
+    return net_optim, train_params, loss
+
+
 @ft.partial(jax.jit, static_argnums=(0))
 def train_q_net(
     discount: float,
     net_optim: custom_pytrees.NetworkOptimWrap,
+    train_params: FrozenDict,
     states: np.ndarray,
     actions: np.ndarray,
     td_targets: jnp.DeviceArray,
-) -> Tuple[custom_pytrees.NetworkOptimWrap, jnp.DeviceArray]:
+) -> Tuple[custom_pytrees.NetworkOptimWrap, FrozenDict, jnp.DeviceArray]:
     def loss_fn(params, targets) -> jnp.DeviceArray:
         estimates = agent_utils.batch_net_eval(net_optim.net, params, states)
         estimates = jax.vmap(lambda x, y: x[y])(estimates, actions)
         return jnp.mean(jax.vmap(net_optim.loss_metric)(targets, estimates))
 
     grad_fn = jax.value_and_grad(loss_fn)
-    loss, grads = grad_fn(net_optim.params["online"], td_targets)
-    net_optim.params["online"], net_optim.optim_state = agent_utils.optimize(
-        net_optim.optim, grads, net_optim.params["online"], net_optim.optim_state
+    loss, grads = grad_fn(train_params, td_targets)
+    train_params, net_optim.optim_state = agent_utils.optimize(
+        net_optim.optim, grads, train_params, net_optim.optim_state
     )
-    return net_optim, loss
-
-
-@ft.partial(jax.jit, static_argnums=(0))
-def train_v_net(
-    discount: float,
-    net_optim: custom_pytrees.NetworkOptimWrap,
-    states: np.ndarray,
-    td_targets: jnp.DeviceArray,
-) -> Tuple[custom_pytrees.NetworkOptimWrap, jnp.DeviceArray]:
-    def loss_fn(params, targets) -> jnp.DeviceArray:
-        estimates = agent_utils.batch_net_eval(net_optim.net, params, states)
-        return jnp.mean(jax.vmap(net_optim.loss_metric)(targets, estimates))
-
-    grad_fn = jax.value_and_grad(loss_fn)
-    loss, grads = grad_fn(net_optim.params, td_targets)
-    net_optim.params, net_optim.optim_state = agent_utils.optimize(
-        net_optim.optim, grads, net_optim.params, net_optim.optim_state
-    )
-    return net_optim, loss
+    return net_optim, train_params, loss
 
 
 @attr.s(auto_attribs=True)
 class DQVMaxAgent(Agent):
     @property
     def model_names(self) -> Tuple[str]:
-        return ("qnet", "vnet")
+        return ("vnet", "qnet")
 
     def build_networks_and_optimizers(self):
-        out_dims = [self.num_actions, 1]
-        self._build_networks_and_optimizers(self.model_names, out_dims)
+        self._build_networks_and_optimizers(self.model_names, [1, self.num_actions])
         # initialize target q network weights with online ones
         qnet_params = self.models["qnet"].params
-        self.models["qnet"].params = {
-            "online": qnet_params,
-            "target": qnet_params,
-        }
+        self.models["qnet"].params = {"online": qnet_params, "target": qnet_params}
 
     def select_action(self, obs: np.ndarray) -> np.ndarray:
         return self._select_action(
@@ -73,8 +74,8 @@ class DQVMaxAgent(Agent):
             self.models["qnet"].params["online"],
         )
 
-    def train(self, replay_elts: Dict[str, np.ndarray]) -> jnp.DeviceArray:
-        return jnp.array((self.train_v(replay_elts), self.train_q(replay_elts)))
+    def train(self, replay_elts: Dict[str, np.ndarray]) -> Tuple[jnp.DeviceArray]:
+        return self.train_v(replay_elts), self.train_q(replay_elts)
 
     def train_v(self, replay_elts: Dict[str, np.ndarray]) -> jnp.DeviceArray:
         v_td_targets = agent_utils.td_error(
@@ -87,8 +88,12 @@ class DQVMaxAgent(Agent):
             replay_elts["reward"],
             replay_elts["terminal"],
         )
-        self.models["vnet"], v_loss = train_v_net(
-            self.gamma, self.models["vnet"], replay_elts["state"], v_td_targets
+        self.models["vnet"], self.models["vnet"].params, v_loss = train_v_net(
+            self.gamma,
+            self.models["vnet"],
+            self.models["vnet"].params,
+            replay_elts["state"],
+            v_td_targets,
         )
         return v_loss
 
@@ -103,9 +108,10 @@ class DQVMaxAgent(Agent):
             replay_elts["reward"],
             replay_elts["terminal"],
         )
-        self.models["qnet"], q_loss = train_q_net(
+        self.models["qnet"], self.models["qnet"].params["online"], q_loss = train_q_net(
             self.gamma,
             self.models["qnet"],
+            self.models["qnet"].params["online"],
             replay_elts["state"],
             replay_elts["action"],
             q_td_targets,
