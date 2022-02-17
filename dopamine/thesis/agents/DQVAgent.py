@@ -3,19 +3,19 @@ from typing import Dict, Tuple
 import attr
 import numpy as np
 from jax import numpy as jnp
-from thesis.agents import agent_utils
-from thesis.agents.Agent import Agent
-from thesis.agents.DQVMaxAgent import DQVMaxAgent
+from thesis.agents import Agent, DQVMaxAgent, agent_utils
 
 
 @attr.s(auto_attribs=True)
-class DQVAgent(Agent):
+class DQVAgent(Agent.Agent):
     @property
     def model_names(self) -> Tuple[str]:
         return ("vnet", "qnet")
 
     def select_action(self, obs: np.ndarray) -> np.ndarray:
-        return DQVMaxAgent.select_action(self, obs)
+        return self._select_action(
+            obs, self.models["qnet"].net, self.models["qnet"].params
+        )
 
     def build_networks_and_optimizers(self):
         self._build_networks_and_optimizers(self.model_names, [1, self.num_actions])
@@ -36,18 +36,17 @@ class DQVAgent(Agent):
             replay_elts["reward"],
             replay_elts["terminal"],
         )
-        # (
-        #     self.models["vnet"],
-        #     self.models["vnet"].params["online"],
-        #     v_loss,
-        # ) = DQVMaxAgent.train_v_net(
-        #     self.gamma,
-        #     self.models["vnet"],
-        #     self.models["vnet"].params["online"],
-        #     replay_elts["state"],
-        #     td_targets,
-        # )
-        # self.models["vnet"].params["online"], self.models["vnet"].optim_state, v_loss = DQVMaxAgent.train_v_net(self.gamma, self.models["vnet"].net, )
+        (
+            self.models["vnet"],
+            self.models["vnet"].params["online"],
+            v_loss,
+        ) = DQVMaxAgent.train_v_net(
+            self.gamma,
+            self.models["vnet"],
+            self.models["vnet"].params["online"],
+            replay_elts["state"],
+            td_targets,
+        )
         (
             self.models["qnet"],
             self.models["qnet"].params,
@@ -60,4 +59,4 @@ class DQVAgent(Agent):
             replay_elts["action"],
             td_targets,
         )
-        # return v_loss, q_loss
+        return v_loss, q_loss
