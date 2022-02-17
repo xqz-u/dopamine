@@ -141,7 +141,9 @@ class Agent(ABC):
         if training and self.trainable:
             training_started = True
             if self.training_steps % self.train_freq == 0:
-                loss = self.train(self.sample_memory()).reshape((len(self.models), 1))
+                loss = jnp.array(self.train(self.sample_memory())).reshape(
+                    (len(self.models), 1)
+                )
             if self.training_steps % self.net_sync_freq == 0:
                 self.sync_weights()
         self.training_steps += training
@@ -184,8 +186,10 @@ class Agent(ABC):
     def select_action(self, obs: np.ndarray) -> np.ndarray:
         pass
 
+    # NOTE the order that losses are returned must match that in which
+    # model_names are declared, since they will be zipped together
     @abstractmethod
-    def train(self, replay_elts: Dict[str, np.ndarray]) -> jnp.DeviceArray:
+    def train(self, replay_elts: Dict[str, np.ndarray]) -> Tuple[jnp.DeviceArray]:
         pass
 
     @abstractmethod
