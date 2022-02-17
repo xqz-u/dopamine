@@ -1,14 +1,15 @@
 + make it so that, in my agents, =observation_dtype= is not needed,
   and is passed by the =create_agent_fn= after creating the
   environment in =dopamine/discrete_domains/run_experiment=
+  DONE can be achieved in =thesis.constants=
 + is merging the replay buffers for the offline agents a good idea? if
   one wants to inspect the learning process, any reference to which
   loaded buffer the replayed actions originated from is lost
-+ get rid of =ExperimentData=?
++ get rid of =ExperimentData=? DONE
 + check if DQN stores observations or states in replay memory, and if
-  their shapes match
+  their shapes match DONE they store states
 + change folder structure pattern: keep my changes in a separate
-  branch?
+  branch? DONE see =thesis.patcher=
 
 
 * Logger
@@ -21,23 +22,24 @@
     Goal -> loggers should be pluggable easily in an agent, given
     that they are properly configured. Ideally they should also be
     able to be stopped and reloaded
+    DONE
 
 * Agent
-  + Base class for my agents
+  + Base class for my agents DONE
   + Profile jax/training operations
-  + DQV max and DQV
+  + DQV max and DQV DONE dqvmax
   + Train online on Atari games!
-  + how about some parallesim? check when to use =jax.pmap=
+  + how about some parallelism? check when to use =jax.pmap=
 
 * Runner
   + Dopamine has a dope runner with some useful functionality
-    (checkpointing, logging and start/stop/reload ability). It's
+    (checkpointing, logging and start/stop/reload ability). Its
     instantiation is quite strict, so maybe work on that... And in
     general try to keep configurations as python dictionaries, do not
-    rely on gin
+    rely on gin DONE
   + Runner should be able to work with offline data as well! Unify the
-    interfaces
-  + Ask Matthia for Peregrine access!!!
+    interfaces DONE
+  + Ask Matthia for Peregrine access
 
 * Offline
   + First, choose whether to work with the Dopamine runner or not,
@@ -47,3 +49,11 @@
     If not -> choose whether to keep working with the Dopamine replay
 	      buffer, or to write a new one (consider also available
 	      time...)
+    DONE
+
+* Data
+  + Use a non-relational database e.g. =mongo= to store the data. This
+    way, it is possible to collect data on one host and send them to a
+    remote database through TCP
+    NOTE this can involve both checkpointing and performance graphs,
+    but needs care for how =aim= plays in this context
