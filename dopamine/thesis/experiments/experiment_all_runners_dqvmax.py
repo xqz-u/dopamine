@@ -4,6 +4,8 @@ from thesis import config, offline_circular_replay_buffer
 from thesis.experiments import dqvmax_cartpole_growingbatch_train as dqvmax_gb
 from thesis.runner import runner
 
+# NOTE this won't run, use configs from thesis.experiments.dqv_4_runners_cartpole
+
 
 def online_conf():
     conf = dqvmax_gb.make_config("online_train")
