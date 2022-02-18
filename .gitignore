@@ -3,8 +3,13 @@
 
 dopamine/thesis/scratch
 
-resources/data
+resources/data/*
+!resources/data/mongodb
+resources/data/mongodb/*
+!resources/data/mongodb/docker-compose.yml
+
 resources/images
+
 resources/papers/auto
 resources/papers/_minted-summary
 resources/papers/summary.tex
