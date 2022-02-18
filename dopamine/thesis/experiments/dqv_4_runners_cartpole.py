@@ -83,4 +83,4 @@ def main():
     runner.run_multiple_configs(all_configs)
 
 
-main()
+# main()
