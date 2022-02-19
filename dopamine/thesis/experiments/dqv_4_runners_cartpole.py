@@ -20,7 +20,7 @@ dqn_exp_conf = {
 
 model_conf = {
     "model": {"hiddens": (512, 512)},
-    "optim": {"call_": optax.adam, "learning_rate": 0.001},
+    "optim": {"call_": optax.adam, "learning_rate": 0.001, "eps": 3.125e-4},
     "loss": losses.huber_loss,
 }
 make_config = lambda exp_name: {
