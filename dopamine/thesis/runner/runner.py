@@ -42,5 +42,6 @@ def run_experiment(args: Tuple[dict, int]):
 def run_multiple_configs(configs: List[dict], n_workers: int = None):
     n_configs, cores = len(configs), mp.cpu_count()
     n_workers = n_workers or (n_configs if n_configs < cores else cores)
+    print(f"n_workers: {n_workers}")
     with mp.Pool(n_workers) as p:
         p.map(run_experiment, zip(configs, range(n_configs)))

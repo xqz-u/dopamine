@@ -29,7 +29,7 @@ class Runner(ABC):
     curr_iteration: int = attr.ib(init=False, default=0)
     curr_redundancy: int = attr.ib(init=False, default=0)
     global_steps: int = attr.ib(init=False, default=0)
-    reporters: List[reporter.Reporter] = attr.ib(factory=list)
+    reporters: List[Reporter.Reporter] = attr.ib(factory=list)
     console: utils.ConsoleLogger = attr.ib(init=False)
     _checkpointer: patcher.Checkpointer = attr.ib(init=False)
 

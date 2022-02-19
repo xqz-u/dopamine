@@ -4,7 +4,7 @@ from typing import Dict, List, Tuple
 import attr
 
 
-@attr.s
+@attr.s(auto_attribs=True)
 class Reporter(ABC):
     experiment_name: str
     writing_freq: int = attr.ib(default=1, kw_only=True)
