@@ -11,7 +11,7 @@ import numpy as np
 from dopamine.discrete_domains import gym_lib
 from jax import numpy as jnp
 from thesis import constants, custom_pytrees, patcher, utils
-from thesis.runner import reporter
+from thesis.reporter import Reporter
 
 # NOTE to do evaluation the way the runner works right now, the agent
 # models must be reloaded
@@ -102,7 +102,7 @@ class Runner(ABC):
             reporter_ = rep["call_"]
             self.reporters.append(
                 reporter_(
-                    experiment=self.conf["experiment_name"],
+                    experiment_name=self.conf["experiment_name"],
                     **utils.argfinder(reporter_, rep),
                 )
             )

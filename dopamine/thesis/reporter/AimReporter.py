@@ -1,41 +1,21 @@
-from abc import ABC, abstractmethod
 from typing import Dict, List, Tuple, Union
 
 import aim
 import attr
-
-
-@attr.s
-class Reporter(ABC):
-    writing_freq: int = attr.ib(default=1, kw_only=True)
-
-    @abstractmethod
-    def setup(self, params: dict, run_number: int):
-        pass
-
-    @abstractmethod
-    def __call__(
-        self,
-        reports: dict,
-        step: int,
-        epoch: int = None,
-        context: dict = None,
-    ) -> Dict[str, List[Tuple[str, float]]]:
-        pass
+from thesis.reporter import Reporter
 
 
 # NOTE giving a Run a hash allows to resume it
 @attr.s(auto_attribs=True)
 class AimReporter(Reporter):
     repo: str
-    experiment: str
     writer: aim.Run = attr.ib(init=False)
 
     def setup(self, params: dict, run_number: int):
         self.writer = aim.Run(
-            run_hash=f"{self.experiment}_{run_number}",
+            run_hash=f"{self.experiment_name}_{run_number}",
             repo=self.repo,
-            experiment=self.experiment,
+            experiment=self.experiment_name,
         )
         self.writer["hparams"] = params
         # save a run_number to group experiments by name but to still
