@@ -43,6 +43,6 @@ def main():
     runner.run_multiple_configs(all_configs)
 
 
-runner.run_multiple_configs(dqn_confs())
+# runner.run_multiple_configs(dqn_confs())
 # runner.run_multiple_configs(dqvmax_confs())
-# runner.run_multiple_configs(dqv_confs())
+runner.run_multiple_configs(dqv_confs())
