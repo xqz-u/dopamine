@@ -1,7 +1,7 @@
 **/.xqz-u-egg
 **/.aim
 
-dopamine/thesis/scratch
+# dopamine/thesis/scratch
 
 resources/data/*
 !resources/data/mongodb
