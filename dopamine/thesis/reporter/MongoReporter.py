@@ -1,3 +1,4 @@
+import signal
 from typing import List
 
 import attr
@@ -15,33 +16,47 @@ class BufferedMongoCollection:
     def size(self):
         return len(self.docs)
 
+    def flush_docs(self):
+        self.collection.insert_many(self.docs)
+        self.docs = []
+
+    def safe_flush_docs(self):
+        if self.size:
+            self.flush_docs()
+
     def __iadd__(self, doc: dict):
         self.docs.append(doc)
         if self.size >= self.buffering:
-            self.coll.insert_many(self.docs)
-            self.docs = []
+            self.flush_docs()
         return self
+
+    def flush_docs_handler(self, signum: int, frame):
+        self.safe_flush_docs()
+        print(f"mongo: Flushed {self.size} documents")
+        raise KeyboardInterrupt
 
     def __repr__(self) -> str:
         return f"<{self.__class__}#docs:{self.size}>"
 
 
+@attr.s(auto_attribs=True)
 class MongoReporter(Reporter.Reporter):
+    host: str = "localhost"
+    port: int = 27017
+    db_name: str = "thesis_db"
+    collection_name: str = "thesis_collection"
+    buffering: int = 100
     client: pymongo.MongoClient = attr.ib(init=False)
     db: pymongo.database.Database = attr.ib(init=False)
     collection: BufferedMongoCollection = attr.ib(init=False)
 
-    def __init__(
-        self,
-        host: str = "localhost",
-        port: int = 27107,
-        db_name: str = "thesis_db",
-        collection_name: str = "thesis_collection",
-        buffering: int = 1000,
-    ):
-        self.client = pymongo.MongoClient(host, port)
-        self.db = self.client[db_name]
-        self.collection = BufferedMongoCollection(buffering, self.db[collection_name])
+    def __attrs_post_init__(self):
+        self.client = pymongo.MongoClient(self.host, self.port)
+        self.db = self.client[self.db_name]
+        self.collection = BufferedMongoCollection(
+            self.buffering, self.db[self.collection_name]
+        )
+        signal.signal(signal.SIGINT, self.collection.flush_docs_handler)
 
     def setup(self, *_, **__):
         ...

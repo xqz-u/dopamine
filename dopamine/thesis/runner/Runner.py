@@ -11,7 +11,7 @@ import numpy as np
 from dopamine.discrete_domains import gym_lib
 from jax import numpy as jnp
 from thesis import constants, custom_pytrees, patcher, utils
-from thesis.reporter import Reporter
+from thesis.reporter import reporter
 
 # NOTE to do evaluation the way the runner works right now, the agent
 # models must be reloaded
@@ -29,7 +29,7 @@ class Runner(ABC):
     curr_iteration: int = attr.ib(init=False, default=0)
     curr_redundancy: int = attr.ib(init=False, default=0)
     global_steps: int = attr.ib(init=False, default=0)
-    reporters: Dict[str, Reporter.Reporter] = attr.ib(factory=dict)
+    reporters: Dict[str, reporter.Reporter] = attr.ib(factory=dict)
     console: utils.ConsoleLogger = attr.ib(init=False)
     _checkpointer: patcher.Checkpointer = attr.ib(init=False)
 
@@ -92,19 +92,26 @@ class Runner(ABC):
         }
         self.agent = agent_(**agent_args)
 
+    # default reporters: console and mongodb
     def setup_reporters(self):
         self.console = utils.ConsoleLogger(
             level=self.conf["runner"].get("log_level", logging.DEBUG),
             name=self.console_name,
         )
-        # TODO setup mongo reporter by default
-        for rep in self.conf["runner"].get("reporters"):
+        exp_name = self.conf["experiment_name"]
+        mongo_class, mongo_args = reporter.MongoReporter, {}
+        reporters_confs = self.conf["runner"].get("reporters", {})
+        if mongo_conf := reporters_confs.get("mongo", {}):
+            mongo_class = mongo_conf["call_"]
+            mongo_args = utils.argfinder(mongo_class, mongo_conf)
+        self.reporters["mongo"] = mongo_class(experiment_name=exp_name, **mongo_args)
+        for rep_name, rep in {
+            k: v for k, v in reporters_confs.items() if k != "mongo"
+        }.items():
             reporter_ = rep["call_"]
-            self.reporters.append(
-                reporter_(
-                    experiment_name=self.conf["experiment_name"],
-                    **utils.argfinder(reporter_, rep),
-                )
+            self.reporters[rep_name] = reporter_(
+                experiment_name=exp_name,
+                **utils.argfinder(reporter_, rep),
             )
 
     def try_resuming(self) -> bool:
@@ -211,10 +218,12 @@ class Runner(ABC):
     def run_experiment(self):
         env_seed = self.next_seeds()
         self.console.debug(f"Env seeds: {env_seed} Agent rng: {self.agent.rng}")
-        for reporter_ in self.reporters:
+        for reporter_ in self.reporters.values():
             reporter_.setup(self.hparams, self.curr_redundancy)
         self.console.info(pprint.pformat(self.hparams))
         self.run_loops()
+        # flush any buffered mongo documents
+        self.reporters["mongo"].collection.safe_flush_docs()
 
     def run_experiment_with_redundancy(self):
         while self.curr_redundancy < self.redundancy:
