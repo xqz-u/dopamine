@@ -1,4 +1,7 @@
+import os
+
 import thesis.experiments.dqv_4_runners_cartpole as dqv_cartpole
+from thesis import config, offline_circular_replay_buffer
 from thesis.agents import DQNAgent, DQVMaxAgent
 from thesis.runner import runner
 
@@ -7,13 +10,24 @@ def gen_confs(envs):
     confs = []
     for env, version in envs:
         for conf_maker in [
-            dqv_cartpole.online_conf,
-            dqv_cartpole.gb_conf,
-            # dqv_cartpole.gb_dqn_exp_conf,
-            # dqv_cartpole.fb_dqn_exp_conf,
+            # dqv_cartpole.online_conf,
+            # dqv_cartpole.gb_conf,
+            dqv_cartpole.gb_dqn_exp_conf,
+            dqv_cartpole.fb_dqn_exp_conf,
         ]:
             c = conf_maker()
             c["env"] = {"environment_name": env, "version": version}
+            c["memory"] = {
+                "call_": offline_circular_replay_buffer.OfflineOutOfGraphReplayBuffer,
+                "checkpoint_dir": os.path.join(
+                    config.data_dir,
+                    f"{env}-{version}",
+                    "JaxDQNAgent",
+                    "online_train",
+                    "checkpoints",
+                ),
+                "iterations": list(range(496, 500)),
+            }
             confs.append(c)
     return confs
 

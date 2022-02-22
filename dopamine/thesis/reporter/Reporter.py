@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from typing import Dict, List, Tuple
 
 import attr
 
@@ -14,7 +13,5 @@ class Reporter(ABC):
         pass
 
     @abstractmethod
-    def __call__(
-        self, reports: dict, step: int, epoch: int = None, context: dict = None
-    ) -> Dict[str, List[Tuple[str, float]]]:
+    def __call__(self, raw_reports: dict, agg_reports: dict, runner_info: dict):
         pass

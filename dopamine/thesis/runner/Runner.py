@@ -29,7 +29,7 @@ class Runner(ABC):
     curr_iteration: int = attr.ib(init=False, default=0)
     curr_redundancy: int = attr.ib(init=False, default=0)
     global_steps: int = attr.ib(init=False, default=0)
-    reporters: List[Reporter.Reporter] = attr.ib(factory=list)
+    reporters: Dict[str, Reporter.Reporter] = attr.ib(factory=dict)
     console: utils.ConsoleLogger = attr.ib(init=False)
     _checkpointer: patcher.Checkpointer = attr.ib(init=False)
 
@@ -92,12 +92,12 @@ class Runner(ABC):
         }
         self.agent = agent_(**agent_args)
 
-    # TODO move self.console out of class?
     def setup_reporters(self):
         self.console = utils.ConsoleLogger(
             level=self.conf["runner"].get("log_level", logging.DEBUG),
             name=self.console_name,
         )
+        # TODO setup mongo reporter by default
         for rep in self.conf["runner"].get("reporters"):
             reporter_ = rep["call_"]
             self.reporters.append(
@@ -153,41 +153,49 @@ class Runner(ABC):
             reward = np.clip(reward, -1, 1)
         return observation, reward, done, info
 
-    # NOTE maybe can be united with do_reports
-    def report_metrics(
-        self, reports: dict, step=None, epoch=None, **kwargs
-    ) -> List[Dict[str, List[Tuple[str, float]]]]:
-        return [
+    def report_metrics(self, raw_metrics: dict, agg_metrics: dict):
+        runner_info = {
+            attrib: getattr(self, attrib)
+            for attrib in [
+                "curr_redundancy",
+                "curr_iteration",
+                "global_steps",
+                "current_schedule",
+            ]
+        }
+        for reporter_name, reporter_ in self.reporters.items():
             reporter_(
-                reports,
-                step=step,
-                epoch=epoch,
-                context={"subset": self.current_schedule, **kwargs},
+                raw_metrics,
+                agg_metrics,
+                {**runner_info, "collection_tag": "experiment_progression"}
+                if reporter_name == "mongo"
+                else runner_info,
             )
-            for reporter_ in self.reporters
-        ]
-
-    def do_reports(self, metrics: dict):
-        reported = self.report_metrics(
-            metrics,
-            step=self.global_steps,
-            epoch=self.curr_iteration,
-        )
-        self.console.debug(
-            f"{self.current_schedule}: #{self.curr_iteration} #ep {metrics['episodes']} #steps {metrics['steps']} #loss_steps {metrics['loss_steps']} #global {self.global_steps}\n{pprint.pformat(reported)}"
-        )
 
     def model_losses(self, losses: jnp.DeviceArray) -> dict:
         return {k: float(v) for k, v in zip(self.agent.losses_names, losses)}
 
+    def aggregate_exp_metrics(self, raw_metrics: dict) -> dict:
+        # to avoid possible division by 0 errors when training has not
+        # started yet
+        raw_metrics["loss_steps"] = raw_metrics["loss_steps"] or 1
+        raw_metrics["losses"] = self.model_losses(raw_metrics["losses"])
+        return {
+            "AvgEp_return": raw_metrics["return"] / raw_metrics["episodes"],
+            **{
+                f"AvgEp_{k}": v / raw_metrics["loss_steps"]
+                for k, v in raw_metrics["losses"].items()
+            },
+        }
+
     def _run_episodes(self):
         metrics = self.run_episodes()
         self.global_steps += metrics["steps"]
-        # to avoid possible division by 0 errors when training has not
-        # started yet
-        metrics["loss_steps"] = metrics["loss_steps"] or 1
-        metrics["losses"] = self.model_losses(metrics["losses"])
-        self.do_reports(metrics)
+        agg_metrics = self.aggregate_exp_metrics(metrics)
+        self.report_metrics(metrics, agg_metrics)
+        self.console.debug(
+            f"{self.current_schedule}: #{self.curr_iteration} #ep {metrics['episodes']} #steps {metrics['steps']} #loss_steps {metrics['loss_steps']} #global {self.global_steps}\n{pprint.pformat(agg_metrics)}"
+        )
 
     def run_one_iteration(self):
         self._run_episodes()

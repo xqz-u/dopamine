@@ -1,5 +1,3 @@
-from typing import Dict, List, Tuple, Union
-
 import aim
 import attr
 from thesis.reporter import Reporter
@@ -32,34 +30,12 @@ class AimReporter(Reporter.Reporter):
         # be able to differentiate on redundancy
         self.writer["hparams", "runner", "run_number"] = run_number
 
-    # TODO do not require dict keys unconditionally! it's a waste when
-    # some values do not need reporting/are not available. One fix idea
-    # can be to define a "report view" for an agent/runner, and to use
-    # that here
-    def __call__(
-        self,
-        reports: Dict[str, Union[float, Dict[str, float]]],
-        step: int,
-        epoch: int = None,
-        context: dict = None,
-    ) -> Dict[str, List[Tuple[str, float]]]:
-        if step % self.writing_freq:
-            return
-        losses = reports["losses"]
-        agg_reports = [
-            ("AvgEp_return", reports["return"] / reports["episodes"])
-        ] + list(
-            zip(
-                map(lambda t: f"AvgEp_{t}", losses.keys()),
-                [v / reports["loss_steps"] for v in losses.values()],
-            )
-        )
-        for tag, val in agg_reports:
+    def __call__(self, _, agg_reports: dict, runner_info: dict):
+        for tag, val in agg_reports.items():
             self.writer.track(
                 val,
                 name=tag,
-                step=step,
-                epoch=epoch,
-                context=context,
+                step=runner_info["global_steps"],
+                epoch=runner_info["curr_iteration"],
+                context=runner_info["current_schedule"],
             )
-        return {"aim_reports": agg_reports}

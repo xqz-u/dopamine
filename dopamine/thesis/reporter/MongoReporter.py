@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple
+from typing import List
 
 import attr
 import pymongo
@@ -46,15 +46,9 @@ class MongoReporter(Reporter.Reporter):
     def setup(self, *_, **__):
         ...
 
-    # NOTE context should contain redundancy information too, and a tag
-    # to indicate the semantic of each document
-    # (e.g. "experiment_progression", "agent_data", "memory_data")
-    def __call__(
-        self, reports: dict, step: int, epoch: int = None, context: dict = None
-    ) -> Dict[str, List[Tuple[str, float]]]:
+    def __call__(self, raw_reports: dict, agg_reports: dict, runner_info: dict):
         self.collection += {
-            **reports,
-            **context,
             "experiment": self.experiment_name,
+            **raw_reports,
+            **runner_info,
         }
-        return {"mongo_reports": str(self.collection)}
