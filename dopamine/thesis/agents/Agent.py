@@ -150,21 +150,24 @@ class Agent(ABC):
         return loss, training_started
 
     def bundle_and_checkpoint(self, ckpt_dir: str, iteration: int) -> dict:
-        if not tf.io.gfile.exists(ckpt_dir):
-            return
-        # Checkpoint the replay buffer.
-        self.memory.save(ckpt_dir, iteration)
+        # if not tf.io.gfile.exists(ckpt_dir):
+        #     return
+        # # Checkpoint the replay buffer.
+        # self.memory.save(ckpt_dir, iteration)
         # NOTE checkpointing happens after a full iteration, when state
         # is reset to 0s, so no use in saving it
         return {
             "training_steps": self.training_steps,
+            "rng": self.rng.checkpointable_elements,
             "models": {
                 model: self.models[model].checkpointable_elements
                 for model in self.model_names
             },
-            **self.rng.checkpointable_elements,
         }
 
+    # TODO transform into a classmethod to avoid running initializer
+    # code when restoring from a checkpoint, since attributes created
+    # with build_memory and stuff are overwritten here
     def unbundle(self, ckpt_dir: str, iteration: int, bundle_dict: dict):
         try:
             self.memory.load(ckpt_dir, iteration)

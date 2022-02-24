@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Dict, Union
 
+import numpy as np
 import optax
 from dopamine.jax import losses
 from flax import linen as nn
@@ -80,8 +81,16 @@ class PRNGKeyWrap:
     def tree_unflatten(cls, _, leaves):
         return cls(*leaves)
 
+    @classmethod
+    def from_dict(cls, serialized_rng: dict):
+        return cls(**serialized_rng)
+
     @property
     def checkpointable_elements(self) -> dict:
-        # cast to int: when going through a jitted function, a PyTree's
+        # cast: when going through a jitted function, a PyTree's
         # attributes are concretized/traced and lose original type
-        return {"seed": int(self.seed), "n_splits": int(self.n_splits)}
+        return {
+            "key": np.asarray(self.key),
+            "seed": int(self.seed),
+            "n_splits": int(self.n_splits),
+        }

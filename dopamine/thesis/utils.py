@@ -103,17 +103,3 @@ class ConsoleLogger(logging.Logger):
 
 def bind_instance_method(instance: object, name: str, method: callable):
     setattr(instance, name, lambda *args, **kwargs: method(instance, *args, **kwargs))
-
-
-# def add_summary_v2(
-#     summary_writer: tf.summary.SummaryWriter,
-#     summaries: list,
-#     step: int,
-#     flush: bool = False,
-# ) -> bool:
-#     with summary_writer.as_default():
-#         for summ_type, *summ_args in summaries:
-#             status = getattr(tf.summary, summ_type)(*summ_args, step=step)
-#     if flush:
-#         summary_writer.flush()
-#     return status

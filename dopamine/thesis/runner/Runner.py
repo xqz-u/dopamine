@@ -70,10 +70,12 @@ class Runner(ABC):
         if not self.try_resuming():
             self.create_agent()
 
-    def create_agent(self, seed_splits: int = 0):
-        rng = custom_pytrees.PRNGKeyWrap(self.seed)
-        for _ in range(seed_splits):
-            next(rng)
+    def create_agent(self, serial_rng: dict = None):
+        rng = (
+            custom_pytrees.PRNGKeyWrap(self.seed)
+            if not serial_rng
+            else custom_pytrees.PRNGKeyWrap.from_dict(serial_rng)
+        )
         agent_ = self.conf["agent"]["call_"]
         # After a first run, conf is enriched with missing defaults
         # for hparams reporting; some keys get added e.g.
@@ -128,13 +130,10 @@ class Runner(ABC):
         if agent_data is None:
             self.console.warning("Unable to reload the agent's parameters!")
             return False
-        # TODO not optimal; would be better to:
-        # - when bundling, save the full rng: there could have been
-        #   millions of splits
         # restore agent with previous rng
         # NOTE this overwrites seed if it changed in the config
-        self.seed = agent_data["seed"]
-        self.create_agent(agent_data["n_splits"])
+        self.seed = agent_data["rng"]["seed"]
+        self.create_agent(agent_data["rng"])
         self.agent.unbundle(self._checkpointer._base_directory, latest_ckpt, agent_data)
         for key in ["curr_redundancy", "curr_iteration", "global_steps"]:
             assert key in agent_data, f"{key} not in agent data."
