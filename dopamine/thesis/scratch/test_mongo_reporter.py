@@ -49,34 +49,7 @@ def main():
     conf = make_config("test_mongo")
     utils.data_dir_from_conf(conf["experiment_name"], conf)
     manager = runner.create_runner(conf)
-    return manager
-    # manager.run_experiment_with_redundancy()
+    manager.run_experiment_with_redundancy()
 
 
-x = main()
-agent = x.agent
-
-mongo_rep = x.reporters["mongo"]
-
-import bson
-import numpy
-
-d = agent.bundle_and_checkpoint("", "")
-d_bs_b = bson.son.SON(d["rng"])
-
-
-import jax
-
-
-@jax.jit
-def pip(rng):
-    next(rng)
-    return rng
-
-
-# agent.rng = pip(agent.rng)
-
-
-mongo_rep.collection += d_bs_b
-mongo_rep.collection.safe_flush_docs()
-# mongo_rep.collection.docs = []
+# main()

@@ -1,7 +1,10 @@
+import pickle
 import signal
 from typing import List
 
 import attr
+import jax
+import numpy as np
 import pymongo
 from thesis.reporter import Reporter
 
@@ -66,4 +69,15 @@ class MongoReporter(Reporter.Reporter):
             "experiment": self.experiment_name,
             **raw_reports,
             **runner_info,
+        }
+
+    def save_checkpoint(self, record: dict, tag: str):
+        self.collection += {
+            **jax.tree_map(
+                lambda v: pickle.dumps(v)
+                if isinstance(v, (jax.numpy.DeviceArray, np.ndarray))
+                else v,
+                record,
+            ),
+            "collection_tag": tag,
         }

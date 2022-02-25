@@ -1,11 +1,11 @@
 from dataclasses import dataclass
 from typing import Dict, Union
 
-import numpy as np
 import optax
 from dopamine.jax import losses
 from flax import linen as nn
 from flax.core.frozen_dict import FrozenDict
+from jax import numpy as jnp
 from jax import random as jrand
 from jax import tree_util
 
@@ -90,7 +90,7 @@ class PRNGKeyWrap:
         # cast: when going through a jitted function, a PyTree's
         # attributes are concretized/traced and lose original type
         return {
-            "key": np.asarray(self.key),
+            "key": jnp.array(self.key),
             "seed": int(self.seed),
             "n_splits": int(self.n_splits),
         }
