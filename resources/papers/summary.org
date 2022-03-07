@@ -6,7 +6,7 @@ bibliographystyle:apacite
 bibliography:bibliography.bib
 
 Question to Mattia, or look at Sutton's book: understand why online learning, so
-with immediate updates, has highly correlated inputs and therefor does not
+with immediate updates, has highly correlated inputs and therefore does not
 satisfy IID and is not suitable for stochastic learning methods e.g. NN
 
 Intuition: if a history of transitions which contains each state-action-reward
@@ -56,15 +56,15 @@ in an online learning setting - and not being able to generalize them.
        it has O(logN) time complexity; this paper only uses uniform sampling.
    + The paper compares 3 algorithms:
      1. =Online-Q=, Q-Learning with online transitions. Primitive Q-Learning,
-        the transition at each time step updates the value function immediately
+	the transition at each time step updates the value function immediately
      2. =Buffer-Q=, Q-Learning with transitions for training only from the
-        memory buffer. DQN-like learning, the current transition is not used
-        immediately to update the value function; instead, it is added to the
-        replay buffer, and only transitions sampled from it are used for
-        learning (at each time step?)
+	memory buffer. DQN-like learning, the current transition is not used
+	immediately to update the value function; instead, it is added to the
+	replay buffer, and only transitions sampled from it are used for
+	learning (at each time step?)
      3. =Combined-Q=, Q-Learning with with CER, uses both the current transition
-        and the ones sampled from the buffer to update the value function at
-        each time step
+	and the ones sampled from the buffer to update the value function at
+	each time step
 ** Testbeds
    + 3 environments:
      - grid world: agent spawns at same location on each episode, the goal
@@ -123,24 +123,24 @@ in an online learning setting - and not being able to generalize them.
     + RMSProp optimizer ???
     + Results:
       - Grid world, =Online-Q= (tabular Q-Learning) and =Buffer-Q= with buffer size 100 do
-        not learn anything, expected since recent transitions are over-fit
-        (there is literally no space for older transitions in the buffer)
+	not learn anything, expected since recent transitions are over-fit
+	(there is literally no space for older transitions in the buffer)
       - Grid world, =Buffer-Q= size $10^4$ learns fast, hypothesis: trade off between data
-        quality and data correlation. Small replay buffer means data is highly
-        temporally correlated, and training a NN requires IID data (independent,
-        identically distributed). Maybe this means that learning a policy is
-        highly subject to the current data at hand, and that the span of the
-        policy cannot reach information acquired in the past, i.e. it is blind
-        about them? In fact, the authors state that large replay buffers provide
-        uncorrelated, yet also outdated, data: indeed the =Buffer-Q= agent with
-        largest memory buffers cannot find the optimal solution.
+	quality and data correlation. Small replay buffer means data is highly
+	temporally correlated, and training a NN requires IID data (independent,
+	identically distributed). Maybe this means that learning a policy is
+	highly subject to the current data at hand, and that the span of the
+	policy cannot reach information acquired in the past, i.e. it is blind
+	about them? In fact, the authors state that large replay buffers provide
+	uncorrelated, yet also outdated, data: indeed the =Buffer-Q= agent with
+	largest memory buffers cannot find the optimal solution.
       - Lunar Landing world, =Online= and =Buffer= Q agents with buffer size 100
-        perform good! Suggests that this environment is harder to over-fit for
-        the NN. For this task, a medium buffer size seems optimal, while a huge
-        one hurts performance in the =Buffer-Q= agent. Good news, CER helps
-        diminish the negative effects in this case!
+	perform good! Suggests that this environment is harder to over-fit for
+	the NN. For this task, a medium buffer size seems optimal, while a huge
+	one hurts performance in the =Buffer-Q= agent. Good news, CER helps
+	diminish the negative effects in this case!
       - For the Pong task, CER does not provide optimization, but this is expected
-        since the task is too hard to approximate with a single-layer NN
+	since the task is too hard to approximate with a single-layer NN
 ** Conclusion
    + `It is important to note that CER is only a workaround, the idea of
      experience replay itself is heavily flawed'
@@ -150,11 +150,11 @@ in an online learning setting - and not being able to generalize them.
    + Model free RL
    + Main issues with online RL algos:
      1. at one time step, they update their state-action value estimate and then
-        discard the data immediately, resulting in `strongly correlated updates
-        that break the i.i.d. assumption of many popular stochastic
-        gradient-based algorithms'
+	discard the data immediately, resulting in `strongly correlated updates
+	that break the i.i.d. assumption of many popular stochastic
+	gradient-based algorithms'
      2. rare experiences are impossible to be valued, since their discarded
-        immediately
+	immediately
    + Experience replay solution: ` _with experience stored in a replay memory, it_
      _becomes possible to break the temporal correlations by mixing more and less_
      _recent experience for the updates, and rare experience will be used for
@@ -215,25 +215,25 @@ in an online learning setting - and not being able to generalize them.
 *** Stochastic Prioritization
     + Prioritized TD-error cons:
       1. To avoid recalculating \delta for all the replay buffer, which is
-         expensive, only the \delta of the chosen transitions are updated; and
-         since the selection is greedy over \delta, this means that fortuitously
-         `expected' transitions, so those with low \delta, will be played less
-         frequently, when the right action in that state could have indeed been
-         chosen by accident
+	 expensive, only the \delta of the chosen transitions are updated; and
+	 since the selection is greedy over \delta, this means that fortuitously
+	 `expected' transitions, so those with low \delta, will be played less
+	 frequently, when the right action in that state could have indeed been
+	 chosen by accident
       2. Sensitive to noise spikes, e.g. stochastic rewards, which influence
-         \delta (the reward is part of the TD update)
+	 \delta (the reward is part of the TD update)
       3. Lack of diversity in training data due to greedy prioritization,
-         leading to overfitting: unexpected transitions will be played most
-         often, leaving no space to the other ones
+	 leading to overfitting: unexpected transitions will be played most
+	 often, leaving no space to the other ones
     + Remedy: stochastic sampling, so softmax over the transitions' priorities
       to draw a sample. But how is a transition's priority determined? 2 ways:
       1. directly proportional to the transition's \delta, plus a small \epsilon
-         to keep re-sampling transitions with \delta = 0
+	 to keep re-sampling transitions with \delta = 0
       2. indirect, rank based priority, where a transition's priority is
-         defined as 1 over the transition's rank - and the rank is the
-         transition's index in the replay buffer, sorted by \delta. They say
-         that then the probability for a transition's to be sampled becomes a
-         power law with exponent \alpha ????
+	 defined as 1 over the transition's rank - and the rank is the
+	 transition's index in the replay buffer, sorted by \delta. They say
+	 that then the probability for a transition's to be sampled becomes a
+	 power law with exponent \alpha ????
     + Implementation is not super straightforward, see the appendix of the paper
       for details
 
@@ -259,14 +259,14 @@ in an online learning setting - and not being able to generalize them.
        since the transition was generated
        - directly influenced by replay capacity
        - proxy for the degree of /off-policyness/ in the buffer (intuition is,
-         the older a policy, the more likely it comes from a policy other than
-         the current one)
+	 the older a policy, the more likely it comes from a policy other than
+	 the current one)
     3. *Replay ratio*: number of gradient updates per environment transition, so
        relative frequency of between gradient updates and transitions (how often
        gradient updates are performed, e.g. 1 update after 4 transitions in the
        case of PER for a replay ratio of .25) -> *TODO* ask clarifications...
        - constant when increasing buffer size, since both the numerator and the
-         denominator increase as well
+	 denominator increase as well
        *TODO* ask about this!!
 *** Experiments
     + They use the Dopamine Rainbow agent, a DQN based agent for their
@@ -280,9 +280,9 @@ in an online learning setting - and not being able to generalize them.
       so by incrementally adding elements of the Rainbow agent to the DQN one,
       and check the relative improvements due to different replay capacities
       - results show that it is the $n$-step return feature of the Rainbow agent
-        that is responsible for the increase in performance resulting from
-        increasing replay capacity! Also, they find that PER is not significant
-        in this interaction
+	that is responsible for the increase in performance resulting from
+	increasing replay capacity! Also, they find that PER is not significant
+	in this interaction
 
 ** Why is /n/-step the Enabling Factor?
    + Van Hasselt suggests that this way of calculating the estimated return is
