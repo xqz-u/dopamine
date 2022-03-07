@@ -63,6 +63,8 @@
    techniques on the dataset. Is it possible to apply ideas from
    [[cite:&schaul2015prioritized]] to the pure offline part of my
    experiments?
+   TODO realize how the preceding sentence can make sense in my
+   context.
 
 # \bibliographystyle{apalike}
 # \bibliography{journal}
