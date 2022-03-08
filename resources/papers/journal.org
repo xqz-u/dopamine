@@ -63,8 +63,28 @@
    techniques on the dataset. Is it possible to apply ideas from
    [[cite:&schaul2015prioritized]] to the pure offline part of my
    experiments?
-   TODO realize how the preceding sentence can make sense in my
-   context.
+   + *Hypothesis*: training an off-policy agent on the DQN Replay
+     Dataset using prioritized replay converges to (sub)optimal policy
+     faster than training it with uniform sampling. It should fail if
+     the replay experience is not diverse enough. The quality of the
+     policy found is not necessarily better than the one found by a
+     uniformly trained off-policy agent on the same dataset, in terms
+     of evaluation metrics (return only? look at Q-values?). What
+     about in imbalanced datasets, so subsampling the DQN Replay
+     Dataset? [[cite:&agarwal2020optimistic]] report that REM and QR-DQN
+     still outperform the best policy found (fully trained, online
+     DQN)...
+   + Moreover, I expect algorithms such as DQV-Max to perform better
+     than e.g. DQN, in line with improvements seen when using ensemble
+     models ([[cite:&agarwal2020optimistic]]). Having 2 models instead of
+     1 to bootstrap the estimates and correct for them introduces
+     additional noise/uncertainty, which can make the learned
+     Q-function more robust and help with generalization.
+   + How about comparing prioritized replay across model-free methods?
+     So approximate dynamic programming (e.g. DQV-Max), actor-critic
+     and policy gradients? Could be interesting, maybe first check if
+     it is at all useful with just one of these methods.
+
 
 # \bibliographystyle{apalike}
 # \bibliography{journal}
