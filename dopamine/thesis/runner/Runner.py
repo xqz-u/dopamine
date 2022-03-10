@@ -3,16 +3,16 @@ import os
 import pprint
 from abc import ABC, abstractmethod
 from copy import deepcopy
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 import attr
 import jax
 import numpy as np
 from dopamine.discrete_domains import gym_lib
+from dopamine.replay_memory import circular_replay_buffer
 from jax import numpy as jnp
 from thesis import constants, custom_pytrees, patcher, utils
 from thesis.reporter import reporter
-from thesis.runner import ExperienceRecorder
 
 # NOTE to do evaluation the way the runner works right now, the agent
 # models must be reloaded
@@ -32,7 +32,6 @@ class Runner(ABC):
     global_steps: int = attr.ib(init=False, default=0)
     reporters: Dict[str, reporter.Reporter] = attr.ib(factory=dict)
     console: utils.ConsoleLogger = attr.ib(init=False)
-    # exp_recorder: Optional[ExperienceRecorder.ExperienceRecorder] = attr.ib(init=False)
     _checkpointer: patcher.Checkpointer = attr.ib(init=False)
 
     @property
@@ -68,12 +67,8 @@ class Runner(ABC):
         self._checkpointer = patcher.Checkpointer(
             os.path.join(self.conf["runner"]["base_dir"], "checkpoints")
         )
-        # if recorder_conf := self.conf["runner"].get("exp_recorder"):
-        #     recorder_conf["path"] = recorder_conf["path"] or os.path.join(
-        #         self.checkpointer._base_directory, "full_experience"
-        #     )
-        #     self.exp_recorder = recorder_conf["call_"](recorder_conf["path"])
         self.setup_reporters()
+        self.setup_experience_recorder()
         if not self.try_resuming():
             self.create_agent()
 
@@ -151,6 +146,25 @@ class Runner(ABC):
         self.curr_iteration += 1
         self.curr_redundancy += self.curr_iteration == self.iterations
         return True
+
+    def setup_experience_recorder(self):
+        if not self.conf["runner"].get("exp_recorder"):
+            return
+        full_experience_path = os.path.join(
+            self._checkpointer._base_directory, "full_experience"
+        )
+        os.makedirs(full_experience_path, exist_ok=True)
+        n_snapshots = 0
+
+        def closure(_):
+            nonlocal n_snapshots
+            if self.agent.memory.cursor() == 0:
+                self.agent.memory.save(full_experience_path, n_snapshots)
+                n_snapshots += 1
+
+        circular_replay_buffer.OutOfGraphReplayBuffer.add = utils.add_hook(closure)(
+            circular_replay_buffer.OutOfGraphReplayBuffer.add
+        )
 
     def next_seeds(self) -> List[int]:
         env_seed = self.env.environment.seed(self.seed)
@@ -239,6 +253,7 @@ class Runner(ABC):
             self.run_experiment()
             self.curr_redundancy += 1
             self._checkpointer.setup_redundancy(self.curr_redundancy)
+            self.setup_experience_recorder()
             self.curr_iteration, self.global_steps = 0, 0
             if self.curr_redundancy != self.redundancy:
                 self.create_agent()

@@ -44,8 +44,6 @@ make_config = lambda exp_name: {
             "iterations": 1000,
             "redundancy": 3,
         },
-        # {"exp_recorder": {"call_": ...,"path": ...}},
-        # {"exp_recorder": {"call_": ...}},
         "reporters": [{"call_": AimReporter, "repo": str(config.aim_dir)}],
     },
 }

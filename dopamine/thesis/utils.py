@@ -103,3 +103,17 @@ class ConsoleLogger(logging.Logger):
 
 def bind_instance_method(instance: object, name: str, method: callable):
     setattr(instance, name, lambda *args, **kwargs: method(instance, *args, **kwargs))
+
+
+# simple composable add_hook. all the registered hooks should be
+# functions of one argument, which will be the result of `fn`.
+def add_hook(hook: callable):
+    def inner(fn: callable):
+        def decorator(*fnargs, **fnkwargs):
+            ret = fn(*fnargs, **fnkwargs)
+            hook(ret)
+            return ret
+
+        return decorator
+
+    return inner

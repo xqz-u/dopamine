@@ -27,7 +27,7 @@ make_config = lambda exp_name: {
             "seed": 4,
             "steps": 600,
             "iterations": 10,
-            "redundancy": 1,
+            "redundancy": 2,
         },
         "reporters": {
             "mongo": {
