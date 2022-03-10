@@ -40,8 +40,9 @@ per_trans = [
     for t in trans
 ]
 
-# NOTE this does not work: we need to give a priority too, in the
-# paper it is the td-error. How do I compute it for offline
-# trajectories?
 for t in per_trans:
-    per_memory.add(*list(t.values()))
+    per_memory.add(
+        *list(t.values()), priority=per_memory.sum_tree.max_recorded_priority
+    )
+
+batch = agent_utils.sample_replay_buffer(per_memory, 3)

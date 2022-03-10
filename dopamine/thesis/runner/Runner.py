@@ -3,7 +3,7 @@ import os
 import pprint
 from abc import ABC, abstractmethod
 from copy import deepcopy
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import attr
 import jax
@@ -12,6 +12,7 @@ from dopamine.discrete_domains import gym_lib
 from jax import numpy as jnp
 from thesis import constants, custom_pytrees, patcher, utils
 from thesis.reporter import reporter
+from thesis.runner import ExperienceRecorder
 
 # NOTE to do evaluation the way the runner works right now, the agent
 # models must be reloaded
@@ -31,6 +32,7 @@ class Runner(ABC):
     global_steps: int = attr.ib(init=False, default=0)
     reporters: Dict[str, reporter.Reporter] = attr.ib(factory=dict)
     console: utils.ConsoleLogger = attr.ib(init=False)
+    # exp_recorder: Optional[ExperienceRecorder.ExperienceRecorder] = attr.ib(init=False)
     _checkpointer: patcher.Checkpointer = attr.ib(init=False)
 
     @property
@@ -66,6 +68,11 @@ class Runner(ABC):
         self._checkpointer = patcher.Checkpointer(
             os.path.join(self.conf["runner"]["base_dir"], "checkpoints")
         )
+        # if recorder_conf := self.conf["runner"].get("exp_recorder"):
+        #     recorder_conf["path"] = recorder_conf["path"] or os.path.join(
+        #         self.checkpointer._base_directory, "full_experience"
+        #     )
+        #     self.exp_recorder = recorder_conf["call_"](recorder_conf["path"])
         self.setup_reporters()
         if not self.try_resuming():
             self.create_agent()

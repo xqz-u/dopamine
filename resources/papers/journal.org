@@ -55,7 +55,7 @@
 * Thesis
   + confirm that, with the DQN Replay Dataset, off-policy algos
     (e.g. DQV-Max) outperform online DQN in the pure offline setting.
-** Hypothesis
+** Possible Hypothesis
    Straightforward hyp.: Growing batch methods for off-policy
    algorithms perform better than pure offline methods (should confirm
    results by [[cite:&kalashnikov2018qt]]). However, I would like to add
@@ -69,7 +69,7 @@
      the replay experience is not diverse enough. The quality of the
      policy found is not necessarily better than the one found by a
      uniformly trained off-policy agent on the same dataset, in terms
-     of evaluation metrics (return only? look at Q-values?). What
+     of evaluation metrics (return only? look at Q-values?). How
      about in imbalanced datasets, so subsampling the DQN Replay
      Dataset? [[cite:&agarwal2020optimistic]] report that REM and QR-DQN
      still outperform the best policy found (fully trained, online
@@ -90,3 +90,21 @@
 # \bibliography{journal}
 bibliographystyle:apalike
 bibliography:journal.bib
+** Final Hypothesis
+   Use all approximate dynamic programming methods.
+
+   NOTE for all methods, produce plots of the mismatch between actual
+   returns and Q-function estimates to check whether distributional
+   shift occur.
+   + *PER*: pure offline off-policy methods using prioritized
+     experience replay [[cite:&schaul2015prioritized]].
+     - /baseline/: fully trained online DQN, TODO find appropriate
+       evaluation metric (look at normalized one from the literature)
+     - /hypothesis/: shorter convergence time to a policy better than
+       the baseline than with uniform sampling from the experience
+       buffer. Concerning _distributional shift_: not avoided; WHY???
+   + *Ensemble methods*: use a DQV ensemble (only ensemble the V
+     function, the one used in DQV to compute the TD targets) to
+     address the distributional shift, in line with
+     [[cite:&agarwal2020optimistic]]. NOTE would be cool to do the same
+     with DQV-Max.
