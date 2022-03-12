@@ -83,10 +83,10 @@ trans_add["state"] = trans_add["state"].squeeze(1)
 
 conf = test_mongo_reporter.make_config("test_exp_recorder")
 conf["runner"]["exp_recorder"] = True
-conf["memory"]["replay_capacity"] = 4
+# conf["memory"]["replay_capacity"] = 4
 utils.data_dir_from_conf(conf["experiment_name"], conf)
 run = runner.create_runner(conf)
-# run.run_experiment_with_redundancy()
+run.run_experiment_with_redundancy()
 
 
 # run.agent.memory.add(*list(trans_add.values()))

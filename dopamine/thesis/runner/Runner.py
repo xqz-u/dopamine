@@ -68,7 +68,6 @@ class Runner(ABC):
             os.path.join(self.conf["runner"]["base_dir"], "checkpoints")
         )
         self.setup_reporters()
-        self.setup_experience_recorder()
         if not self.try_resuming():
             self.create_agent()
 
@@ -147,6 +146,8 @@ class Runner(ABC):
         self.curr_redundancy += self.curr_iteration == self.iterations
         return True
 
+    # FIXME replay_capacity % (steps * iterations) == 0 in order for
+    # full experience to be saved
     def setup_experience_recorder(self):
         if not self.conf["runner"].get("exp_recorder"):
             return
@@ -236,6 +237,7 @@ class Runner(ABC):
             self.run_one_iteration()
 
     def run_experiment(self):
+        self.setup_experience_recorder()
         env_seed = self.next_seeds()
         self.console.debug(f"Env seeds: {env_seed} Agent rng: {self.agent.rng}")
         for reporter_ in self.reporters.values():
@@ -253,7 +255,6 @@ class Runner(ABC):
             self.run_experiment()
             self.curr_redundancy += 1
             self._checkpointer.setup_redundancy(self.curr_redundancy)
-            self.setup_experience_recorder()
             self.curr_iteration, self.global_steps = 0, 0
             if self.curr_redundancy != self.redundancy:
                 self.create_agent()

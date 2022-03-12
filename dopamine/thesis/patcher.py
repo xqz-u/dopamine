@@ -4,6 +4,7 @@ from typing import Tuple
 
 from dopamine.discrete_domains import checkpointer
 from dopamine.discrete_domains.checkpointer import Checkpointer
+from dopamine.replay_memory import circular_replay_buffer
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Checkpointer
 
@@ -39,3 +40,15 @@ Checkpointer.ckpt_dir: str = ""
 og_init = Checkpointer.__init__
 Checkpointer.__init__ = init
 Checkpointer.setup_redundancy = setup_redundancy
+
+
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Memory
+
+
+def save_n_transitions(self, checkpoint_dir: str, iteration_number: int):
+    last_trans = self.cursor() - 1
+    latest_trans = {k: self._store[k][:last_trans] for k in self._store.keys()}
+    # old_buff = self._store
+    # self._store = buff
+    self.save(checkpoint_dir, iteration_number)
+    # self._store = old_buff
