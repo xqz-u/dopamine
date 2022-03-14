@@ -1,51 +1,3 @@
-def add_hook(hook: callable):
-    def inner(fn: callable):
-        def decorator(*fnargs, **fnkwargs):
-            ret = fn(*fnargs, **fnkwargs)
-            hook(ret)
-            return ret
-
-        return decorator
-
-    return inner
-
-
-def stu(arg):
-    print(f"after {arg}")
-    return 6
-
-
-def ciccio(arg):
-    print(f"after {arg}")
-    return 2
-
-
-@add_hook(stu)
-@add_hook(ciccio)
-def pippo():
-    return 4
-
-
-# pippo = add_hook(stu)(add_hook(ciccio)(pippo))
-
-pippo()
-
-
-class Cip:
-    a: int = 4
-
-    @add_hook(stu)
-    def method(self):
-        print("#method called")
-        return self.a
-
-
-# Cip.method = add_hook(stu)(Cip.method)
-x = Cip()
-x.method()
-# x.method = add_hook(stu)(x.method)
-
-
 import os
 
 import gym
@@ -83,10 +35,9 @@ trans_add["state"] = trans_add["state"].squeeze(1)
 
 conf = test_mongo_reporter.make_config("test_exp_recorder")
 conf["runner"]["exp_recorder"] = True
-# conf["memory"]["replay_capacity"] = 4
-utils.data_dir_from_conf(conf["experiment_name"], conf)
-run = runner.create_runner(conf)
-run.run_experiment_with_redundancy()
-
-
-# run.agent.memory.add(*list(trans_add.values()))
+conf["runner"]["experiment"]["redundancy"] = 3
+conf["memory"]["replay_capacity"] = 1500
+# utils.data_dir_from_conf(conf["experiment_name"], conf)
+# run = runner.create_runner(conf)
+# run.setup_experience_recorder()
+# run.run_experiment_with_redundancy()

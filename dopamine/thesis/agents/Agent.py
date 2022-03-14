@@ -4,11 +4,16 @@ from typing import Dict, Sequence, Tuple
 import attr
 import numpy as np
 import tensorflow as tf
-from dopamine.replay_memory import circular_replay_buffer
 from flax import linen as nn
 from flax.core.frozen_dict import FrozenDict
 from jax import numpy as jnp
-from thesis import custom_pytrees, exploration, offline_circular_replay_buffer, utils
+from thesis import (
+    custom_pytrees,
+    exploration,
+    offline_circular_replay_buffer,
+    patcher,
+    utils,
+)
 from thesis.agents import agent_utils
 
 
@@ -22,9 +27,7 @@ class Agent(ABC):
     min_replay_history: int = 5000
     train_freq: int = 1
     gamma: float = 0.99
-    memory: circular_replay_buffer.OutOfGraphReplayBuffer = (
-        circular_replay_buffer.OutOfGraphReplayBuffer
-    )
+    memory: patcher.OutOfGraphReplayBuffer = patcher.OutOfGraphReplayBuffer
     act_sel_fn: callable = exploration.egreedy
     eval_mode: bool = False
     models: Dict[str, custom_pytrees.NetworkOptimWrap] = attr.ib(factory=dict)

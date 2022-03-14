@@ -9,7 +9,6 @@ import attr
 import jax
 import numpy as np
 from dopamine.discrete_domains import gym_lib
-from dopamine.replay_memory import circular_replay_buffer
 from jax import numpy as jnp
 from thesis import constants, custom_pytrees, patcher, utils
 from thesis.reporter import reporter
@@ -146,25 +145,12 @@ class Runner(ABC):
         self.curr_redundancy += self.curr_iteration == self.iterations
         return True
 
-    # FIXME replay_capacity % (steps * iterations) == 0 in order for
-    # full experience to be saved
+    # NOTE no start and stop functionality here!
     def setup_experience_recorder(self):
         if not self.conf["runner"].get("exp_recorder"):
             return
-        full_experience_path = os.path.join(
-            self._checkpointer._base_directory, "full_experience"
-        )
-        os.makedirs(full_experience_path, exist_ok=True)
-        n_snapshots = 0
-
-        def closure(_):
-            nonlocal n_snapshots
-            if self.agent.memory.cursor() == 0:
-                self.agent.memory.save(full_experience_path, n_snapshots)
-                n_snapshots += 1
-
-        circular_replay_buffer.OutOfGraphReplayBuffer.add = utils.add_hook(closure)(
-            circular_replay_buffer.OutOfGraphReplayBuffer.add
+        self.agent.memory.full_experience_initializer(
+            self._checkpointer._base_directory, self.steps, self.iterations
         )
 
     def next_seeds(self) -> List[int]:
@@ -244,6 +230,8 @@ class Runner(ABC):
             reporter_.setup(self.hparams, self.curr_redundancy)
         self.console.info(pprint.pformat(self.hparams))
         self.run_loops()
+        if self.conf["runner"].get("exp_recorder"):
+            self.agent.memory.finalize_full_experience()
         # flush any buffered mongo documents
         self.reporters["mongo"].collection.safe_flush_docs()
 
@@ -254,10 +242,10 @@ class Runner(ABC):
             )
             self.run_experiment()
             self.curr_redundancy += 1
-            self._checkpointer.setup_redundancy(self.curr_redundancy)
-            self.curr_iteration, self.global_steps = 0, 0
             if self.curr_redundancy != self.redundancy:
+                self._checkpointer.setup_redundancy(self.curr_redundancy)
                 self.create_agent()
+            self.curr_iteration, self.global_steps = 0, 0
 
     def _checkpoint_experiment(self):
         agent_data = self.agent.bundle_and_checkpoint(
