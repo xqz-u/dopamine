@@ -254,7 +254,7 @@ class OutOfGraphReplayBuffer(object):
         terminal,
         *args,
         priority=None,
-        episode_end=False
+        episode_end=False,
     ):
         """Adds a transition to the replay memory.
 

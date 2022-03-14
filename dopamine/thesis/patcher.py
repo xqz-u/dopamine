@@ -72,7 +72,7 @@ def save_no_garbage(self, checkpoint_dir, iteration_number):
 
 # NOTE would be better to have a factory classmethod to create an
 # instance of memory given a a buffer, but this in quicker for now
-def save_buff_subset(self: OutOfGraphReplayBuffer, save_path: str, suffix: int):
+def save_buff_subset(self, save_path: str, suffix: int):
     last_trans_idx = self.cursor() - 1
     print(f"save {last_trans_idx} pending transitions out of {self._replay_capacity}")
     latest_trans = {k: self._store[k][:last_trans_idx] for k in self._store.keys()}
@@ -81,7 +81,7 @@ def save_buff_subset(self: OutOfGraphReplayBuffer, save_path: str, suffix: int):
     og_invalid_range = self.invalid_range
     # adapt checkpointable attributes to saved memory subset
     self._store = latest_trans
-    self.add_count = last_trans_idx
+    self.add_count = np.array(last_trans_idx)
     self.invalid_range = circular_replay_buffer.invalid_range(
         self.cursor(), self._replay_capacity, self._stack_size, self._update_horizon
     )
