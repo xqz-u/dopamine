@@ -1,7 +1,9 @@
+import operator
 from collections import OrderedDict
 
 import attr
 from jax import numpy as jnp
+from thesis import utils
 from thesis.runner import Runner
 
 
@@ -16,15 +18,16 @@ class FixedBatchRunner(Runner.Runner):
         assert self.agent.min_replay_history == 0
 
     def train_iteration(self) -> OrderedDict:
-        loss, q_estims = self.agent.init_loss(), jnp.array([])
+        train_info = OrderedDict(
+            loss=self.agent.init_loss(), steps=self.steps, q_estimates=0.0
+        )
         for _ in range(self.steps):
-            train_dict = self.agent.learn()
-            loss += train_dict["loss"]
-            q_estims = jnp.concatenate([q_estims, train_dict["q_estimates"]])
+            utils.inplace_dict_assoc(
+                train_info, operator.add, update_dict=self.agent.learn()
+            )
             # if self.global_steps % self.eval_period == 0:
             #     self.eval_round()
         self.global_steps += self.steps
-        train_info = OrderedDict(loss=loss, steps=self.steps, q_estimates=q_estims)
         aggregate_info = Runner.aggregate_losses(self.agent.loss_names, train_info)
         self.report_metrics(train_info, aggregate_info)
         return {"raw": train_info, "aggregate": aggregate_info}

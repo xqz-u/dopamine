@@ -13,27 +13,13 @@ from dopamine.discrete_domains import gym_lib
 from thesis import constants, custom_pytrees, patcher, utils
 from thesis.reporter import reporter
 
+# TODO try to move experience recorder related code to online runner
+
+
 # NOTE to do evaluation the way the runner works right now, the agent
 # models must be reloaded; this must be taken into account when
 # creating an agent under the 'eval' schedule. for now only do
 # train_and_eval indeed...
-
-
-# NOTE that e.g. in an iteration of 600 steps, enough experience to
-# start training might occur at the step 450, so dividing the total
-# loss by the number of steps (and not by the number of steps since
-# traning has started) is a bit optimistic only in the first tranining
-# round
-def aggregate_losses(loss_names: Tuple[str], raw_metrics: OrderedDict) -> OrderedDict:
-    raw_metrics["loss"] = {k: float(v) for k, v in zip(loss_names, raw_metrics["loss"])}
-    return OrderedDict(
-        **{
-            f"AvgEp_{k}": (v / raw_metrics["steps"] if v != 0 else v)
-            for k, v in raw_metrics["loss"].items()
-        }
-    )
-
-
 @attr.s(auto_attribs=True)
 class Runner(ABC):
     conf: dict
@@ -164,14 +150,6 @@ class Runner(ABC):
         self.curr_redundancy += self.curr_iteration == self.iterations
         return True
 
-    # NOTE no start and stop functionality here!
-    def setup_experience_recorder(self):
-        if not self.conf["runner"].get("exp_recorder"):
-            return
-        self.agent.memory.full_experience_initializer(
-            self._checkpointer._base_directory, self.steps, self.iterations
-        )
-
     def next_seeds(self) -> List[int]:
         env_seed = self.env.environment.seed(self.seed)
         self.seed += 1
@@ -203,12 +181,24 @@ class Runner(ABC):
         for reporter_name, reporter_ in self.reporters.items():
             reporter_(raw_metrics, agg_metrics, runner_info)
 
-    def run_experiment(self):
-        self.setup_experience_recorder()
+    def setup_experiment(self):
+        # if self.conf["runner"].get("exp_recorder"):
+        #     self.agent.memory.full_experience_initializer(
+        #         self._checkpointer._base_directory, self.steps, self.iterations
+        #     )
         env_seed = self.next_seeds()
         self.console.debug(f"Env seeds: {env_seed} Agent rng: {self.agent.rng}")
         for reporter_ in self.reporters.values():
             reporter_.setup(self.hparams, self.curr_redundancy)
+
+    def finalize_experiment(self):
+        # flush buffered mongo documents and record pending
+        # transitions when registering a full run's experience
+        # if self.conf["runner"].get("exp_recorder"):
+        #     self.agent.memory.finalize_full_experience()
+        self.reporters["mongo"].collection.safe_flush_docs()
+
+    def run_experiment(self):
         self.console.info(pprint.pformat(self.hparams))
         while self.curr_iteration < self.iterations:
             metrics = getattr(self, f"{self.schedule}_iteration")()
@@ -217,18 +207,15 @@ class Runner(ABC):
             )
             self._checkpoint_experiment()
             self.curr_iteration += 1
-        # flush buffered mongo documents and record pending
-        # transitions when registering a full run's experience
-        if self.conf["runner"].get("exp_recorder"):
-            self.agent.memory.finalize_full_experience()
-        self.reporters["mongo"].collection.safe_flush_docs()
 
     def run_experiment_with_redundancy(self):
         while self.curr_redundancy < self.redundancy:
             self.console.debug(
                 f"Start: redundancy {self.curr_redundancy} iteration: {self.curr_iteration}"
             )
+            self.setup_experiment()
             self.run_experiment()
+            self.finalize_experiment()
             self.curr_redundancy += 1
             if self.curr_redundancy != self.redundancy:
                 self._checkpointer.setup_redundancy(self.curr_redundancy)
@@ -262,3 +249,26 @@ class Runner(ABC):
     @abstractmethod
     def console_name(self):
         pass
+
+
+# NOTE that e.g. in an iteration of 600 steps, enough experience to
+# start training might occur at the step 450, so dividing the total
+# loss by the number of steps (and not by the number of steps since
+# traning has started) is a bit optimistic only in the first tranining
+# round
+# NOTE when training has not started, loss and q_estimates are not
+# computed; using 0 as a proxy right now, maybe it is better not to
+# track at all until available
+def aggregate_losses(loss_names: Tuple[str], raw_metrics: OrderedDict) -> OrderedDict:
+    # cast to float to report with mongo without need to serialize
+    raw_metrics["loss"] = {k: float(v) for k, v in zip(loss_names, raw_metrics["loss"])}
+    raw_metrics["q_estimates"] = float(raw_metrics["q_estimates"])
+    return OrderedDict(
+        **{
+            f"AvgStep_{k}": (v / raw_metrics["steps"] if v != 0 else v)
+            for k, v in raw_metrics["loss"].items()
+        },
+        AvgStep_q_estimates=qs / raw_metrics["steps"]
+        if (qs := raw_metrics["q_estimates"]) != 0
+        else qs,
+    )
