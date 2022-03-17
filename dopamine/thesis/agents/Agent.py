@@ -72,10 +72,11 @@ class Agent(ABC):
         )
 
     def build_memory(self):
-        memory_class = self.conf["memory"].get("call_", self.memory)
+        memory_class = self.conf["memory"].pop("call_", self.memory)
         args = self.select_args(memory_class, "memory")
         self.conf["memory"] = args
         self.memory = memory_class(**args)
+        self.conf["memory"]["call_"] = memory_class
         if memory_class is offline_circular_replay_buffer.OfflineOutOfGraphReplayBuffer:
             self.memory.load_buffers()
 
@@ -138,7 +139,7 @@ class Agent(ABC):
         return self.action
 
     def learn(self) -> Dict[str, jnp.DeviceArray]:
-        train_dict = {"loss": self.init_loss(), "q_estimates": jnp.array([])}
+        train_dict = {"loss": self.init_loss(), "q_estimates": jnp.array(0)}
         if self.trainable:
             if self.training_steps % self.train_freq == 0:
                 train_dict = self.train(self.sample_memory())

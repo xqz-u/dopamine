@@ -14,7 +14,7 @@ from thesis.runner import Runner
 class OnlineRunner(Runner.Runner):
     def train_one_episode(self) -> OrderedDict:
         ret_dict = OrderedDict(
-            reward=0.0, steps=0, loss=self.agent.init_loss(), q_estimates=jnp.array([])
+            reward=0.0, steps=0, loss=self.agent.init_loss(), q_estimates=0.0
         )
         done, observation = False, self.env.reset()
         while not done:
@@ -23,12 +23,10 @@ class OnlineRunner(Runner.Runner):
                 action, ret_dict["steps"]
             )
             self.agent.record_trajectory(reward, done)
-            train_dict = self.agent.learn()
             utils.inplace_dict_assoc(
-                ret_dict, operator.add, *[reward, 1, train_dict["loss"]]
-            )
-            ret_dict["q_estimates"] = jnp.concatenate(
-                [ret_dict["q_estimates"], train_dict["q_estimates"]]
+                ret_dict,
+                operator.add,
+                update_dict={"reward": reward, "steps": 1, **self.agent.learn()},
             )
         return ret_dict
 
@@ -38,18 +36,13 @@ class OnlineRunner(Runner.Runner):
             steps=0,
             episodes=0,
             loss=self.agent.init_loss(),
-            q_estimates=jnp.array([]),
+            q_estimates=0.0,
         )
         while train_info["steps"] < self.steps:
-            episode_train_dict = self.train_one_episode()
-            q_estimates = episode_train_dict.pop("q_estimates")
             # this works as long as the dict returned by
             # train_one_episode has the same keys as train_info
             utils.inplace_dict_assoc(
-                train_info, operator.add, update_dict=episode_train_dict
-            )
-            train_info["q_estimates"] = jnp.concatenate(
-                [train_info["q_estimates"], q_estimates]
+                train_info, operator.add, update_dict=self.train_one_episode()
             )
             train_info["episodes"] += 1
         self.global_steps += train_info["steps"]

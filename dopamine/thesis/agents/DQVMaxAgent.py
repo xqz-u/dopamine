@@ -44,17 +44,20 @@ def train_q_net(
 ) -> Tuple[
     custom_pytrees.NetworkOptimWrap, FrozenDict, jnp.DeviceArray, jnp.DeviceArray
 ]:
-    def loss_fn(params, targets) -> jnp.DeviceArray:
+    def loss_fn(params, targets) -> Tuple[jnp.DeviceArray, ...]:
         estimates = agent_utils.batch_net_eval(net_optim.net, params, states)
         estimates = jax.vmap(lambda x, y: x[y])(estimates, actions)
-        return jnp.mean(jax.vmap(net_optim.loss_metric)(targets, estimates)), estimates
+        return (
+            jnp.mean(jax.vmap(net_optim.loss_metric)(targets, estimates)),
+            estimates.mean(),
+        )
 
     grad_fn = jax.value_and_grad(loss_fn, has_aux=True)
-    (loss, q_estimates), grads = grad_fn(train_params, td_targets)
+    (loss, mean_q_estim), grads = grad_fn(train_params, td_targets)
     train_params, net_optim.optim_state = agent_utils.optimize(
         net_optim.optim, grads, train_params, net_optim.optim_state
     )
-    return net_optim, train_params, loss, q_estimates
+    return net_optim, train_params, loss, mean_q_estim
 
 
 @attr.s(auto_attribs=True)
