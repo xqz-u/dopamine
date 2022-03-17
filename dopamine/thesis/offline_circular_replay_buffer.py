@@ -27,8 +27,6 @@ def _merge_replay_buffers(self, other):
     return self
 
 
-# TODO dataclass
-# TODO documentation
 class OfflineOutOfGraphReplayBuffer(circular_replay_buffer.OutOfGraphReplayBuffer):
     def __init__(
         self,

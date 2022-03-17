@@ -5,7 +5,7 @@ import optax
 from dopamine.jax import losses
 from thesis import config, offline_circular_replay_buffer
 from thesis.agents import DQVAgent
-from thesis.reporter.AimReporter import AimReporter
+from thesis.reporter import reporter
 from thesis.runner import runner
 
 dqn_logdir = os.path.join(
@@ -36,15 +36,23 @@ make_config = lambda exp_name: {
     # "memory": {"replay_capacity": int(5e4)},
     "runner": {
         # "call_": runner.GrowingBatchRunner,
-        "schedule": "train",
         "log_level": logging.INFO,
         "experiment": {
+            "schedule": "train",
             "seed": 4,
             "steps": 600,
             "iterations": 1000,
             "redundancy": 3,
         },
-        "reporters": [{"call_": AimReporter, "repo": str(config.aim_dir)}],
+        "reporters": {
+            "mongo": {
+                "call_": reporter.MongoReporter,
+                "db_name": "test_database",
+                "collection_name": "test_collection",
+                "buffering": 100,
+            },
+            "aim": {"call_": reporter.AimReporter, "repo": str(config.aim_dir)},
+        },
     },
 }
 

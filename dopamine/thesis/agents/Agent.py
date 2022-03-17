@@ -35,7 +35,7 @@ class Agent(ABC):
     state: np.ndarray = None
     rng: custom_pytrees.PRNGKeyWrap = None
     training_steps: int = 0
-    losses_names: Tuple[str] = None
+    loss_names: Tuple[str] = None
     _observation: np.ndarray = None
 
     @property
@@ -50,7 +50,7 @@ class Agent(ABC):
         )
         self.build_memory()
         self.build_networks_and_optimizers()
-        self.losses_names = tuple(
+        self.loss_names = tuple(
             f"{m}_{self.models[m].loss_metric.__name__}" for m in self.model_names
         )
         self.act_sel_fn = self.conf["exploration"].get("call_", self.act_sel_fn)
@@ -137,26 +137,24 @@ class Agent(ABC):
         self.action = np.array(self.action)
         return self.action
 
-    def learn(self) -> Tuple[jnp.DeviceArray, bool]:
-        loss = self.init_loss()
-        training = not self.eval_mode
-        training_started = False
-        if training and self.trainable:
-            training_started = True
+    def learn(self) -> Dict[str, jnp.DeviceArray]:
+        train_dict = {"loss": self.init_loss(), "q_estimates": jnp.array([])}
+        if self.trainable:
             if self.training_steps % self.train_freq == 0:
-                loss = jnp.array(self.train(self.sample_memory())).reshape(
-                    (len(self.models), 1)
+                train_dict = self.train(self.sample_memory())
+                train_dict["loss"] = jnp.array(train_dict["loss"]).reshape(
+                    len(self.models), 1
                 )
             if self.training_steps % self.net_sync_freq == 0:
                 self.sync_weights()
-        self.training_steps += training
-        return loss, training_started
+        self.training_steps += 1
+        return train_dict
 
     def bundle_and_checkpoint(self, ckpt_dir: str, iteration: int) -> dict:
-        # if not tf.io.gfile.exists(ckpt_dir):
-        #     return
+        if not tf.io.gfile.exists(ckpt_dir):
+            return
         # # Checkpoint the replay buffer.
-        # self.memory.save(ckpt_dir, iteration)
+        self.memory.save(ckpt_dir, iteration)
         # NOTE checkpointing happens after a full iteration, when state
         # is reset to 0s, so no use in saving it
         return {
@@ -195,7 +193,7 @@ class Agent(ABC):
     # NOTE the order that losses are returned must match that in which
     # model_names are declared, since they will be zipped together
     @abstractmethod
-    def train(self, replay_elts: Dict[str, np.ndarray]) -> Tuple[jnp.DeviceArray]:
+    def train(self, replay_elts: Dict[str, np.ndarray]) -> Dict[str, jnp.DeviceArray]:
         pass
 
     @abstractmethod

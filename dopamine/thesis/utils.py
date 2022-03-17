@@ -3,6 +3,7 @@ import inspect
 import logging
 import os
 import time
+from collections import OrderedDict
 from itertools import groupby
 from typing import Any, Tuple, Union
 
@@ -99,3 +100,20 @@ class ConsoleLogger(logging.Logger):
         ch.setFormatter(formatter)
         self.addHandler(ch)
         self.setLevel(level)
+
+
+# precedence: update_dict, all_values
+def inplace_dict_assoc(
+    d: OrderedDict,
+    fn: callable,
+    *all_values,
+    update_dict: dict = None,
+):
+    assert any(
+        [update_dict, all_values]
+    ), "one of update_dict or all_values must not be None"
+    if update_dict:
+        d.update({k: fn(d[k], v) for k, v in update_dict.items()})
+    else:
+        for (k, v), nv in zip(d.items(), all_values):
+            d[k] = fn(v, nv)

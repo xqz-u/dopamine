@@ -12,13 +12,13 @@ from thesis.runner.OnlineRunner import OnlineRunner
 
 # schedule:
 # - train (default)
-# - eval
+# - eval (not implemented so far)
+# - train_and_eval
 def create_runner(
     conf: dict,
 ) -> Union[OnlineRunner, GrowingBatchRunner, FixedBatchRunner]:
     # set some defaults
-    for key, default in [["schedule", "train"], ["call_", OnlineRunner]]:
-        conf["runner"][key] = conf["runner"].get(key, default)
+    conf["runner"]["call_"] = conf["runner"].get("call_", OnlineRunner)
     return conf["runner"]["call_"](conf, **conf["runner"]["experiment"])
 
 

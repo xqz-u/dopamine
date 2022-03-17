@@ -2,6 +2,7 @@ import logging
 import os
 import pprint
 from abc import ABC, abstractmethod
+from collections import OrderedDict
 from copy import deepcopy
 from typing import Dict, List, Tuple
 
@@ -9,17 +10,34 @@ import attr
 import jax
 import numpy as np
 from dopamine.discrete_domains import gym_lib
-from jax import numpy as jnp
 from thesis import constants, custom_pytrees, patcher, utils
 from thesis.reporter import reporter
 
 # NOTE to do evaluation the way the runner works right now, the agent
-# models must be reloaded
+# models must be reloaded; this must be taken into account when
+# creating an agent under the 'eval' schedule. for now only do
+# train_and_eval indeed...
+
+
+# NOTE that e.g. in an iteration of 600 steps, enough experience to
+# start training might occur at the step 450, so dividing the total
+# loss by the number of steps (and not by the number of steps since
+# traning has started) is a bit optimistic only in the first tranining
+# round
+def aggregate_losses(loss_names: Tuple[str], raw_metrics: OrderedDict) -> OrderedDict:
+    raw_metrics["loss"] = {k: float(v) for k, v in zip(loss_names, raw_metrics["loss"])}
+    return OrderedDict(
+        **{
+            f"AvgEp_{k}": (v / raw_metrics["steps"] if v != 0 else v)
+            for k, v in raw_metrics["loss"].items()
+        }
+    )
 
 
 @attr.s(auto_attribs=True)
 class Runner(ABC):
     conf: dict
+    schedule: str = "train"
     seed: int = 0
     steps: int = 500
     iterations: int = 1000
@@ -37,9 +55,10 @@ class Runner(ABC):
     def hparams(self) -> dict:
         r = deepcopy(self.conf)
         r.pop("experiment_name", None)
-        for k in ["reporters", "base_dir", "ckpt_file_prefix", "logging_file_prefix"]:
+        for k in ["base_dir", "ckpt_file_prefix", "logging_file_prefix"]:
             r["runner"].pop(k, None)
         r["env"].pop("preproc", None)
+        r.pop("reporters", None)
         return jax.tree_map(
             lambda v: f"<{v.__name__}>"
             if callable(v)
@@ -49,14 +68,14 @@ class Runner(ABC):
 
     @property
     def current_schedule(self) -> str:
-        return "train" if not self.agent.eval_mode else "eval"
+        return "train" if not self.agent.eval_mode else "train_and_eval"
 
     def __attrs_post_init__(self):
         # add values to config if it had defaults
         self.conf["runner"]["experiment"].update(
             {
                 k: getattr(self, k)
-                for k in ["seed", "steps", "iterations", "redundancy"]
+                for k in ["seed", "steps", "iterations", "redundancy", "schedule"]
             },
         )
         env_ = self.conf["env"].get("call_", self.env)
@@ -89,7 +108,7 @@ class Runner(ABC):
             "observation_shape": self.conf["env"]["observation_shape"],
             "observation_dtype": self.env.observation_space.dtype,
             "rng": rng,
-            "eval_mode": True if self.conf["runner"]["schedule"] == "eval" else False,
+            "eval_mode": not self.schedule == "train",
             **utils.argfinder(agent_, {**self.conf["agent"], **self.conf["memory"]}),
         }
         self.agent = agent_(**agent_args)
@@ -102,7 +121,7 @@ class Runner(ABC):
         )
         exp_name = self.conf["experiment_name"]
         mongo_class, mongo_args = reporter.MongoReporter, {}
-        reporters_confs = self.conf["runner"].get("reporters", {})
+        reporters_confs = self.conf.get("reporters", {})
         if mongo_conf := reporters_confs.get("mongo", {}):
             mongo_class = mongo_conf["call_"]
             mongo_args = utils.argfinder(mongo_class, mongo_conf)
@@ -167,6 +186,9 @@ class Runner(ABC):
             reward = np.clip(reward, -1, 1)
         return observation, reward, done, info
 
+    # {**runner_info, "collection_tag": "experiment_progression"}
+    # if reporter_name == "mongo"
+    # else runner_info,
     def report_metrics(self, raw_metrics: dict, agg_metrics: dict):
         runner_info = {
             attrib: getattr(self, attrib)
@@ -174,53 +196,12 @@ class Runner(ABC):
                 "curr_redundancy",
                 "curr_iteration",
                 "global_steps",
+                "schedule",
                 "current_schedule",
             ]
         }
         for reporter_name, reporter_ in self.reporters.items():
-            reporter_(
-                raw_metrics,
-                agg_metrics,
-                {**runner_info, "collection_tag": "experiment_progression"}
-                if reporter_name == "mongo"
-                else runner_info,
-            )
-
-    def model_losses(self, losses: jnp.DeviceArray) -> dict:
-        return {k: float(v) for k, v in zip(self.agent.losses_names, losses)}
-
-    def aggregate_exp_metrics(self, raw_metrics: dict) -> dict:
-        # to avoid possible division by 0 errors when training has not
-        # started yet
-        raw_metrics["loss_steps"] = raw_metrics["loss_steps"] or 1
-        raw_metrics["losses"] = self.model_losses(raw_metrics["losses"])
-        return {
-            "AvgEp_return": raw_metrics["return"] / raw_metrics["episodes"],
-            **{
-                f"AvgEp_{k}": v / raw_metrics["loss_steps"]
-                for k, v in raw_metrics["losses"].items()
-            },
-        }
-
-    def _run_episodes(self):
-        metrics = self.run_episodes()
-        self.global_steps += metrics["steps"]
-        agg_metrics = self.aggregate_exp_metrics(metrics)
-        self.report_metrics(metrics, agg_metrics)
-        self.console.debug(
-            f"{self.current_schedule}: #{self.curr_iteration} #ep {metrics['episodes']} #steps {metrics['steps']} #loss_steps {metrics['loss_steps']} #global {self.global_steps}\n{pprint.pformat(agg_metrics)}"
-        )
-
-    def run_one_iteration(self):
-        self._run_episodes()
-        self._checkpoint_experiment()
-        self.curr_iteration += 1
-
-    # NOTE this method exists to provide a default, but should be
-    # overridden in derived classes if necessary
-    def run_loops(self):
-        while self.curr_iteration < self.iterations:
-            self.run_one_iteration()
+            reporter_(raw_metrics, agg_metrics, runner_info)
 
     def run_experiment(self):
         self.setup_experience_recorder()
@@ -229,10 +210,17 @@ class Runner(ABC):
         for reporter_ in self.reporters.values():
             reporter_.setup(self.hparams, self.curr_redundancy)
         self.console.info(pprint.pformat(self.hparams))
-        self.run_loops()
+        while self.curr_iteration < self.iterations:
+            metrics = getattr(self, f"{self.schedule}_iteration")()
+            self.console.debug(
+                f"{self.current_schedule}: #{self.curr_iteration} #global {self.global_steps}\n{pprint.pformat(metrics)}"
+            )
+            self._checkpoint_experiment()
+            self.curr_iteration += 1
+        # flush buffered mongo documents and record pending
+        # transitions when registering a full run's experience
         if self.conf["runner"].get("exp_recorder"):
             self.agent.memory.finalize_full_experience()
-        # flush any buffered mongo documents
         self.reporters["mongo"].collection.safe_flush_docs()
 
     def run_experiment_with_redundancy(self):
@@ -259,7 +247,15 @@ class Runner(ABC):
         self._checkpointer.save_checkpoint(self.curr_iteration, agent_data)
 
     @abstractmethod
-    def run_episodes(self) -> dict:
+    def train_iteration(self):
+        pass
+
+    @abstractmethod
+    def eval_iteration(self):
+        pass
+
+    @abstractmethod
+    def train_and_eval_iteration(self):
         pass
 
     @property
