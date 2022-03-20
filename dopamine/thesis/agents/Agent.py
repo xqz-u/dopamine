@@ -100,9 +100,9 @@ class Agent(ABC):
                 params, **optim_spec
             )
             loss_fn = net_conf[net_name].get(
-                "loss", custom_pytrees.NetworkOptimWrap.loss
+                "loss_metric", custom_pytrees.NetworkOptimWrap.loss_metric
             )
-            net_conf[net_name]["loss"] = loss_fn
+            net_conf[net_name]["loss_metric"] = loss_fn
             self.models[net_name] = custom_pytrees.NetworkOptimWrap(
                 params, optim_state, net, optim, loss_fn
             )

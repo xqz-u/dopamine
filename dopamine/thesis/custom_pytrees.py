@@ -32,10 +32,6 @@ class NetworkOptimWrap:
         return cls(*leaves, *treedef)
 
     @property
-    def loss(self):
-        return self.loss_metric
-
-    @property
     def checkpointable_elements(self) -> dict:
         return {"params": self.params, "optim_state": self.optim_state}
 
