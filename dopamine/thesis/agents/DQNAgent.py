@@ -10,40 +10,40 @@ from thesis.agents import Agent, DQVMaxAgent, agent_utils
 class DQNAgent(Agent.Agent):
     @property
     def model_names(self) -> Tuple[str]:
-        return ("qnet",)
+        return ("qfunc",)
 
     def build_networks_and_optimizers(self):
         self._build_networks_and_optimizers(self.model_names, [self.num_actions])
-        qnet_params = self.models["qnet"].params
-        self.models["qnet"].params = {"online": qnet_params, "target": qnet_params}
+        qfunc_params = self.models["qfunc"].params
+        self.models["qfunc"].params = {"online": qfunc_params, "target": qfunc_params}
 
     def select_action(self, obs: np.ndarray) -> np.ndarray:
         return DQVMaxAgent.DQVMaxAgent.select_action(self, obs)
 
-    def train(self, replay_elts: Dict[str, np.ndarray]) -> Tuple[jnp.DeviceArray]:
+    def train(self, replay_elts: Dict[str, np.ndarray]) -> Dict[str, jnp.DeviceArray]:
         td_error = agent_utils.td_error(
             self.gamma,
             agent_utils.batch_net_eval(
-                self.models["qnet"].net,
-                self.models["qnet"].params["target"],
+                self.models["qfunc"].net,
+                self.models["qfunc"].params["target"],
                 replay_elts["next_state"],
             ).max(1),
             replay_elts["reward"],
             replay_elts["terminal"],
         )
         (
-            self.models["qnet"],
-            self.models["qnet"].params["online"],
+            self.models["qfunc"],
+            self.models["qfunc"].params["online"],
             q_loss,
+            q_estimates,
         ) = DQVMaxAgent.train_q_net(
-            self.gamma,
-            self.models["qnet"],
-            self.models["qnet"].params["online"],
+            self.models["qfunc"],
+            self.models["qfunc"].params["online"],
             replay_elts["state"],
             replay_elts["action"],
             td_error,
         )
-        return (q_loss,)
+        return {"loss": (q_loss,), "q_estimates": q_estimates}
 
     def sync_weights(self):
         return DQVMaxAgent.DQVMaxAgent.sync_weights(self)

@@ -10,53 +10,52 @@ from thesis.agents import Agent, DQVMaxAgent, agent_utils
 class DQVAgent(Agent.Agent):
     @property
     def model_names(self) -> Tuple[str]:
-        return ("vnet", "qnet")
+        return ("vfunc", "qfunc")
 
     def select_action(self, obs: np.ndarray) -> np.ndarray:
         return self._select_action(
-            obs, self.models["qnet"].net, self.models["qnet"].params
+            obs, self.models["qfunc"].net, self.models["qfunc"].params
         )
 
     def build_networks_and_optimizers(self):
         self._build_networks_and_optimizers(self.model_names, [1, self.num_actions])
-        vnet_params = self.models["vnet"].params
-        self.models["vnet"].params = {"online": vnet_params, "target": vnet_params}
+        vfunc_params = self.models["vfunc"].params
+        self.models["vfunc"].params = {"online": vfunc_params, "target": vfunc_params}
 
-    def sync_weights(self):
-        self.models["vnet"].params["target"] = self.models["vnet"].params["online"]
-
-    def train(self, replay_elts: Dict[str, np.ndarray]) -> Tuple[jnp.DeviceArray]:
+    def train(self, replay_elts: Dict[str, np.ndarray]) -> Dict[str, jnp.DeviceArray]:
         td_targets = agent_utils.td_error(
             self.gamma,
             agent_utils.batch_net_eval(
-                self.models["vnet"].net,
-                self.models["vnet"].params["target"],
+                self.models["vfunc"].net,
+                self.models["vfunc"].params["target"],
                 replay_elts["next_state"],
             ),
             replay_elts["reward"],
             replay_elts["terminal"],
         )
         (
-            self.models["vnet"],
-            self.models["vnet"].params["online"],
+            self.models["vfunc"],
+            self.models["vfunc"].params["online"],
             v_loss,
         ) = DQVMaxAgent.train_v_net(
-            self.gamma,
-            self.models["vnet"],
-            self.models["vnet"].params["online"],
+            self.models["vfunc"],
+            self.models["vfunc"].params["online"],
             replay_elts["state"],
             td_targets,
         )
         (
-            self.models["qnet"],
-            self.models["qnet"].params,
+            self.models["qfunc"],
+            self.models["qfunc"].params,
             q_loss,
+            q_estimates,
         ) = DQVMaxAgent.train_q_net(
-            self.gamma,
-            self.models["qnet"],
-            self.models["qnet"].params,
+            self.models["qfunc"],
+            self.models["qfunc"].params,
             replay_elts["state"],
             replay_elts["action"],
             td_targets,
         )
-        return v_loss, q_loss
+        return {"loss": (v_loss, q_loss), "q_estimates": q_estimates}
+
+    def sync_weights(self):
+        self.models["vfunc"].params["target"] = self.models["vfunc"].params["online"]
