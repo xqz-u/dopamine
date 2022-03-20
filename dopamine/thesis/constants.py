@@ -15,7 +15,7 @@ MOUNTAINCAR_MIN_VALS = (-1.2, -0.07)
 MOUNTAINCAR_MAX_VALS = (0.6, 0.07)
 
 env_configs = {
-    "CartPole-v0": {
+    "CartPole-v1": {
         "observation_shape": (4, 1),
         "preproc": {
             "min_vals": CARTPOLE_MIN_VALS,
