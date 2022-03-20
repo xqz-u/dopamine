@@ -176,6 +176,9 @@ class Runner(ABC):
         for reporter_name, reporter_ in self.reporters.items():
             reporter_(raw_metrics, agg_metrics, runner_info)
 
+    # NOTE this and the corresponding finalize method can be
+    # overridden in child classes to implement specific logic that is
+    # run for every loop
     def setup_experiment(self):
         env_seed = self.next_seeds()
         self.console.debug(f"Env seeds: {env_seed} Agent rng: {self.agent.rng}")
