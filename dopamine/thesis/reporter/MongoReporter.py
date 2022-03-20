@@ -1,11 +1,7 @@
-# import pickle
 import signal
 from typing import List
 
 import attr
-
-# import jax
-# import numpy as np
 import pymongo
 from thesis.reporter import Reporter
 
@@ -32,11 +28,13 @@ class BufferedMongoCollection:
         self.docs.append(doc)
         if self.size >= self.buffering:
             self.flush_docs()
+            print("Wrote buffered mongo docs")
         return self
 
     def flush_docs_handler(self, signum: int, frame):
+        n_pending_docs = self.size
         self.safe_flush_docs()
-        print(f"mongo: Flushed {self.size} documents")
+        print(f"mongo handler on {signum}: Flushed {n_pending_docs} documents")
         raise KeyboardInterrupt
 
     def __repr__(self) -> str:
@@ -63,7 +61,7 @@ class MongoReporter(Reporter.Reporter):
         signal.signal(signal.SIGINT, self.collection.flush_docs_handler)
 
     def setup(self, *_, **__):
-        ...
+        pass
 
     def __call__(self, raw_reports: dict, agg_reports: dict, runner_info: dict):
         self.collection += {
@@ -72,13 +70,14 @@ class MongoReporter(Reporter.Reporter):
             **runner_info,
         }
 
-    # def save_checkpoint(self, record: dict, tag: str):
-    #     self.collection += {
-    #         **jax.tree_map(
-    #             lambda v: pickle.dumps(v)
-    #             if isinstance(v, (jax.numpy.DeviceArray, np.ndarray))
-    #             else v,
-    #             record,
-    #         ),
-    #         "collection_tag": tag,
-    #     }
+
+# def save_checkpoint(self, record: dict, tag: str):
+#     self.collection += {
+#         **jax.tree_map(
+#             lambda v: pickle.dumps(v)
+#             if isinstance(v, (jax.numpy.DeviceArray, np.ndarray))
+#             else v,
+#             record,
+#         ),
+#         "collection_tag": tag,
+#     }
