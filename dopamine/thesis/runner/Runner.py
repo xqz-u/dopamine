@@ -197,6 +197,7 @@ class Runner(ABC):
         # if self.conf["runner"].get("exp_recorder"):
         #     self.agent.memory.finalize_full_experience()
         self.reporters["mongo"].collection.safe_flush_docs()
+        self.console.debug("flushed mongo reporter...")
 
     def run_experiment(self):
         self.console.info(pprint.pformat(self.hparams))
@@ -206,6 +207,9 @@ class Runner(ABC):
                 f"{self.current_schedule}: #{self.curr_iteration} #global {self.global_steps}\n{pprint.pformat(metrics)}"
             )
             self._checkpoint_experiment()
+            self.console.debug(
+                f"wrote checkpoint {self.curr_redundancy}-{self.curr_iteration}"
+            )
             self.curr_iteration += 1
 
     def run_experiment_with_redundancy(self):
