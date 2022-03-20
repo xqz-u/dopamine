@@ -2,16 +2,30 @@ import operator
 from collections import OrderedDict
 
 import attr
-from jax import numpy as jnp
 from thesis import utils
 from thesis.runner import Runner
-
-# TODO return a dict from the agent containing all the relevant info,
-# such as q-values
 
 
 @attr.s(auto_attribs=True)
 class OnlineRunner(Runner.Runner):
+    record_experience: bool = False
+
+    def setup_experiment(self):
+        if self.record_experience:
+            self.agent.memory.full_experience_initializer(
+                self._checkpointer._base_directory, self.steps, self.iterations
+            )
+            self.console.debug("Setup full experience recorder!")
+        super().setup_experiment()
+
+    def finalize_experiment(self):
+        # record pending transitions when registering a full run's
+        # experience
+        if self.record_experience:
+            self.agent.memory.finalize_full_experience()
+            self.console.debug("Finalized experinence record")
+        super().finalize_experiment()
+
     def train_one_episode(self) -> OrderedDict:
         ret_dict = OrderedDict(
             reward=0.0, steps=0, loss=self.agent.init_loss(), q_estimates=0.0

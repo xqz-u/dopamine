@@ -13,8 +13,6 @@ from dopamine.discrete_domains import gym_lib
 from thesis import constants, custom_pytrees, patcher, utils
 from thesis.reporter import reporter
 
-# TODO try to move experience recorder related code to online runner
-
 
 # NOTE to do evaluation the way the runner works right now, the agent
 # models must be reloaded; this must be taken into account when
@@ -164,9 +162,6 @@ class Runner(ABC):
             reward = np.clip(reward, -1, 1)
         return observation, reward, done, info
 
-    # {**runner_info, "collection_tag": "experiment_progression"}
-    # if reporter_name == "mongo"
-    # else runner_info,
     def report_metrics(self, raw_metrics: dict, agg_metrics: dict):
         runner_info = {
             attrib: getattr(self, attrib)
@@ -182,20 +177,13 @@ class Runner(ABC):
             reporter_(raw_metrics, agg_metrics, runner_info)
 
     def setup_experiment(self):
-        # if self.conf["runner"].get("exp_recorder"):
-        #     self.agent.memory.full_experience_initializer(
-        #         self._checkpointer._base_directory, self.steps, self.iterations
-        #     )
         env_seed = self.next_seeds()
         self.console.debug(f"Env seeds: {env_seed} Agent rng: {self.agent.rng}")
         for reporter_ in self.reporters.values():
             reporter_.setup(self.hparams, self.curr_redundancy)
 
     def finalize_experiment(self):
-        # flush buffered mongo documents and record pending
-        # transitions when registering a full run's experience
-        # if self.conf["runner"].get("exp_recorder"):
-        #     self.agent.memory.finalize_full_experience()
+        # flush any buffered mongo documents
         self.reporters["mongo"].collection.safe_flush_docs()
         self.console.debug("flushed mongo reporter...")
 

@@ -101,7 +101,7 @@ def add_with_full_exp(self, *args, **kwargs):
 
 def finalize_full_experience(self):
     if self._replay_capacity % self._tot_budget == 0:
-        # no residual transitions, saved by add_closure already
+        # no residual transitions, already saved by add_with_full_exp
         return
     print("save residual experiences...")
     self.save_buff_subset(self._full_experience_path, self._n_snapshots)
