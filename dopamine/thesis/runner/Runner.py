@@ -4,7 +4,7 @@ import pprint
 from abc import ABC, abstractmethod
 from collections import OrderedDict
 from copy import deepcopy
-from typing import Dict, List, Tuple
+from typing import Dict, Tuple
 
 import attr
 import jax
@@ -14,7 +14,7 @@ from thesis import constants, custom_pytrees, patcher, utils
 from thesis.reporter import reporter
 
 
-# NOTE to do evaluation the way the runner works right now, the agent
+# TODO to do evaluation the way the runner works right now, the agent
 # models must be reloaded; this must be taken into account when
 # creating an agent under the 'eval' schedule. for now only do
 # train_and_eval indeed...
@@ -26,6 +26,8 @@ class Runner(ABC):
     steps: int = 500
     iterations: int = 1000
     redundancy: int = 1
+    eval_steps: int = 500
+    eval_period: int = 1
     env: object = gym_lib.create_gym_environment
     agent: object = attr.ib(init=False)
     curr_iteration: int = attr.ib(init=False, default=0)
@@ -38,7 +40,6 @@ class Runner(ABC):
     @property
     def hparams(self) -> dict:
         r = deepcopy(self.conf)
-        r.pop("experiment_name", None)
         for k in ["base_dir", "ckpt_file_prefix", "logging_file_prefix"]:
             r["runner"].pop(k, None)
         r["env"].pop("preproc", None)
@@ -52,14 +53,22 @@ class Runner(ABC):
 
     @property
     def current_schedule(self) -> str:
-        return "train" if not self.agent.eval_mode else "train_and_eval"
+        return "eval" if self.agent.eval_mode else "train"
 
     def __attrs_post_init__(self):
         # add values to config if it had defaults
         self.conf["runner"]["experiment"].update(
             {
                 k: getattr(self, k)
-                for k in ["seed", "steps", "iterations", "redundancy", "schedule"]
+                for k in [
+                    "seed",
+                    "steps",
+                    "iterations",
+                    "redundancy",
+                    "schedule",
+                    "eval_steps",
+                    "eval_period",
+                ]
             },
         )
         env_ = self.conf["env"].get("call_", self.env)
@@ -92,7 +101,6 @@ class Runner(ABC):
             "observation_shape": self.conf["env"]["observation_shape"],
             "observation_dtype": self.env.observation_space.dtype,
             "rng": rng,
-            "eval_mode": not self.schedule == "train",
             **utils.argfinder(agent_, {**self.conf["agent"], **self.conf["memory"]}),
         }
         self.agent = agent_(**agent_args)
@@ -148,10 +156,9 @@ class Runner(ABC):
         self.curr_redundancy += self.curr_iteration == self.iterations
         return True
 
-    def next_seeds(self) -> List[int]:
-        env_seed = self.env.environment.seed(self.seed)
+    def next_seeds(self):
+        self.env.environment.reset(seed=self.seed)
         self.seed += 1
-        return env_seed
 
     def step_environment(
         self, action: int, episode_steps: int
@@ -180,8 +187,8 @@ class Runner(ABC):
     # overridden in child classes to implement specific logic that is
     # run for every loop
     def setup_experiment(self):
-        env_seed = self.next_seeds()
-        self.console.debug(f"Env seeds: {env_seed} Agent rng: {self.agent.rng}")
+        self.next_seeds()
+        self.console.debug(f"Env seeded, Agent rng: {self.agent.rng}")
         for reporter_ in self.reporters.values():
             reporter_.setup(self.hparams, self.curr_redundancy)
 
@@ -195,12 +202,13 @@ class Runner(ABC):
         while self.curr_iteration < self.iterations:
             metrics = getattr(self, f"{self.schedule}_iteration")()
             self.console.debug(
-                f"{self.current_schedule}: #{self.curr_iteration} #global {self.global_steps}\n{pprint.pformat(metrics)}"
+                f"{self.schedule}: #{self.curr_iteration} #global {self.global_steps}\n{pprint.pformat(metrics)}"
             )
-            self._checkpoint_experiment()
-            self.console.debug(
-                f"wrote checkpoint {self.curr_redundancy}-{self.curr_iteration}"
-            )
+            if not self.agent.eval_mode:
+                self._checkpoint_experiment()
+                self.console.debug(
+                    f"wrote checkpoint {self.curr_redundancy}-{self.curr_iteration}"
+                )
             self.curr_iteration += 1
 
     def run_experiment_with_redundancy(self):
@@ -229,15 +237,15 @@ class Runner(ABC):
         self._checkpointer.save_checkpoint(self.curr_iteration, agent_data)
 
     @abstractmethod
-    def train_iteration(self):
+    def train_iteration(self) -> dict:
         pass
 
     @abstractmethod
-    def eval_iteration(self):
+    def eval_iteration(self) -> dict:
         pass
 
     @abstractmethod
-    def train_and_eval_iteration(self):
+    def train_and_eval_iteration(self) -> dict:
         pass
 
     @property
