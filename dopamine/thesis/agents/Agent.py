@@ -7,13 +7,7 @@ import tensorflow as tf
 from flax import linen as nn
 from flax.core.frozen_dict import FrozenDict
 from jax import numpy as jnp
-from thesis import (
-    custom_pytrees,
-    exploration,
-    offline_circular_replay_buffer,
-    patcher,
-    utils,
-)
+from thesis import custom_pytrees, exploration, patcher, utils
 from thesis.agents import agent_utils
 
 
@@ -77,8 +71,6 @@ class Agent(ABC):
         self.conf["memory"] = args
         self.memory = memory_class(**args)
         self.conf["memory"]["call_"] = memory_class
-        if memory_class is offline_circular_replay_buffer.OfflineOutOfGraphReplayBuffer:
-            self.memory.load_buffers()
 
     # NOTE should the static args to loss_metric be partialled?
     # consider that it can be done before passing the function in the

@@ -108,11 +108,13 @@ def finalize_full_experience(self):
 
 
 def full_experience_initializer(
-    self, full_experience_path: str, steps: int, iterations: int
+    self, full_experience_path: str, steps: int, iterations: int, redundancy: int
 ):
     self._tot_budget = steps * iterations
     self._n_snapshots = 0
-    self._full_experience_path = os.path.join(full_experience_path, "full_experience")
+    self._full_experience_path = os.path.join(
+        full_experience_path, "full_experience", f"redundancy_{redundancy}"
+    )
     os.makedirs(self._full_experience_path, exist_ok=True)
     OutOfGraphReplayBuffer.add = add_with_full_exp
 

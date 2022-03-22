@@ -5,7 +5,8 @@ import os
 import time
 from collections import OrderedDict
 from itertools import groupby
-from typing import Any, Tuple, Union
+from pathlib import Path
+from typing import Any, List, Tuple, Union
 
 import attr
 
@@ -117,3 +118,11 @@ def inplace_dict_assoc(
     else:
         for (k, v), nv in zip(d.items(), all_values):
             d[k] = fn(v, nv)
+
+
+def list_all_ckpt_iterations(base_directory: str) -> List[int]:
+    iters = [
+        int(f.name.split(".gz")[0].split(".")[1])
+        for f in Path(base_directory).glob("add_count_ckpt.*.gz")
+    ]
+    return list(range(min(iters), max(iters) + 1))

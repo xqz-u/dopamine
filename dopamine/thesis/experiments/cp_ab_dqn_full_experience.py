@@ -60,6 +60,8 @@ def main():
 
 def main_cp():
     cp_conf = make_config("cp_dqn_full_experience_%%", "CartPole", "v1")
+    # cp_conf = make_config("cp_test", "CartPole", "v1")
+    # cp_conf["memory"]["replay_capacity"] = 500
     runner.run_experiment([cp_conf, 0])
 
 

@@ -13,9 +13,14 @@ class OnlineRunner(Runner.Runner):
     def setup_experiment(self):
         if self.record_experience:
             self.agent.memory.full_experience_initializer(
-                self._checkpointer._base_directory, self.steps, self.iterations
+                self._checkpointer.ckpt_dir,
+                self.steps,
+                self.iterations,
+                self.curr_redundancy,
             )
-            self.console.debug("Setup full experience recorder!")
+            self.console.debug(
+                f"save full experience to {self.agent.memory._full_experience_path}"
+            )
         super().setup_experiment()
 
     def finalize_experiment(self):
@@ -23,7 +28,7 @@ class OnlineRunner(Runner.Runner):
         # experience
         if self.record_experience:
             self.agent.memory.finalize_full_experience()
-            self.console.debug("Finalized experinence record")
+            self.console.debug("Finalized experience record")
         super().finalize_experiment()
 
     def train_one_episode(self) -> OrderedDict:
@@ -66,12 +71,6 @@ class OnlineRunner(Runner.Runner):
         )
         self.report_metrics(train_info, aggregate_info)
         return {"raw": train_info, "aggregate": aggregate_info}
-
-    def eval_iteration(self):
-        pass
-
-    def train_and_eval_iteration(self):
-        pass
 
     @property
     def console_name(self):
