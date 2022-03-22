@@ -23,10 +23,8 @@ class AimReporter(Reporter.Reporter):
         self.writer = aim.Run(
             run_hash=str(run_hash), repo=self.repo, experiment=self.experiment_name
         )
+        params["hash"] = run_hash
         self.writer["hparams"] = params
-        # save a run_number to group experiments by name but to still
-        # be able to differentiate on redundancy
-        self.writer["hparams", "runner", "run_number"] = run_number
 
     def __call__(self, _, agg_reports: dict, runner_info: dict):
         for tag, val in agg_reports.items():

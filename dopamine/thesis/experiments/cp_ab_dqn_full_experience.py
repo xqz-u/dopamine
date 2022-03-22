@@ -2,7 +2,7 @@ import logging
 
 import optax
 from dopamine.jax import losses
-from thesis import config, utils
+from thesis import config
 from thesis.agents import DQNAgent
 from thesis.reporter import reporter
 from thesis.runner import runner
@@ -30,32 +30,44 @@ make_config = lambda exp_name, env, version: {
             "schedule": "train",
             "record_experience": True,
             "seed": 4,
-            "steps": int(1e3),
-            "iterations": 50,
-            "redundancy": 2,
+            "steps": 1000,
+            "iterations": 500,
+            "redundancy": 3,
         },
     },
     "reporters": {
-        "mongo": {"call_": reporter.MongoReporter, "buffering": 25},
+        "mongo": {
+            "call_": reporter.MongoReporter,
+            "buffering": 25,
+            "collection_name": exp_name,
+        },
         "aim": {"call_": reporter.AimReporter, "repo": str(config.data_dir)},
     },
 }
 
 
-def make_configs():
-    def with_dir(name, *args):
-        conf = make_config(name, *args)
-        utils.data_dir_from_conf(conf["experiment_name"], conf)
-        return conf
-
-    return [
-        with_dir("cp_dqn_full_experience", "CartPole", "v1"),
-        with_dir("ab_dqn_full_experience", "Acrobot", "v1"),
-    ]
-
-
 def main():
-    runner.run_multiple_configs(make_configs())
+    runner.run_multiple_configs(
+        [
+            make_config(*c)
+            for c in [
+                ("cp_dqn_full_experience_%%", "CartPole", "v1"),
+                ("ab_dqn_full_experience_%%", "Acrobot", "v1"),
+            ]
+        ]
+    )
 
 
-# main()
+def main_cp():
+    cp_conf = make_config("cp_dqn_full_experience_%%", "CartPole", "v1")
+    runner.run_experiment([cp_conf, 0])
+
+
+def main_ab():
+    ab_conf = make_config("ab_dqn_full_experience_%%", "Acrobot", "v1")
+    runner.run_experiment([ab_conf, 0])
+
+
+# if __name__ == "__main__":
+# main_cp()
+# main_ab()
