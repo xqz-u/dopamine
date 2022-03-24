@@ -1,6 +1,7 @@
 import os
 
 from thesis import config, offline_circular_replay_buffer
+from thesis.agents import DQVMaxAgent
 from thesis.experiments.cp_ab_dqn_full_experience import make_config
 from thesis.runner import runner
 
@@ -14,9 +15,11 @@ dqn_full_exp_conf = lambda exp_name, full_env: {
 
 
 def main(exp_name, env, version, full_experience_exp_name):
-    conf = make_config(exp_name, "CartPole", "v1")
+    conf = make_config(exp_name, env, version)
+    conf["nets"]["vfunc"] = conf["nets"]["qfunc"]
+    conf["agent"]["call_"] = DQVMaxAgent.DQVMaxAgent
     conf["runner"]["call_"] = runner.FixedBatchRunner
-    conf["memory"] = dqn_full_exp_conf(full_experience_exp_name, "CartPole-v1")
+    conf["memory"] = dqn_full_exp_conf(full_experience_exp_name, f"{env}-{version}")
     conf["runner"]["experiment"].pop("record_experience", None)
     conf["runner"]["experiment"]["schedule"] = "train_and_eval"
     conf["runner"]["experiment"]["eval_period"] = 2
@@ -29,7 +32,6 @@ def main(exp_name, env, version, full_experience_exp_name):
 
 
 if __name__ == "__main__":
-    ...
-    # main("cp_dqn_distr_shift_test", "CartPole", "v1", "cp_dqn_full_experience_%%")
-# run = main("cp_dqn_distr_shift_test", "CartPole", "v1", "cp_dqn_full_experience_%%")
-# run.run_experiment_with_redundancy()
+    pass
+    # main("cp_dqvmax_distr_shift", "CartPole", "v1", "cp_dqn_full_experience_%%")
+    # main("ab_dqvmax_distr_shift", "Acrobot", "v1", "ab_dqn_full_experience_%%")
