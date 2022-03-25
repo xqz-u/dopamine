@@ -32,10 +32,6 @@ class Agent(ABC):
     loss_names: Tuple[str] = None
     _observation: np.ndarray = None
 
-    @property
-    def trainable(self) -> bool:
-        return self.memory.add_count > self.min_replay_history
-
     def __attrs_post_init__(self):
         self.rng = self.rng or custom_pytrees.PRNGKeyWrap()
         self.conf["memory"]["stack_size"] = self.conf["memory"].get("stack_size", 1)
@@ -132,7 +128,7 @@ class Agent(ABC):
 
     def learn(self) -> Dict[str, jnp.DeviceArray]:
         train_dict = {"loss": self.init_loss(), "q_estimates": jnp.array(0)}
-        if self.trainable:
+        if self.memory.add_count > self.min_replay_history:
             if self.training_steps % self.train_freq == 0:
                 train_dict = self.train(self.sample_memory())
                 train_dict["loss"] = jnp.array(train_dict["loss"]).reshape(
@@ -143,11 +139,7 @@ class Agent(ABC):
         self.training_steps += 1
         return train_dict
 
-    def bundle_and_checkpoint(self, ckpt_dir: str, iteration: int) -> dict:
-        if not tf.io.gfile.exists(ckpt_dir):
-            return
-        # # Checkpoint the replay buffer.
-        self.memory.save(ckpt_dir, iteration)
+    def checkpoint_dict(self, ckpt_dir: str, iteration: int) -> dict:
         # NOTE checkpointing happens after a full iteration, when state
         # is reset to 0s, so no use in saving it
         return {

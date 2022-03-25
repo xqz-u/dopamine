@@ -10,18 +10,16 @@ from thesis.runner import Runner
 class OnlineRunner(Runner.Runner):
     record_experience: bool = False
 
-    def setup_experiment(self):
+    # NOTE when record_experience is True, start&stop does not apply
+    def __attrs_post_init__(self):
+        super().__attrs_post_init__()
         if self.record_experience:
             self.agent.memory.full_experience_initializer(
-                self._checkpointer.ckpt_dir,
-                self.steps,
-                self.iterations,
-                self.curr_redundancy,
+                self.checkpoint_dir, self.steps, self.iterations
             )
             self.console.debug(
-                f"save full experience to {self.agent.memory._full_experience_path}"
+                f"Save full experience to {self.agent.memory._full_experience_path}"
             )
-        super().setup_experiment()
 
     def finalize_experiment(self):
         # record pending transitions when registering a full run's
@@ -71,6 +69,12 @@ class OnlineRunner(Runner.Runner):
         )
         self.report_metrics(train_info, aggregate_info)
         return {"raw": train_info, "aggregate": aggregate_info}
+
+    def _checkpoint_experiment(self):
+        if self.record_experience:
+            self._checkpoint_agent()
+        else:
+            super()._checkpoint_experiment()
 
     @property
     def console_name(self):

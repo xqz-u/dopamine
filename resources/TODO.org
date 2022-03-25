@@ -39,13 +39,13 @@
     rely on gin DONE
   + Runner should be able to work with offline data as well! Unify the
     interfaces DONE
-  + Ask Matthia for Peregrine access
+  + Ask Matthia for Peregrine access DONE
 
 * Offline
   + First, choose whether to work with the Dopamine runner or not,
     since it already has a mechanism to dump the trajectories.
     If so  -> check if satisfied with current offline replay buffer
-	      implementation
+	      implementation DONE
     If not -> choose whether to keep working with the Dopamine replay
 	      buffer, or to write a new one (consider also available
 	      time...)
@@ -57,3 +57,17 @@
     remote database through TCP
     NOTE this can involve both checkpointing and performance graphs,
     but needs care for how =aim= plays in this context
+    NOTE implemented only for agents' performance tracking, not for
+    memory or agents' checkpointing; TODO migrate everything! What is
+    the point of having to care both of regular files and a db then?
+    Portability gets more complicated, it is an incomplete design...
+
+* General
+  - [ ] Parallelize redundancies code
+  - [ ] Offline prioritized buffer: transfer all trajectories
+    registered in some buffers to a prioritized one with equal
+    priority, then train offline
+  - [ ] Ensemble DQVMax
+  - [ ] Download the Atari DQN replay dataset on Peregrine
+  - [ ] Produce distributional shift plot with DQVMax in atari games (?)
+  - [ ] Load trained agent for evaluation (?)

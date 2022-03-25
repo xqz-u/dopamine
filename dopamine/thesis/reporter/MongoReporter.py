@@ -47,7 +47,7 @@ class MongoReporter(Reporter.Reporter):
     port: int = 27017
     db_name: str = "thesis_db"
     collection_name: str = "thesis_collection"
-    buffering: int = 100
+    buffering: int = 50
     client: pymongo.MongoClient = attr.ib(init=False)
     db: pymongo.database.Database = attr.ib(init=False)
     collection: BufferedMongoCollection = attr.ib(init=False)
@@ -60,9 +60,6 @@ class MongoReporter(Reporter.Reporter):
         )
         signal.signal(signal.SIGINT, self.collection.flush_docs_handler)
 
-    def setup(self, *_, **__):
-        pass
-
     def __call__(self, raw_reports: dict, agg_reports: dict, runner_info: dict):
         self.collection += {
             "experiment": self.experiment_name,
@@ -71,6 +68,7 @@ class MongoReporter(Reporter.Reporter):
         }
 
 
+# naive method used to save arbitrary data to mongo by pickling them
 # def save_checkpoint(self, record: dict, tag: str):
 #     self.collection += {
 #         **jax.tree_map(

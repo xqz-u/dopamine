@@ -9,12 +9,22 @@ from pathlib import Path
 from typing import Any, List, Tuple, Union
 
 import attr
+import jax
 
 from thesis import config
 
 
 def is_builtin(elt) -> bool:
     return elt.__class__.__module__ == "builtins"
+
+
+def reportable_conf(conf: dict) -> dict:
+    return jax.tree_map(
+        lambda v: f"<{v.__name__}>"
+        if callable(v)
+        else (str(v) if not is_builtin(v) else v),
+        conf,
+    )
 
 
 # https://stackoverflow.com/questions/3844801/check-if-all-elements-in-a-list-are-identical
@@ -67,10 +77,26 @@ def data_dir_from_conf(
     return full_path
 
 
-def attr_fields_d(attr_class: object) -> dict:
+# ruturns fields of a class decorated by attr.s as a dict, where the
+# values are retrieved from an instance and the keys from its class.
+# if get_props is truthy, the class' properties are retrieved from its
+# instance too
+def attr_fields_d(attr_inst: object, get_props: bool = False) -> dict:
+    attr_class = type(attr_inst)
     return {
-        field.name: getattr(attr_class, field.name)
-        for field in attr.fields(type(attr_class))
+        **{
+            field.name: getattr(attr_inst, field.name)
+            for field in attr.fields(attr_class)
+        },
+        **(
+            {}
+            if not get_props
+            else {
+                p: getattr(attr_inst, p)
+                for p in dir(attr_class)
+                if isinstance(getattr(attr_class, p), property)
+            }
+        ),
     }
 
 
