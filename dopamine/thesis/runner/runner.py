@@ -43,7 +43,10 @@ def expand_confs_repeats(confs_and_reps: List[Tuple[dict, int]]) -> List[dict]:
     return ret
 
 
-# TODO load offline logs correctly! also in parallel
+# check that conf.memory is offline, descend into dirs from
+# _buffers_root_dir and add those to each config under the keyword
+# required by the offline buffer
+# TODO load offline logs correctly! in parallel too
 # NOTE starting processes sequentially to avoid race conditions in sql
 # for aim reporters
 def run_experiment_atomic(conf: dict, init_wait: float = None):

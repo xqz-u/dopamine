@@ -4,6 +4,7 @@ import optax
 from dopamine.jax import losses
 from thesis import config
 from thesis.agents import DQNAgent
+from thesis.experiments import cp_ab_dqvmax_distr_shift
 from thesis.reporter import reporter
 from thesis.runner import runner
 
@@ -65,5 +66,33 @@ def test_parallel():
     )
 
 
+def offline_cp_ab_confs():
+    def do_conf(exp_name, env, version, repeats, off_exp_name):
+        c = make_config(exp_name, env, version, repeats)
+        c["memory"] = cp_ab_dqvmax_distr_shift.dqn_full_exp_conf(
+            off_exp_name, f"{env}-{version}"
+        )
+        return c
+
+    return [
+        do_conf(
+            "test_cp_full_offline", "CartPole", "v1", 3, "cp_dqn_full_experience_%%"
+        ),
+        do_conf(
+            "test_ab_full_offline", "Acrobot", "v1", 3, "ab_dqn_full_experience_%%"
+        ),
+    ]
+
+
+def test_serial_offline():
+    runner.run_experiments(offline_cp_ab_confs)
+
+
+def test_parallel_offline():
+    runner.p_run_experiments(offline_cp_ab_confs)
+
+
 # test_serial()
 # test_parallel()
+# test_serial_offline()
+# test_parallel_offline()
