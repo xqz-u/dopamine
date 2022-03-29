@@ -9,9 +9,8 @@ from typing import Dict, Tuple
 import attr
 import gym
 import numpy as np
-import tensorflow as tf
-from dopamine.discrete_domains import gym_lib
-from thesis import constants, custom_pytrees, patcher, utils
+from dopamine.discrete_domains import checkpointer, gym_lib
+from thesis import constants, custom_pytrees, utils
 from thesis.agents import Agent
 from thesis.reporter import reporter
 
@@ -37,7 +36,7 @@ class Runner(ABC):
     global_steps: int = attr.ib(init=False, default=0)
     console: utils.ConsoleLogger = attr.ib(init=False)
     checkpoint_dir: str = attr.ib(init=False)
-    _checkpointer: patcher.Checkpointer = attr.ib(init=False)
+    _checkpointer: checkpointer.Checkpointer = attr.ib(init=False)
 
     def pprint_conf(self):
         pprint.pprint(utils.reportable_conf(self.conf))
@@ -73,7 +72,7 @@ class Runner(ABC):
         self.checkpoint_dir = os.path.join(
             self.conf["runner"]["base_dir"], "checkpoints", str(self.redundancy_nr)
         )
-        self._checkpointer = patcher.Checkpointer(self.checkpoint_dir)
+        self._checkpointer = checkpointer.Checkpointer(self.checkpoint_dir)
         if not self.try_resuming():
             self.create_agent()
         self.setup_reporters()
@@ -120,7 +119,9 @@ class Runner(ABC):
             )
 
     def try_resuming(self) -> bool:
-        latest_iter_ckpt = patcher.get_latest_checkpoint_number(self.checkpoint_dir)
+        latest_iter_ckpt = checkpointer.get_latest_checkpoint_number(
+            self.checkpoint_dir
+        )
         if latest_iter_ckpt < 0:
             self.console.debug(
                 "No previous iteration found, start experiment from scratch"
@@ -201,7 +202,7 @@ class Runner(ABC):
         self.finalize_experiment()
 
     def _checkpoint_agent(self):
-        if not tf.io.gfile.exists(self.checkpoint_dir):
+        if not os.path.exists(self.checkpoint_dir):
             return
         agent_data = self.agent.checkpoint_dict(
             self.checkpoint_dir, self.curr_iteration
@@ -214,7 +215,7 @@ class Runner(ABC):
         self.console.debug("Saved agent + runner's state")
 
     def _checkpoint_replay_buffer(self):
-        if tf.io.gfile.exists(self.checkpoint_dir):
+        if not os.path.exists(self.checkpoint_dir):
             self.agent.memory.save(self.checkpoint_dir, self.curr_iteration)
             self.console.debug("Saved replay buffer")
 

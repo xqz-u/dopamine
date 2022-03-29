@@ -152,3 +152,14 @@ def list_all_ckpt_iterations(base_directory: str) -> List[int]:
         for f in Path(base_directory).glob("add_count_ckpt.*.gz")
     ]
     return list(range(min(iters), max(iters) + 1))
+
+
+# NOTE sorted uses alphanumeric ordering by default
+def unfold_replay_buffers_dir(base_dir: str, inter_tree: str = "") -> List[str]:
+    return [os.path.join(base_dir, d, inter_tree) for d in sorted(os.listdir(base_dir))]
+
+
+# unfold_replay_buffers_dir("/home/xqz-u/uni/thesis/resources/data/Pong", "replay_logs")
+# unfold_replay_buffers_dir(
+#     "/home/xqz-u/uni/thesis/resources/data/CartPole-v1/DQNAgent/test_new_runner_nofull_cp_s/checkpoints"
+# )
