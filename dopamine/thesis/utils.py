@@ -155,11 +155,17 @@ def list_all_ckpt_iterations(base_directory: str) -> List[int]:
 
 
 # NOTE sorted uses alphanumeric ordering by default
+# this function finds replay buffers stored in (possibly) multiple
+# folders starting from 1 level of depth from base_dir; a directory
+# structure of arbitrary depth can exist after this level, so 2
+# 2 folder structure are admissible:
+# /base_dir
+#   /replay_buffers_dir_0
+#     /inter_tree (of arbitrary depth, optional)
+#       /replay_buffers_files_0
+#   /replay_buffers_dir_1
+#     /inter_tree (of arbitrary depth, optional)
+#       /replay_buffers_files_1
+# ...
 def unfold_replay_buffers_dir(base_dir: str, inter_tree: str = "") -> List[str]:
     return [os.path.join(base_dir, d, inter_tree) for d in sorted(os.listdir(base_dir))]
-
-
-# unfold_replay_buffers_dir("/home/xqz-u/uni/thesis/resources/data/Pong", "replay_logs")
-# unfold_replay_buffers_dir(
-#     "/home/xqz-u/uni/thesis/resources/data/CartPole-v1/DQNAgent/test_new_runner_nofull_cp_s/checkpoints"
-# )

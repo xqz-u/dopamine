@@ -1,11 +1,12 @@
 import datetime
+import itertools as it
 import multiprocessing as mp
 import os
 import time
 from copy import deepcopy
-from typing import List, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
-from thesis import utils
+from thesis import offline_circular_replay_buffer, utils
 from thesis.runner.FixedBatchRunner import FixedBatchRunner
 from thesis.runner.OnlineRunner import OnlineRunner
 
@@ -26,27 +27,47 @@ def create_runner(
     return conf["runner"]["call_"](conf, **conf["runner"]["experiment"])
 
 
-def expand_confs_repeats(confs_and_reps: List[Tuple[dict, int]]) -> List[dict]:
-    def set_redundancy(conf: dict, rep: int) -> dict:
+# NOTE when repeats is > than available redundancy dirs, the latter
+# are cycled through for a total of repeats times, in all other cases
+# repeats takes the priority
+def expand_single_conf(
+    conf: dict,
+    repeats: int,
+    buffers_root_dir: str = None,
+    intermediate_dirs: str = "",
+) -> List[dict]:
+    expanded_confs = []
+    for i in range(repeats):
         c = deepcopy(conf)
-        c["runner"]["experiment"]["redundancy_nr"] = rep
-        return c
+        c["runner"]["experiment"]["redundancy_nr"] = i
+        expanded_confs.append(c)
+    if buffers_root_dir is not None:
+        assert (
+            conf["memory"].get("call_")
+            is offline_circular_replay_buffer.OfflineOutOfGraphReplayBuffer
+        ), f"buffers_root_dir is {buffers_root_dir}, so conf['memory']['call_'] should be {offline_circular_replay_buffer.OfflineOutOfGraphReplayBuffer}"
+        for c, buff_dir in zip(
+            expanded_confs,
+            it.cycle(
+                utils.unfold_replay_buffers_dir(buffers_root_dir, intermediate_dirs)
+            ),
+        ):
+            c["memory"]["_buffers_dir"] = buff_dir
+    return expanded_confs
 
-    ret = [
-        set_redundancy(conf, i)
-        for conf, repeat in confs_and_reps
-        for i in range(repeat)
+
+def expand_configs(
+    experiments_specs: Tuple[dict, int, Optional[str], Optional[str]]
+) -> List[dict]:
+    expanded_confs = [
+        c for args in experiments_specs for c in expand_single_conf(*args)
     ]
     print("Experiments running order:")
-    for c in ret:
+    for c in expanded_confs:
         print(c["experiment_name"], c["runner"]["experiment"]["redundancy_nr"])
-    return ret
+    return expanded_confs
 
 
-# check that conf.memory is offline, descend into dirs from
-# _buffers_root_dir and add those to each config under the keyword
-# required by the offline buffer
-# TODO load offline logs correctly! in parallel too
 # NOTE starting processes sequentially to avoid race conditions in sql
 # for aim reporters
 def run_experiment_atomic(conf: dict, init_wait: float = None):
@@ -68,8 +89,8 @@ def run_experiment_atomic_wrap(args):
     return run_experiment_atomic(*args)
 
 
-def run_experiments(confs_and_reps: List[Tuple[dict, int]]):
-    for c in expand_confs_repeats(confs_and_reps):
+def run_experiments(experiments_specs: Tuple[dict, int, Optional[str], Optional[str]]):
+    for c in expand_configs(experiments_specs):
         run_experiment_atomic(c)
 
 
@@ -78,8 +99,10 @@ def run_experiments(confs_and_reps: List[Tuple[dict, int]]):
 # to the parallel code occurs, usually one process gets stuck in a
 # deadlock and the whole program never terminates. So don't start and
 # stop at all right now!
-def p_run_experiments(confs_and_reps: List[Tuple[dict, int]]):
-    expanded_confs = expand_confs_repeats(confs_and_reps)
+def p_run_experiments(
+    experiments_specs: Tuple[dict, int, Optional[str], Optional[str]]
+):
+    expanded_confs = expand_configs(experiments_specs)
     n_confs, n_workers = os.cpu_count(), len(expanded_confs)
     n_workers = n_confs if n_confs < n_workers else n_workers
     # NOTE processes are spawned at time instants 0, 1, 2, ...,
