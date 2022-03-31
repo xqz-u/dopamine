@@ -37,6 +37,7 @@ class Runner(ABC):
     console: utils.ConsoleLogger = attr.ib(init=False)
     checkpoint_dir: str = attr.ib(init=False)
     _checkpointer: checkpointer.Checkpointer = attr.ib(init=False)
+    _render_gym: bool = attr.ib(init=False, default=False)
 
     def pprint_conf(self):
         pprint.pprint(utils.reportable_conf(self.conf))
@@ -69,6 +70,10 @@ class Runner(ABC):
         self.env = env_(**utils.argfinder(env_, self.conf["env"]))
         self.conf["env"].update(constants.env_preproc_info(**self.conf["env"]))
         self.conf["env"]["clip_rewards"] = self.conf.get("clip_rewards", False)
+        self._render_gym = (
+            isinstance(self.env, gym_lib.GymPreprocessing)
+            and self.conf["env"].get("render_mode") == "human"
+        )
         self.checkpoint_dir = os.path.join(
             self.conf["runner"]["base_dir"], "checkpoints", str(self.redundancy_nr)
         )
@@ -235,6 +240,8 @@ class Runner(ABC):
         ep_reward, ep_steps = 0.0, 0
         done, observation = False, self.env.reset()
         while not done:
+            if self._render_gym:
+                self.env.environment.render()
             action = self.agent.select_action(observation)
             observation, reward, done, _ = self.step_environment(action, ep_steps)
             ep_reward += reward

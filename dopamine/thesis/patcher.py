@@ -5,9 +5,10 @@ import pickle
 import gym
 import numpy as np
 import tensorflow as tf
-from dopamine.discrete_domains import atari_lib
+from dopamine.discrete_domains import atari_lib, gym_lib
 from dopamine.replay_memory import circular_replay_buffer
 from dopamine.replay_memory.circular_replay_buffer import OutOfGraphReplayBuffer
+from gym.wrappers.time_limit import TimeLimit
 
 
 def save_no_garbage(self, checkpoint_dir, iteration_number):
@@ -92,6 +93,8 @@ for fn in [
 # --------------------------------------------------
 
 
-def create_atari_environment(environment_name: str) -> atari_lib.AtariPreprocessing:
-    env = gym.make(environment_name)
+def create_atari_environment(
+    environment_name: str, render_mode: str = "rgb_array"
+) -> atari_lib.AtariPreprocessing:
+    env = gym.make(environment_name, render_mode=render_mode)
     return atari_lib.AtariPreprocessing(env.env)

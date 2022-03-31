@@ -5,7 +5,7 @@ import gin
 import optax
 from dopamine.discrete_domains import gym_lib, run_experiment
 from dopamine.jax import losses
-from thesis import config, offline_circular_replay_buffer, patcher
+from thesis import config, networks, offline_circular_replay_buffer, patcher, utils
 from thesis.agents import DQNAgent
 from thesis.reporter import reporter
 from thesis.runner import FixedBatchRunner, runner
@@ -57,30 +57,41 @@ make_config = lambda exp_name, env, version, is_atari=False: {
     },
 }
 
-cp_conf = make_config("cp_new", "CartPole", "v1")
-cp_conf["runner"]["experiment"]["redundancy_nr"] = 0
-cp_conf["runner"]["base_dir"] = os.path.join(
-    config.data_dir, "CartPole-v1/DQNAgent/cp_new"
-)
-run_cp = runner.create_runner(cp_conf)
+
+def pong_dopamine():
+    pong_gin_conf = os.path.join(
+        config.dopamine_dir, "jax/agents/dqn/configs/dqn_profiling.gin"
+    )
+    data_path = os.path.join(config.scratch_data_dir, "Pong", "dqn")
+    gin.parse_config_file(pong_gin_conf)
+    run = run_experiment.create_runner(data_path)
+    run.run_experiment()
+
+
+def cp(render_mode="rgb_array"):
+    cp_conf = make_config("cp_new", "CartPole", "v1")
+    cp_conf["env"]["render_mode"] = render_mode
+    cp_conf["runner"]["experiment"]["redundancy_nr"] = 0
+    cp_conf["runner"]["base_dir"] = os.path.join(
+        config.scratch_data_dir, "CartPole-v1/DQNAgent/cp_new"
+    )
+    return runner.create_runner(cp_conf)
+
+
+def pong(render_mode: str = "rgb_array"):
+    pong_conf = make_config("test_pong", "ALE/Pong", "v5", True)
+    pong_conf["nets"]["qfunc"]["model"] = {"call_": networks.NatureDQNNetwork}
+    pong_conf["env"]["render_mode"] = render_mode
+    pong_conf["runner"]["experiment"]["redundancy_nr"] = 0
+    pong_conf["runner"]["base_dir"] = utils.data_dir_from_conf(
+        pong_conf["experiment_name"], pong_conf, basedir=config.scratch_data_dir
+    )
+    run_pong = runner.create_runner(pong_conf)
+    return run_pong
+
+
+# run_cp = cp("human")
 # run_cp.run_experiment()
 
-
-from thesis import utils
-
-pong_conf = make_config("test_pong", "ALE/Pong", "v5", True)
-pong_conf["runner"]["experiment"]["redundancy_nr"] = 0
-pong_conf["runner"]["base_dir"] = utils.data_dir_from_conf(
-    pong_conf["experiment_name"], pong_conf, basedir=config.scratch_data_dir
-)
-run_pong = runner.create_runner(pong_conf)
+# run_pong = pong("human")
 # run_pong.run_experiment()
-
-
-# pong_gin_conf = os.path.join(
-#     config.dopamine_dir, "jax/agents/dqn/configs/dqn_profiling.gin"
-# )
-# data_path = os.path.join(config.scratch_data_dir, "Pong", "dqn")
-# gin.parse_config_file(pong_gin_conf)
-# run = run_experiment.create_runner(data_path)
-# # run.run_experiment()

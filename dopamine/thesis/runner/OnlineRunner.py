@@ -2,6 +2,7 @@ import operator
 from collections import OrderedDict
 
 import attr
+from dopamine.discrete_domains import gym_lib
 from thesis import utils
 from thesis.runner import Runner
 
@@ -35,6 +36,8 @@ class OnlineRunner(Runner.Runner):
         )
         done, observation = False, self.env.reset()
         while not done:
+            if self._render_gym:
+                self.env.environment.render()
             action = self.agent.select_action(observation)
             observation, reward, done, _ = self.step_environment(
                 action, ret_dict["steps"]
