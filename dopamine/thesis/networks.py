@@ -1,7 +1,7 @@
 from typing import Sequence, Tuple, Union
 
+from dopamine.jax.networks import NatureDQNNetwork
 from flax import linen as nn
-
 from jax import numpy as jnp
 
 
@@ -60,3 +60,13 @@ def mlp(
             for v in tup
         ],
     )
+
+
+nature_nn_og_call = NatureDQNNetwork.__call__
+
+
+def nature_nn_new_call(self, x):
+    return nature_nn_og_call(self, x).q_values
+
+
+NatureDQNNetwork.__call__ = nature_nn_new_call

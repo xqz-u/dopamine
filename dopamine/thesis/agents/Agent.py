@@ -35,7 +35,9 @@ class Agent(ABC):
 
     def __attrs_post_init__(self):
         self.rng = self.rng or custom_pytrees.PRNGKeyWrap()
-        self.state = jnp.ones(self.observation_shape + (self.stack_size,))
+        self.state = jnp.ones(
+            self.observation_shape + (self.stack_size,), dtype=self.observation_dtype
+        )
         self.build_memory()
         self.build_networks_and_optimizers()
         self.loss_names = tuple(

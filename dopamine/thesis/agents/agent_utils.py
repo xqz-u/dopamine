@@ -20,7 +20,7 @@ def build_net(
     **kwargs,
 ) -> Tuple[nn.Module, FrozenDict, dict]:
     args = locals()
-    net = call_(output_dim=out_dim, **kwargs)
+    net = call_(out_dim, **kwargs)
     params = net.init(next(key), example_inp)
     return net, params, {"call_": args["call_"], **args["kwargs"]}
 
