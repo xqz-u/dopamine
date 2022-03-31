@@ -67,7 +67,7 @@ class Runner(ABC):
         )
         env_ = self.conf["env"].get("call_", self.env)
         self.env = env_(**utils.argfinder(env_, self.conf["env"]))
-        self.conf["env"].update(constants.env_info(**self.conf["env"]))
+        self.conf["env"].update(constants.env_preproc_info(**self.conf["env"]))
         self.conf["env"]["clip_rewards"] = self.conf.get("clip_rewards", False)
         self.checkpoint_dir = os.path.join(
             self.conf["runner"]["base_dir"], "checkpoints", str(self.redundancy_nr)
@@ -93,8 +93,7 @@ class Runner(ABC):
         agent_args = {
             "conf": self.conf,
             "num_actions": self.env.action_space.n,
-            "observation_shape": self.conf["env"]["observation_shape"],
-            "observation_dtype": self.env.observation_space.dtype,
+            **constants.env_info(self.env),
             "rng": rng,
             **utils.argfinder(agent_, {**self.conf["agent"], **self.conf["memory"]}),
         }

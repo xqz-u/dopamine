@@ -2,8 +2,10 @@ import gzip
 import os
 import pickle
 
+import gym
 import numpy as np
 import tensorflow as tf
+from dopamine.discrete_domains import atari_lib
 from dopamine.replay_memory import circular_replay_buffer
 from dopamine.replay_memory.circular_replay_buffer import OutOfGraphReplayBuffer
 
@@ -85,3 +87,11 @@ for fn in [
     finalize_full_experience,
 ]:
     setattr(OutOfGraphReplayBuffer, fn.__name__, fn)
+
+
+# --------------------------------------------------
+
+
+def create_atari_environment(environment_name: str) -> atari_lib.AtariPreprocessing:
+    env = gym.make(environment_name)
+    return atari_lib.AtariPreprocessing(env.env)

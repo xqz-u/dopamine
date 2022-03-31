@@ -17,6 +17,7 @@ class Agent(ABC):
     num_actions: int
     observation_shape: Tuple[int]
     observation_dtype: np.dtype
+    stack_size: int
     net_sync_freq: int = 200
     min_replay_history: int = 5000
     train_freq: int = 1
@@ -34,10 +35,7 @@ class Agent(ABC):
 
     def __attrs_post_init__(self):
         self.rng = self.rng or custom_pytrees.PRNGKeyWrap()
-        self.conf["memory"]["stack_size"] = self.conf["memory"].get("stack_size", 1)
-        self.state = jnp.ones(
-            self.observation_shape + (self.conf["memory"]["stack_size"],)
-        )
+        self.state = jnp.ones(self.observation_shape + (self.stack_size,))
         self.build_memory()
         self.build_networks_and_optimizers()
         self.loss_names = tuple(
@@ -56,14 +54,14 @@ class Agent(ABC):
             }
         )
 
-    def select_args(self, fn: callable, top_level_key: str) -> dict:
+    def select_args_with_self(self, fn: callable, top_level_key: str) -> dict:
         return utils.argfinder(
             fn, {**self.conf[top_level_key], **utils.attr_fields_d(self)}
         )
 
     def build_memory(self):
         memory_class = self.conf["memory"].pop("call_", self.memory)
-        args = self.select_args(memory_class, "memory")
+        args = self.select_args_with_self(memory_class, "memory")
         self.conf["memory"] = args
         self.memory = memory_class(**args)
         self.conf["memory"]["call_"] = memory_class
@@ -119,7 +117,7 @@ class Agent(ABC):
     ) -> np.ndarray:
         self.update_state(obs)
         self.rng, self.action = self.act_sel_fn(
-            **self.select_args(self.act_sel_fn, "exploration"),
+            **self.select_args_with_self(self.act_sel_fn, "exploration"),
             net=net,
             params=params,
         )

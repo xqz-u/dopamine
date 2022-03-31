@@ -64,7 +64,8 @@ def data_dir_from_conf(
         ""
         if not build_hierarchy
         else os.path.join(
-            "-".join(conf["env"].values()), conf["agent"]["call_"].__name__
+            f"{conf['env']['environment_name']}-{conf['env']['version']}",
+            conf["agent"]["call_"].__name__,
         )
     )
     full_path = os.path.join(
@@ -77,10 +78,6 @@ def data_dir_from_conf(
     return full_path
 
 
-# ruturns fields of a class decorated by attr.s as a dict, where the
-# values are retrieved from an instance and the keys from its class.
-# if get_props is truthy, the class' properties are retrieved from its
-# instance too
 def attr_fields_d(attr_inst: object, get_props: bool = False) -> dict:
     attr_class = type(attr_inst)
     return {
