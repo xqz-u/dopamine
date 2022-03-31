@@ -1,12 +1,12 @@
 import logging
+import os
 
 import optax
 from dopamine.jax import losses
-from thesis import config
+from thesis import config, offline_circular_replay_buffer
 from thesis.agents import DQNAgent
-from thesis.experiments import cp_ab_dqvmax_distr_shift
 from thesis.reporter import reporter
-from thesis.runner import runner
+from thesis.runner import FixedBatchRunner, runner
 
 make_config = lambda exp_name, env, version: {
     "experiment_name": exp_name,
@@ -48,76 +48,46 @@ make_config = lambda exp_name, env, version: {
 }
 
 
-def test_serial():
-    runner.run_experiments(
-        [
-            (make_config("test_new_runner_nofull_cp_s", "CartPole", "v1"), 3),
-            (make_config("test_new_runner_nofull_ab_s", "Acrobot", "v1"), 3),
-        ]
-    )
+online_spec = [
+    ("test_cp_record", "CartPole", "v1"),
+    ("test_ab_record", "Acrobot", "v1"),
+]
+online_confs = []
+for name, env, v in online_spec:
+    c = make_config(name, env, v)
+    c["runner"]["experiment"]["record_experience"] = True
+    online_confs.append((c, 3))
+# runner.p_run_experiments(online_confs)
+print("------------------------------------------------")
 
-
-def test_parallel():
-    runner.p_run_experiments(
-        [
-            (make_config("test_new_runner_nofull_cp", "CartPole", "v1"), 3),
-            (make_config("test_new_runner_nofull_ab", "Acrobot", "v1"), 3),
-        ]
-    )
-
-
-def offline_cp_ab_confs():
-    def do_conf(exp_name, env, version, repeats, off_exp_name):
-        c = make_config(exp_name, env, version)
-        off_spec = cp_ab_dqvmax_distr_shift.dqn_full_exp_conf(
-            off_exp_name, f"{env}-{version}"
+offline_spec = ["test_cp_off", "test_ab_off"]
+offline_confs = []
+for name, (on_name, env, v) in zip(offline_spec, online_spec):
+    c = make_config(name, env, v)
+    c["runner"]["call_"] = FixedBatchRunner.FixedBatchRunner
+    c["memory"] = {
+        "call_": offline_circular_replay_buffer.OfflineOutOfGraphReplayBuffer
+    }
+    offline_confs.append(
+        (
+            c,
+            4,
+            os.path.join(
+                config.data_dir, f"{env}-{v}", "DQNAgent", on_name, "checkpoints"
+            ),
         )
-        off_dir = off_spec.pop("_buffers_root_dir")
-        c["memory"] = off_spec
-        return (c, repeats, off_dir)
+    )
+# runner.p_run_experiments(offline_confs)
 
-    return [
-        do_conf(
-            "test_cp_full_offline", "CartPole", "v1", 5, "test_new_runner_nofull_cp_s"
-        ),
-        do_conf(
-            "test_ab_full_offline", "Acrobot", "v1", 5, "test_new_runner_nofull_ab_s"
-        ),
-    ]
-
-
-def test_serial_offline():
-    runner.run_experiments(offline_cp_ab_confs)
-
-
-def test_parallel_offline():
-    runner.p_run_experiments(offline_cp_ab_confs)
-
-
-# test_serial()
-# test_parallel()
-# test_serial_offline()
-# test_parallel_offline()
-
-
-# online_confs = [
-#     (make_config("test_new_runner_nofull_cp", "CartPole", "v1"), 3),
-#     (make_config("test_new_runner_nofull_ab", "Acrobot", "v1"), 3),
-# ]
-# runner.expand_configs(online_confs)
-# runner.expand_configs(offline_cp_ab_confs())
-
-# import os
-
-# from thesis import offline_circular_replay_buffer
-
-# fake_pong_conf = online_confs[0]
-# # fake_pong_conf = (fake_pong_conf[0], 10)
-# fake_pong_conf[0]["memory"][
-#     "call_"
-# ] = offline_circular_replay_buffer.OfflineOutOfGraphReplayBuffer
-# el = runner.expand_configs(
-#     [fake_pong_conf + (os.path.join(config.data_dir, "Pong"), "replay_logs")]
+# cp_off = offline_confs[0][0]
+# cp_off["runner"]["call_"] = FixedBatchRunner.FixedBatchRunner
+# cp_off["runner"]["experiment"]["redundancy_nr"] = 0
+# cp_off["memory"]["_buffers_dir"] = os.path.join(
+#     config.data_dir,
+#     "-".join(online_spec[0][1:]),
+#     "DQNAgent",
+#     online_spec[0][0],
+#     "checkpoints",
+#     "0",
 # )
-# for e in el:
-#     print(e["memory"]["_buffers_dir"])
+# runner.run_experiment_atomic(cp_off)

@@ -8,9 +8,7 @@ from thesis.runner import runner
 dqn_full_exp_conf = lambda exp_name, full_env: {
     "call_": offline_circular_replay_buffer.OfflineOutOfGraphReplayBuffer,
     "_buffers_root_dir": os.path.join(
-        config.data_dir,
-        # f"{full_env}/DQNAgent/{exp_name}/checkpoints/full_experience",
-        f"{full_env}/DQNAgent/{exp_name}/checkpoints",
+        config.data_dir, f"{full_env}/DQNAgent/{exp_name}/checkpoints/full_experience"
     ),
 }
 

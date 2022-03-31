@@ -15,15 +15,14 @@ from thesis.runner import Runner
 @attr.s(auto_attribs=True)
 class FixedBatchRunner(Runner.Runner):
     def __attrs_post_init__(self):
-        # we are not collecting new experiences at all, so force start
+        # we are not collecting new experiences at all, so force
         # fitting immediately
         self.conf["agent"]["min_replay_history"] = 0
         super().__attrs_post_init__()
         assert self.agent.min_replay_history == 0
-
-    def setup_experiment(self):
-        self.agent.memory.load_buffers(f"redundancy_{self.curr_redundancy}")
-        super().setup_experiment()
+        # TODO is this the right place for this call? move loading to
+        # __init__ of OfflineOutOfGraphReplayBuffer...
+        self.agent.memory.load_buffers()
 
     def train_iteration(self) -> OrderedDict:
         train_info = OrderedDict(
