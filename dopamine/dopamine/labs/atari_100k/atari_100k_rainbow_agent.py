@@ -15,7 +15,9 @@
 """Atari 100k rainbow agent with support for data augmentation."""
 
 import functools
+
 from absl import logging
+from dopamine.jax import networks
 from dopamine.jax.agents.full_rainbow import full_rainbow_agent
 import gin
 import jax
@@ -24,14 +26,23 @@ import tensorflow as tf
 
 
 ############################ Data Augmentation ############################
-def _random_crop(key, img, cropped_shape):
+
+
+@functools.partial(jax.vmap, in_axes=(0, 0, 0, None))
+def _crop_with_indices(img, x, y, cropped_shape):
+  cropped_image = (jax.lax.dynamic_slice(img, [x, y, 0], cropped_shape[1:]))
+  return cropped_image
+
+
+def _per_image_random_crop(key, img, cropped_shape):
   """Random crop an image."""
-  _, width, height = cropped_shape[:-1]
+  batch_size, width, height = cropped_shape[:-1]
   key_x, key_y = jax.random.split(key, 2)
-  x = jax.random.randint(key_x, shape=(), minval=0, maxval=img.shape[1] - width)
+  x = jax.random.randint(
+      key_x, shape=(batch_size,), minval=0, maxval=img.shape[1] - width)
   y = jax.random.randint(
-      key_y, shape=(), minval=0, maxval=img.shape[2] - height)
-  return img[:, x:x + width, y:y + height]
+      key_y, shape=(batch_size,), minval=0, maxval=img.shape[2] - height)
+  return _crop_with_indices(img, x, y, cropped_shape)
 
 
 def _intensity_aug(key, x, scale=0.05):
@@ -41,16 +52,20 @@ def _intensity_aug(key, x, scale=0.05):
   return x * noise
 
 
+@jax.jit
 def drq_image_augmentation(key, obs, img_pad=4):
-  """Padding and cropping for DrQ (Kostrikov et. al, 2020)."""
+  """Padding and cropping for DrQ."""
+  flat_obs = obs.reshape(-1, *obs.shape[-3:])
   paddings = [(0, 0), (img_pad, img_pad), (img_pad, img_pad), (0, 0)]
-  cropped_shape = obs.shape
+  cropped_shape = flat_obs.shape
   # The reference uses ReplicationPad2d in pytorch, but it is not available
   # in Jax. Use 'edge' instead.
-  obs = jnp.pad(obs, paddings, 'edge')
+  flat_obs = jnp.pad(flat_obs, paddings, 'edge')
   key1, key2 = jax.random.split(key, num=2)
-  aug_obs = _intensity_aug(key1, _random_crop(key2, obs, cropped_shape))
-  return aug_obs
+  cropped_obs = _per_image_random_crop(key2, flat_obs, cropped_shape)
+  # cropped_obs = _random_crop(key2, flat_obs, cropped_shape)
+  aug_obs = _intensity_aug(key1, cropped_obs)
+  return aug_obs.reshape(*obs.shape)
 
 
 def preprocess_inputs_with_augmentation(x, data_augmentation=False, rng=None):
@@ -71,6 +86,7 @@ class Atari100kRainbowAgent(full_rainbow_agent.JaxFullRainbowAgent):
                num_actions,
                data_augmentation=False,
                summary_writer=None,
+               network=networks.FullRainbowNetwork,
                seed=None):
     """Creates the Rainbow-based agent for the Atari 100k benchmark.
 
@@ -80,12 +96,16 @@ class Atari100kRainbowAgent(full_rainbow_agent.JaxFullRainbowAgent):
       num_actions: int, number of actions the agent can take at any state.
       data_augmentation: bool, whether to use data augmentation.
       summary_writer: SummaryWriter object, for outputting training statistics.
+      network: flax.linen Module, neural network used by the agent initialized
+        by shape in _create_network below. See
+        dopamine.jax.networks.RainbowNetwork as an example.
       seed: int, a seed for Jax RNG and initialization.
     """
     super().__init__(
         num_actions=num_actions,
         preprocess_fn=preprocess_inputs_with_augmentation,
         summary_writer=summary_writer,
+        network=network,
         seed=seed)
     logging.info('\t data_augmentation: %s', data_augmentation)
     self._data_augmentation = data_augmentation

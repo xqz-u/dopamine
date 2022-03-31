@@ -12,6 +12,8 @@ from thesis.runner import Runner
 # FixedBatchRunner.redundancy is different than the nr. of
 # redundancies used to generate the data online, the runner will fail
 # as it is
+# TODO move loading of replay buffers to __init__ of
+# OfflineOutOfGraphReplayBuffer...
 @attr.s(auto_attribs=True)
 class FixedBatchRunner(Runner.Runner):
     def __attrs_post_init__(self):
@@ -20,8 +22,6 @@ class FixedBatchRunner(Runner.Runner):
         self.conf["agent"]["min_replay_history"] = 0
         super().__attrs_post_init__()
         assert self.agent.min_replay_history == 0
-        # TODO is this the right place for this call? move loading to
-        # __init__ of OfflineOutOfGraphReplayBuffer...
         self.agent.memory.load_buffers()
 
     def train_iteration(self) -> OrderedDict:

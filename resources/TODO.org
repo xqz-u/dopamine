@@ -63,7 +63,7 @@
     Portability gets more complicated, it is an incomplete design...
 
 * General
-  - [ ] Parallelize redundancies code
+  - [X] Parallelize redundancies code
   - [ ] Offline prioritized buffer: transfer all trajectories
     registered in some buffers to a prioritized one with equal
     priority, then train offline
@@ -71,3 +71,4 @@
   - [ ] Download the Atari DQN replay dataset on Peregrine
   - [ ] Produce distributional shift plot with DQVMax in atari games (?)
   - [ ] Load trained agent for evaluation (?)
+  - [ ] Move everything persistence-related to Mongo (?)
