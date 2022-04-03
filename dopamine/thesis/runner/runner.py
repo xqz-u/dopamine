@@ -6,7 +6,8 @@ import time
 from copy import deepcopy
 from typing import List, Optional, Tuple, Union
 
-from thesis import offline_circular_replay_buffer, utils
+from thesis import utils
+from thesis.memory import offline_memory
 from thesis.runner.FixedBatchRunner import FixedBatchRunner
 from thesis.runner.OnlineRunner import OnlineRunner
 
@@ -43,9 +44,8 @@ def expand_single_conf(
         expanded_confs.append(c)
     if buffers_root_dir is not None:
         assert (
-            conf["memory"].get("call_")
-            is offline_circular_replay_buffer.OfflineOutOfGraphReplayBuffer
-        ), f"buffers_root_dir is {buffers_root_dir}, so conf['memory']['call_'] should be {offline_circular_replay_buffer.OfflineOutOfGraphReplayBuffer}"
+            conf["memory"].get("call_") is offline_memory.OfflineOutOfGraphReplayBuffer
+        ), f"buffers_root_dir is {buffers_root_dir}, so conf['memory']['call_'] should be {offline_memory.OfflineOutOfGraphReplayBuffer}"
         for c, buff_dir in zip(
             expanded_confs,
             it.cycle(
