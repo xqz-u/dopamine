@@ -2,11 +2,12 @@ import os
 
 import gym
 from dopamine.replay_memory import prioritized_replay_buffer
-from thesis import config, constants, offline_circular_replay_buffer
+from thesis import config, constants
 from thesis.agents import agent_utils
+from thesis.memory import offline_memory
 
 cartpole = gym.make("CartPole-v0")
-cartpole_dict = constants.env_info("CartPole", "v0")
+cartpole_dict = constants.env_info(cartpole)
 memory_args = {
     "observation_shape": cartpole_dict["observation_shape"],
     "stack_size": 1,
@@ -17,8 +18,8 @@ memory_args = {
 experiences_path = os.path.join(
     config.data_dir, "CartPole-v0/JaxDQNAgent/online_train/checkpoints"
 )
-off_memory = offline_circular_replay_buffer.OfflineOutOfGraphReplayBuffer(
-    **memory_args, checkpoint_dir=experiences_path, iterations=[499]
+off_memory = offline_memory.OfflineOutOfGraphReplayBuffer(
+    **memory_args, _buffers_dir=experiences_path
 )
 off_memory.load_buffers()
 
