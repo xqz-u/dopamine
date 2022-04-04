@@ -3,8 +3,9 @@ import os
 
 import optax
 from dopamine.jax import losses
-from thesis import config, offline_circular_replay_buffer
+from thesis import config
 from thesis.agents import DQNAgent
+from thesis.memory import offline_memory
 from thesis.reporter import reporter
 from thesis.runner import FixedBatchRunner, runner
 
@@ -65,9 +66,7 @@ offline_confs = []
 for name, (on_name, env, v) in zip(offline_spec, online_spec):
     c = make_config(name, env, v)
     c["runner"]["call_"] = FixedBatchRunner.FixedBatchRunner
-    c["memory"] = {
-        "call_": offline_circular_replay_buffer.OfflineOutOfGraphReplayBuffer
-    }
+    c["memory"] = {"call_": offline_memory.OfflineOutOfGraphReplayBuffer}
     offline_confs.append(
         (
             c,

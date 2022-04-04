@@ -4,7 +4,6 @@ from concurrent import futures
 
 import numpy as np
 from dopamine.replay_memory import circular_replay_buffer
-
 from thesis import utils
 
 
