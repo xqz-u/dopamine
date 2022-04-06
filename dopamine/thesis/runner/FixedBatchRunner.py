@@ -12,17 +12,18 @@ from thesis.runner import Runner
 # FixedBatchRunner.redundancy is different than the nr. of
 # redundancies used to generate the data online, the runner will fail
 # as it is
-# TODO move loading of replay buffers to __init__ of
-# OfflineOutOfGraphReplayBuffer...
 @attr.s(auto_attribs=True)
 class FixedBatchRunner(Runner.Runner):
     def __attrs_post_init__(self):
         # we are not collecting new experiences at all, so force
         # fitting immediately
+        min_rep_hist = self.conf["agent"].get("min_replay_history")
         self.conf["agent"]["min_replay_history"] = 0
         super().__attrs_post_init__()
-        assert self.agent.min_replay_history == 0
-        self.agent.memory.load_buffers()
+        if min_rep_hist is not None and min_rep_hist != 0:
+            self._console.debug(
+                f"An offline agent should start training immediately, originally got min_replay_history: {min_rep_hist}, now it is set to 0"
+            )
 
     def train_iteration(self) -> OrderedDict:
         train_info = OrderedDict(
