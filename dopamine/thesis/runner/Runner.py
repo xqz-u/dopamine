@@ -15,9 +15,11 @@ from thesis.agents import Agent
 from thesis.reporter import reporter
 
 
+# TODO set numpy random number generator and python random generator's
+# seed, used by Dopamine!
 # TODO to do evaluation the way the runner works right now, the agent
-# models must be reloaded; this must be taken into account when
-# creating an agent under the 'eval' schedule. for now only do
+# models should be loaded from disk; this must be taken into account
+# when creating an agent under the 'eval' schedule. for now only do
 # train_and_eval indeed...
 @attr.s(auto_attribs=True)
 class Runner(ABC):

@@ -11,6 +11,10 @@ def env_preproc_info(environment_name: str = None, version: str = None, **_) -> 
     return env_additional_info.get(f"{environment_name}-{version}", {})
 
 
+# NOTE when an agent is created, the relevant environment information
+# are passed from this function, regardless whether they were
+# specified in the experiment config; such info are mostly important
+# for the replay buffers
 def env_info(
     env: Union[gym_lib.GymPreprocessing, atari_lib.AtariPreprocessing]
 ) -> dict:
