@@ -1,5 +1,6 @@
 import logging
 import os
+from typing import List
 
 import optax
 from dopamine.jax import losses
@@ -34,8 +35,8 @@ conf_cartpole_dqvmax_offline = lambda exp_name: {
             "schedule": "train_and_eval",
             "seed": 4,
             "steps": 1000,
-            "iterations": 100,
-            "eval_period": 3,
+            "iterations": 500,
+            "eval_period": 5,
         },
     },
     "reporters": {
@@ -49,8 +50,7 @@ conf_cartpole_dqvmax_offline = lambda exp_name: {
 }
 
 
-def main(exp_name: str):
-    conf = conf_cartpole_dqvmax_offline(exp_name)
+def main(conf: dict) -> List[dict]:
     dqna_cartpole_buffers_dir = os.path.join(
         config.data_dir,
         "CartPole-v1/DQNAgent/cp_dqn_full_experience_%%/checkpoints/full_experience",
@@ -74,4 +74,4 @@ def main(exp_name: str):
     # run = runner.create_runner(conf)
 
 
-runner.p_run_experiments(main("cp_dqvmax_offline_test"), scratch=True)
+# runner.p_run_experiments(main(conf_cartpole_dqvmax_offline("cp_dqvmax_offline_test")), scratch=True)

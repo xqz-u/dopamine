@@ -1,3 +1,4 @@
+import inspect
 from abc import ABC, abstractmethod
 from typing import Dict, Sequence, Tuple
 
@@ -56,17 +57,32 @@ class Agent(ABC):
             }
         )
 
-    def select_args_with_self(self, fn: callable, top_level_key: str) -> dict:
-        return utils.argfinder(
-            fn, {**self.conf[top_level_key], **utils.attr_fields_d(self)}
-        )
-
+    # Since OutOfGraphReplayBuffer has a lot of parameters with
+    # defaults, its derived classes _explicitly_ take only those
+    # parameters that differ from the base. The base defaults are then
+    # restored first, and they are replaced with the corresponding
+    # values bound in self.conf/self if any
     def build_memory(self):
         memory_class = self.conf["memory"].pop("call_", self.memory)
-        args = self.select_args_with_self(memory_class, "memory")
-        self.conf["memory"] = args
-        self.memory = memory_class(**args)
-        self.conf["memory"]["call_"] = memory_class
+        full_typesig = {
+            **dict(inspect.signature(memory_class).parameters),
+            **dict(inspect.signature(self.memory).parameters),
+        }
+        # kwargs is given to classes derived from
+        # OutOfGraphReplayBuffer to avoid writing down the full lambda
+        # list, so the latter gets destructured
+        full_typesig.pop("kwargs", None)
+        bound_values = {**self.conf["memory"], **utils.attr_fields_d(self)}
+        merged_params = {
+            k: val
+            if (val := bound_values.get(k))
+            else (
+                v.default if not isinstance(v.default, inspect.Parameter.empty) else v
+            )
+            for k, v in full_typesig.items()
+        }
+        self.memory = memory_class(**merged_params)
+        self.conf["memory"] = {"call_": memory_class, **merged_params}
 
     # NOTE should the static args to loss_metric be partialled?
     # consider that it can be done before passing the function in the
@@ -119,7 +135,10 @@ class Agent(ABC):
     ) -> np.ndarray:
         self.update_state(obs)
         self.rng, self.action = self.act_sel_fn(
-            **self.select_args_with_self(self.act_sel_fn, "exploration"),
+            **utils.argfinder(
+                self.act_sel_fn,
+                {**self.conf["exploration"], **utils.attr_fields_d(self)},
+            ),
             net=net,
             params=params,
         )

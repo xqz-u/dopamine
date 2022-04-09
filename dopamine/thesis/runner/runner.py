@@ -7,7 +7,7 @@ from copy import deepcopy
 from typing import List, Union
 
 from thesis import config, utils
-from thesis.memory import offline_memory
+from thesis.memory import offline_memory, prio_offline_memory
 from thesis.runner.FixedBatchRunner import FixedBatchRunner
 from thesis.runner.OnlineRunner import OnlineRunner
 
@@ -55,9 +55,10 @@ def add_offline_buffers(
         it.cycle(utils.unfold_replay_buffers_dir(buffers_root_dir, intermediate_dirs)),
         it.cycle(iterations or ([None] * len(confs))),
     ):
-        assert (
-            c["memory"].get("call_") is offline_memory.OfflineOutOfGraphReplayBuffer
-        ), f"buffers_root_dir is {buffers_root_dir}, so conf['memory']['call_'] should be {offline_memory.OfflineOutOfGraphReplayBuffer}"
+        assert c["memory"].get("call_") in [
+            offline_memory.OfflineOutOfGraphReplayBuffer,
+            prio_offline_memory.PrioritizedOfflineOutOfGraphReplayBuffer,
+        ], f"buffers_root_dir is {buffers_root_dir}, so conf['memory']['call_'] should be {offline_memory.OfflineOutOfGraphReplayBuffer}"
         c["memory"]["_buffers_dir"] = buff_dir
         if iters_ is not None:
             c["memory"]["_buffers_iterations"] = iters_
@@ -100,6 +101,7 @@ def p_run_experiments(experiments_confs: List[dict], scratch: bool = False):
     show_experiments_order(experiments_confs)
     n_confs, n_workers = os.cpu_count(), len(experiments_confs)
     n_workers = n_confs if n_confs < n_workers else n_workers
+    print(f"Worker pool size: {n_workers}")
     # NOTE processes are spawned at time instants 0, 1, 2, ...,
     # n_confs-1
     with mp.Pool(processes=n_workers) as p:

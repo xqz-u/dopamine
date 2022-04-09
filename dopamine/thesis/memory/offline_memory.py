@@ -1,5 +1,5 @@
 from concurrent import futures
-from typing import List, Tuple
+from typing import List
 
 import numpy as np
 from dopamine.replay_memory.circular_replay_buffer import OutOfGraphReplayBuffer
@@ -24,30 +24,12 @@ class OfflineOutOfGraphReplayBuffer(OutOfGraphReplayBuffer):
         "invalid_range",
         "_store",
     ]
-    _parent_init_args: List[str] = [
-        "observation_shape",
-        "stack_size",
-        "update_horizon",
-        "batch_size",
-        "gamma",
-        "observation_dtype",
-    ]
 
     def __init__(
-        self,
-        observation_shape: Tuple[int],
-        stack_size: int,
-        _buffers_dir: str,
-        _buffers_iterations: List[int] = None,
-        update_horizon: int = 1,
-        batch_size: int = 32,
-        gamma: float = 0.99,
-        observation_dtype: np.dtype = np.float32,
-        **kwargs,
+        self, _buffers_dir: str, _buffers_iterations: List[int] = None, **kwargs
     ):
-        args = locals()
-        self._kwargs = {**{k: args[k] for k in self._parent_init_args}, **kwargs}
-        super().__init__(**self._kwargs)
+        super().__init__(**kwargs)
+        self._kwargs = kwargs
         self._buffers_dir = _buffers_dir
         self._console = utils.ConsoleLogger(name=__name__)
         self.load_buffers(iterations=_buffers_iterations)
