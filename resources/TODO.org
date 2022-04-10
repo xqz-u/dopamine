@@ -28,7 +28,7 @@
   + Base class for my agents DONE
   + Profile jax/training operations
   + DQV max and DQV DONE dqvmax
-  + Train online on Atari games!
+  + Train online on Atari games DONE
   + how about some parallelism? check when to use =jax.pmap=
 
 * Runner
@@ -65,10 +65,12 @@
 * General
   - [X] Parallelize redundancies code
   - [ ] Offline prioritized buffer: transfer all trajectories
-    registered in some buffers to a prioritized one with equal
-    priority, then train offline
+	registered in some buffers to a prioritized one with equal
+	priority, then train offline. Merge trajectories! Very data
+	heavy, how to do this?
   - [ ] Ensemble DQVMax
   - [ ] Download the Atari DQN replay dataset on Peregrine
   - [ ] Produce distributional shift plot with DQVMax in atari games (?)
   - [ ] Load trained agent for evaluation (?)
   - [ ] Move everything persistence-related to Mongo (?)
+  - [ ] Move the offline replay buffer classes to functions
