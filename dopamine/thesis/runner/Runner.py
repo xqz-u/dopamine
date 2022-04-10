@@ -15,8 +15,6 @@ from thesis.agents import Agent
 from thesis.reporter import reporter
 
 
-# TODO set numpy random number generator and python random generator's
-# seed, used by Dopamine!
 # TODO to do evaluation the way the runner works right now, the agent
 # models should be loaded from disk; this must be taken into account
 # when creating an agent under the 'eval' schedule. for now only do
@@ -154,6 +152,9 @@ class Runner(ABC):
         return True
 
     def next_seeds(self):
+        # NOTE thesis.agents use jax's rng and not numpy's, still set
+        # numpy's global rng for Dopamine code
+        np.random.seed(self.seed)
         self.env.environment.reset(seed=self.seed)
         self.seed += 1
 
