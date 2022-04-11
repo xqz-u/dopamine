@@ -14,7 +14,9 @@ def env_preproc_info(environment_name: str = None, version: str = None, **_) -> 
 # NOTE when an agent is created, the relevant environment information
 # are passed from this function, regardless whether they were
 # specified in the experiment config; such info are mostly important
-# for the replay buffers
+# for the replay buffers. #actions is not passed to keep
+# initialization compatible with both Agent and Memory (the latter
+# would be invalidated)
 def env_info(
     env: Union[gym_lib.GymPreprocessing, atari_lib.AtariPreprocessing]
 ) -> dict:
