@@ -95,14 +95,14 @@ class Runner(ABC):
         # passed as keywords. Merging the dictionaries like this
         # eliminates duplicates, and it is safe because same keys share
         # same values.
-        agent_args = {
-            "conf": self.conf,
-            "num_actions": self.env.action_space.n,
-            **constants.env_info(self.env),
-            "rng": rng,
-            **utils.argfinder(agent_, {**self.conf["agent"], **self.conf["memory"]}),
-        }
-        self.agent = agent_(**agent_args)
+        self.agent = agent_(
+            **{
+                "conf": self.conf,
+                "num_actions": self.env.action_space.n,
+                **constants.env_info(self.env),
+                "rng": rng,
+            }
+        )
 
     # default reporters: console and mongodb
     def setup_reporters(self):
