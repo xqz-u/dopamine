@@ -1,4 +1,3 @@
-import inspect
 from abc import ABC, abstractmethod
 from typing import Dict, Sequence, Tuple
 
@@ -10,6 +9,8 @@ from flax.core.frozen_dict import FrozenDict
 from jax import numpy as jnp
 from thesis import custom_pytrees, exploration, patcher, utils
 from thesis.agents import agent_utils
+
+default_memory_args = {"replay_capacity": int(1e6), "batch_size": 32}
 
 
 @attr.s(auto_attribs=True)
@@ -61,28 +62,16 @@ class Agent(ABC):
     # defaults, its derived classes _explicitly_ take only those
     # parameters that differ from the base. The base defaults are then
     # restored first, and they are replaced with the corresponding
-    # values bound in self.conf/self if any
+    # values bound in self.conf/self (if any)
     def build_memory(self):
         memory_class = self.conf["memory"].pop("call_", self.memory)
-        full_typesig = {
-            **dict(inspect.signature(memory_class).parameters),
-            **dict(inspect.signature(self.memory).parameters),
-        }
-        # kwargs is given to classes derived from
-        # OutOfGraphReplayBuffer to avoid writing down the full lambda
-        # list, so the latter gets destructured
-        full_typesig.pop("kwargs", None)
-        bound_values = {**self.conf["memory"], **utils.attr_fields_d(self)}
-        merged_params = {
-            k: val
-            if (val := bound_values.get(k))
-            else (
-                v.default if not isinstance(v.default, inspect.Parameter.empty) else v
-            )
-            for k, v in full_typesig.items()
-        }
-        self.memory = memory_class(**merged_params)
-        self.conf["memory"] = {"call_": memory_class, **merged_params}
+        args = utils.argfinder(
+            patcher.OutOfGraphReplayBuffer,
+            {**default_memory_args, **utils.attr_fields_d(self)},
+        )
+        args.update(self.conf["memory"])
+        self.memory = memory_class(**args)
+        self.conf["memory"] = {"call_": memory_class, **args}
 
     # NOTE should the static args to loss_metric be partialled?
     # consider that it can be done before passing the function in the
