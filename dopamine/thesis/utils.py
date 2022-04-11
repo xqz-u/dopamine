@@ -14,6 +14,10 @@ import jax
 from thesis import config
 
 
+def jax_container_shapes(cont) -> dict[str, Tuple[int]]:
+    return jax.tree_map(lambda el: el.shape, cont)
+
+
 def is_builtin(elt) -> bool:
     return elt.__class__.__module__ == "builtins"
 
