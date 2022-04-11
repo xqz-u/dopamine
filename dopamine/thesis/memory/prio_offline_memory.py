@@ -1,14 +1,10 @@
 from typing import List
 
-from dopamine.replay_memory.circular_replay_buffer import OutOfGraphReplayBuffer
 from dopamine.replay_memory.prioritized_replay_buffer import (
     OutOfGraphPrioritizedReplayBuffer,
 )
 from thesis import utils
 from thesis.memory.offline_memory import OfflineOutOfGraphReplayBuffer
-
-dopamine_memory_defaults = utils.callable_defaults(OutOfGraphReplayBuffer.__init__)
-prio_dopamine_missing_defaults = ["replay_capacity", "batch_size"]
 
 
 # TODO merge multiple buffers!
@@ -21,24 +17,10 @@ class PrioritizedOfflineOutOfGraphReplayBuffer(
     _parent_necessary_attributes: List[str]
 
     def __init__(
-        self,
-        _buffers_dir: str,
-        _buffers_iterations: List[int] = None,
-        replay_capacity: int = None,
-        batch_size: int = None,
-        **kwargs,
+        self, _buffers_dir: str, _buffers_iterations: List[int] = None, **kwargs
     ):
-        # NOTE prioritized_replay_buffer wants replay_capacity and
-        # batch_size too, add the base defaults if not present
-        args = locals()
         super().__init__(
-            _buffers_dir=_buffers_dir,
-            _buffers_iterations=_buffers_iterations,
-            **kwargs,
-            **{
-                param: args[param] or dopamine_memory_defaults[param]
-                for param in prio_dopamine_missing_defaults
-            },
+            _buffers_dir=_buffers_dir, _buffers_iterations=_buffers_iterations, **kwargs
         )
 
     @property
