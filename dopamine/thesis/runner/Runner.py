@@ -68,8 +68,8 @@ class Runner(ABC):
         )
         env_ = self.conf["env"].get("call_", self.env)
         self.env = env_(**utils.argfinder(env_, self.conf["env"]))
-        self.conf["env"].update(constants.env_preproc_info(**self.conf["env"]))
         self.conf["env"]["clip_rewards"] = self.conf.get("clip_rewards", False)
+        self.conf["env"].update(constants.env_preproc_info(**self.conf["env"]))
         self._render_gym = (
             isinstance(self.env, gym_lib.GymPreprocessing)
             and self.conf["env"].get("render_mode") == "human"
@@ -158,13 +158,14 @@ class Runner(ABC):
         self.env.environment.reset(seed=self.seed)
         self.seed += 1
 
+    def maybe_clip_reward(self, r: float) -> float:
+        return r if not self.conf["env"]["clip_rewards"] else np.clip(r, -1, 1)
+
     def step_environment(
         self, action: int, episode_steps: int
     ) -> Tuple[np.array, float, bool, dict]:
         observation, reward, done, info = self.env.step(action)
         done = done or episode_steps >= self.env.environment.spec.max_episode_steps
-        if self.conf["env"]["clip_rewards"]:
-            reward = np.clip(reward, -1, 1)
         return observation, reward, done, info
 
     def report_metrics(self, raw_metrics: dict, agg_metrics: dict):

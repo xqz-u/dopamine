@@ -10,7 +10,7 @@ from flax.core.frozen_dict import FrozenDict
 from jax import numpy as jnp
 from jax import random as jrand
 from thesis import custom_pytrees, networks
-from thesis.memory import offline_memory
+from thesis.memory import offline_memory, prio_offline_memory
 
 
 def build_net(
@@ -39,6 +39,7 @@ def sample_replay_buffer(
     memory: Union[
         circular_replay_buffer.OutOfGraphReplayBuffer,
         offline_memory.OfflineOutOfGraphReplayBuffer,
+        prio_offline_memory.PrioritizedOfflineOutOfGraphReplayBuffer,
     ],
     batch_size: int = None,
     indices: int = None,

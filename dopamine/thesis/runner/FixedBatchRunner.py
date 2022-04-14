@@ -24,6 +24,10 @@ class FixedBatchRunner(Runner.Runner):
             self._console.debug(
                 f"An offline agent should start training immediately, originally got min_replay_history: {min_rep_hist}, now it is set to 0"
             )
+        if self.clip_rewards:
+            self.console.warning(
+                "clip_rewards is True, so the loaded replay datasets' rewards should be already clipped"
+            )
 
     def train_iteration(self) -> OrderedDict:
         train_info = OrderedDict(

@@ -20,6 +20,7 @@ class Agent(ABC):
     observation_shape: Tuple[int]
     observation_dtype: np.dtype
     stack_size: int
+    clip_rewards: bool = False
     net_sync_freq: int = 200
     min_replay_history: int = 5000
     train_freq: int = 1
@@ -34,6 +35,7 @@ class Agent(ABC):
     training_steps: int = 0
     loss_names: Tuple[str] = None
     _observation: np.ndarray = None
+    net_sync_freq_vs_upd: int = None
 
     def __attrs_post_init__(self):
         self.rng = self.rng or custom_pytrees.PRNGKeyWrap()
@@ -45,18 +47,24 @@ class Agent(ABC):
         self.loss_names = tuple(
             f"{m}_{self.models[m].loss_metric.__name__}" for m in self.model_names
         )
-        self.act_sel_fn = self.conf["exploration"].get("call_", self.act_sel_fn)
+        assert (
+            "eval_mode" not in self.conf["exploration"]
+        ), "eval_mode for exploration will be set by the Runner class!"
+        self.act_sel_fn = self.conf["exploration"].pop("call_", self.act_sel_fn)
         self.conf["exploration"] = {
             "call_": self.act_sel_fn,
-            **utils.callable_defaults(self.act_sel_fn),
+            "args": {
+                **self.conf["exploration"],
+                **utils.callable_defaults(self.act_sel_fn),
+            },
         }
-        self.conf["exploration"].pop("eval_mode")
         self.conf["agent"].update(
             {
                 k: getattr(self, k)
                 for k in ["net_sync_freq", "min_replay_history", "train_freq", "gamma"]
             }
         )
+        self.net_sync_freq_vs_upd = self.net_sync_freq * self.train_freq
 
     # Since OutOfGraphReplayBuffer has a lot of parameters with
     # defaults, its derived classes _explicitly_ take only those
@@ -105,7 +113,12 @@ class Agent(ABC):
 
     def record_trajectory(self, reward: float, terminal: bool):
         if not self.eval_mode:
-            self.memory.add(self._observation, self.action, reward, terminal)
+            self.memory.add(
+                self._observation,
+                self.action,
+                reward if not self.clip_rewards else np.clip(reward, -1, 1),
+                terminal,
+            )
 
     def sample_memory(self) -> dict:
         return agent_utils.sample_replay_buffer(self.memory)
@@ -124,10 +137,8 @@ class Agent(ABC):
     ) -> np.ndarray:
         self.update_state(obs)
         self.rng, self.action = self.act_sel_fn(
-            **utils.argfinder(
-                self.act_sel_fn,
-                {**self.conf["exploration"], **utils.attr_fields_d(self)},
-            ),
+            **self.conf["exploration"]["args"],
+            training_steps=self.training_steps,
             net=net,
             params=params,
         )
@@ -142,7 +153,7 @@ class Agent(ABC):
                 train_dict["loss"] = jnp.array(train_dict["loss"]).reshape(
                     len(self.models), 1
                 )
-            if self.training_steps % self.net_sync_freq == 0:
+            if self.training_steps % self.net_sync_freq_vs_upd == 0:
                 self.sync_weights()
         self.training_steps += 1
         return train_dict

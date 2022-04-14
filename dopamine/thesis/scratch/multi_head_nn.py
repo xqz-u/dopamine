@@ -24,7 +24,10 @@ action_qvals = net.apply(params, example_state)
 
 
 # import os
+
+# from thesis import config
 # from thesis.memory import offline_memory
+
 # pong_buffers_path = os.path.join(config.data_dir, "Pong/1/replay_logs")
 
 # off_mem = offline_memory.OfflineOutOfGraphReplayBuffer(
@@ -35,6 +38,7 @@ action_qvals = net.apply(params, example_state)
 #     observation_shape=atari_lib.NATURE_DQN_OBSERVATION_SHAPE,
 #     stack_size=atari_lib.NATURE_DQN_STACK_SIZE,
 # )
+# off_mem.load_single_buffer(1)
 # atari_records = agent_utils.sample_replay_buffer(off_mem)
 # atari_states = atari_records["state"]
 # example_in, example_state, *atari_states = atari_states

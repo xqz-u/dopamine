@@ -2,7 +2,7 @@ import operator
 from collections import OrderedDict
 
 import attr
-from dopamine.discrete_domains import gym_lib
+import numpy as np
 from thesis import utils
 from thesis.runner import Runner
 
