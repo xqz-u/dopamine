@@ -2,7 +2,6 @@ import operator
 from collections import OrderedDict
 
 import attr
-import numpy as np
 from thesis import utils
 from thesis.runner import Runner
 

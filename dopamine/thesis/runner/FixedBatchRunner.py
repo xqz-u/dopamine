@@ -16,17 +16,23 @@ from thesis.runner import Runner
 class FixedBatchRunner(Runner.Runner):
     def __attrs_post_init__(self):
         # we are not collecting new experiences at all, so force
-        # fitting immediately
+        # fitting immediately, and train at each step
         min_rep_hist = self.conf["agent"].get("min_replay_history")
         self.conf["agent"]["min_replay_history"] = 0
+        train_freq = self.conf["agent"].get("train_freq")
+        self.conf["agent"]["train_freq"] = 1
         super().__attrs_post_init__()
         if min_rep_hist is not None and min_rep_hist != 0:
-            self._console.debug(
-                f"An offline agent should start training immediately, originally got min_replay_history: {min_rep_hist}, now it is set to 0"
-            )
-        if self.clip_rewards:
             self.console.warning(
-                "clip_rewards is True, so the loaded replay datasets' rewards should be already clipped"
+                f"Offline agents train immediately, got min_replay_history: {min_rep_hist}, now set to 0"
+            )
+        if train_freq is not None and train_freq != 1:
+            self.console.warning(
+                f"Offline agents fit trajectories at every step, got train_freq: {train_freq}, now set to 1"
+            )
+        if self.agent.clip_rewards:
+            self.console.warning(
+                "clip_rewards is True, so the recorded rewards should be already clipped"
             )
 
     def train_iteration(self) -> OrderedDict:
