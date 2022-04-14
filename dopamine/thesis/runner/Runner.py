@@ -51,7 +51,7 @@ class Runner(ABC):
             level=self.conf["runner"].get("log_level", logging.DEBUG),
             name=self.console_name,
         )
-        # add values to config if it had defaults
+        # update defaults
         self.conf["runner"]["experiment"].update(
             {
                 k: getattr(self, k)
@@ -68,7 +68,6 @@ class Runner(ABC):
         )
         env_ = self.conf["env"].get("call_", self.env)
         self.env = env_(**utils.argfinder(env_, self.conf["env"]))
-        self.conf["env"]["clip_rewards"] = self.conf.get("clip_rewards", False)
         self.conf["env"].update(constants.env_preproc_info(**self.conf["env"]))
         self._render_gym = (
             isinstance(self.env, gym_lib.GymPreprocessing)
@@ -101,6 +100,7 @@ class Runner(ABC):
                 "num_actions": self.env.action_space.n,
                 **constants.env_info(self.env),
                 "rng": rng,
+                **utils.argfinder(agent_, self.conf["agent"]),
             }
         )
 
@@ -127,7 +127,7 @@ class Runner(ABC):
             self.checkpoint_dir
         )
         if latest_iter_ckpt < 0:
-            self.console.debug(
+            self.console.info(
                 "No previous iteration found, start experiment from scratch"
             )
             return False
@@ -158,9 +158,6 @@ class Runner(ABC):
         self.env.environment.reset(seed=self.seed)
         self.seed += 1
 
-    def maybe_clip_reward(self, r: float) -> float:
-        return r if not self.conf["env"]["clip_rewards"] else np.clip(r, -1, 1)
-
     def step_environment(
         self, action: int, episode_steps: int
     ) -> Tuple[np.array, float, bool, dict]:
@@ -186,24 +183,24 @@ class Runner(ABC):
     # run for every loop
     def setup_experiment(self):
         self.next_seeds()
-        self.console.debug(f"Env seeded, Agent rng: {self.agent.rng}")
+        self.console.info(f"Env seeded, Agent rng: {self.agent.rng}")
 
     def finalize_experiment(self):
         # flush any buffered mongo documents
         self.reporters["mongo"].collection.safe_flush_docs()
-        self.console.debug("flushed mongo reporter...")
+        self.console.info("flushed mongo reporter...")
 
     def run_experiment(self):
         self.setup_experiment()
         self.pprint_conf()
         while self.curr_iteration < self.iterations:
             metrics = getattr(self, f"{self.schedule}_iteration")()
-            self.console.debug(
+            self.console.info(
                 f"{self.schedule}: #{self.curr_iteration} #global {self.global_steps}\n{pprint.pformat(metrics)}"
             )
             if not self.agent.eval_mode:
                 self._checkpoint_experiment()
-                self.console.debug(
+                self.console.info(
                     f"wrote checkpoint {self.redundancy_nr}-{self.curr_iteration}"
                 )
             self.curr_iteration += 1
@@ -220,12 +217,12 @@ class Runner(ABC):
         agent_data["curr_iteration"] = self.curr_iteration
         agent_data["global_steps"] = self.global_steps
         self._checkpointer.save_checkpoint(self.curr_iteration, agent_data)
-        self.console.debug("Saved agent + runner's state")
+        self.console.info("Saved agent + runner's state")
 
     def _checkpoint_replay_buffer(self):
         if not os.path.exists(self.checkpoint_dir):
             self.agent.memory.save(self.checkpoint_dir, self.curr_iteration)
-            self.console.debug("Saved replay buffer")
+            self.console.info("Saved replay buffer")
 
     def _checkpoint_experiment(self):
         self._checkpoint_replay_buffer()
@@ -254,6 +251,9 @@ class Runner(ABC):
 
     # NOTE default implementations provided, override if necessary
     def eval_iteration(self) -> dict:
+        self.console.info(
+            f"Eval: {self.eval_steps} after {self.eval_period} train iterations"
+        )
         self.agent.eval_mode = True
         eval_info = OrderedDict(reward=0.0, steps=0, episodes=0)
         while eval_info["steps"] < self.eval_steps:
