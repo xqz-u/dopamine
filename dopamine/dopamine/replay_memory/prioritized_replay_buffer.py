@@ -50,6 +50,8 @@ class OutOfGraphPrioritizedReplayBuffer(circular_replay_buffer.OutOfGraphReplayB
         action_dtype=np.int32,
         reward_shape=(),
         reward_dtype=np.float32,
+        checkpoint_duration=4,
+        keep_every=None,
     ):
         """Initializes OutOfGraphPrioritizedReplayBuffer.
 
@@ -90,6 +92,8 @@ class OutOfGraphPrioritizedReplayBuffer(circular_replay_buffer.OutOfGraphReplayB
             action_dtype=action_dtype,
             reward_shape=reward_shape,
             reward_dtype=reward_dtype,
+            checkpoint_duration=checkpoint_duration,
+            keep_every=keep_every,
         )
 
         self.sum_tree = sum_tree.SumTree(replay_capacity)

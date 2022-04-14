@@ -16,8 +16,8 @@ from thesis.reporter import reporter
 
 
 # TODO to do evaluation the way the runner works right now, the agent
-# models must be reloaded; this must be taken into account when
-# creating an agent under the 'eval' schedule. for now only do
+# models should be loaded from disk; this must be taken into account
+# when creating an agent under the 'eval' schedule. for now only do
 # train_and_eval indeed...
 @attr.s(auto_attribs=True)
 class Runner(ABC):
@@ -51,7 +51,7 @@ class Runner(ABC):
             level=self.conf["runner"].get("log_level", logging.DEBUG),
             name=self.console_name,
         )
-        # add values to config if it had defaults
+        # update defaults
         self.conf["runner"]["experiment"].update(
             {
                 k: getattr(self, k)
@@ -69,7 +69,6 @@ class Runner(ABC):
         env_ = self.conf["env"].get("call_", self.env)
         self.env = env_(**utils.argfinder(env_, self.conf["env"]))
         self.conf["env"].update(constants.env_preproc_info(**self.conf["env"]))
-        self.conf["env"]["clip_rewards"] = self.conf.get("clip_rewards", False)
         self._render_gym = (
             isinstance(self.env, gym_lib.GymPreprocessing)
             and self.conf["env"].get("render_mode") == "human"
@@ -95,14 +94,15 @@ class Runner(ABC):
         # passed as keywords. Merging the dictionaries like this
         # eliminates duplicates, and it is safe because same keys share
         # same values.
-        agent_args = {
-            "conf": self.conf,
-            "num_actions": self.env.action_space.n,
-            **constants.env_info(self.env),
-            "rng": rng,
-            **utils.argfinder(agent_, {**self.conf["agent"], **self.conf["memory"]}),
-        }
-        self.agent = agent_(**agent_args)
+        self.agent = agent_(
+            **{
+                "conf": self.conf,
+                "num_actions": self.env.action_space.n,
+                **constants.env_info(self.env),
+                "rng": rng,
+                **utils.argfinder(agent_, self.conf["agent"]),
+            }
+        )
 
     # default reporters: console and mongodb
     def setup_reporters(self):
@@ -127,7 +127,7 @@ class Runner(ABC):
             self.checkpoint_dir
         )
         if latest_iter_ckpt < 0:
-            self.console.debug(
+            self.console.info(
                 "No previous iteration found, start experiment from scratch"
             )
             return False
@@ -152,6 +152,9 @@ class Runner(ABC):
         return True
 
     def next_seeds(self):
+        # NOTE thesis.agents use jax's rng and not numpy's, still set
+        # numpy's global rng for Dopamine code
+        np.random.seed(self.seed)
         self.env.environment.reset(seed=self.seed)
         self.seed += 1
 
@@ -160,8 +163,6 @@ class Runner(ABC):
     ) -> Tuple[np.array, float, bool, dict]:
         observation, reward, done, info = self.env.step(action)
         done = done or episode_steps >= self.env.environment.spec.max_episode_steps
-        if self.conf["env"]["clip_rewards"]:
-            reward = np.clip(reward, -1, 1)
         return observation, reward, done, info
 
     def report_metrics(self, raw_metrics: dict, agg_metrics: dict):
@@ -182,24 +183,24 @@ class Runner(ABC):
     # run for every loop
     def setup_experiment(self):
         self.next_seeds()
-        self.console.debug(f"Env seeded, Agent rng: {self.agent.rng}")
+        self.console.info(f"Env seeded, Agent rng: {self.agent.rng}")
 
     def finalize_experiment(self):
         # flush any buffered mongo documents
         self.reporters["mongo"].collection.safe_flush_docs()
-        self.console.debug("flushed mongo reporter...")
+        self.console.info("flushed mongo reporter...")
 
     def run_experiment(self):
         self.setup_experiment()
         self.pprint_conf()
         while self.curr_iteration < self.iterations:
             metrics = getattr(self, f"{self.schedule}_iteration")()
-            self.console.debug(
+            self.console.info(
                 f"{self.schedule}: #{self.curr_iteration} #global {self.global_steps}\n{pprint.pformat(metrics)}"
             )
             if not self.agent.eval_mode:
                 self._checkpoint_experiment()
-                self.console.debug(
+                self.console.info(
                     f"wrote checkpoint {self.redundancy_nr}-{self.curr_iteration}"
                 )
             self.curr_iteration += 1
@@ -216,12 +217,12 @@ class Runner(ABC):
         agent_data["curr_iteration"] = self.curr_iteration
         agent_data["global_steps"] = self.global_steps
         self._checkpointer.save_checkpoint(self.curr_iteration, agent_data)
-        self.console.debug("Saved agent + runner's state")
+        self.console.info("Saved agent + runner's state")
 
     def _checkpoint_replay_buffer(self):
         if not os.path.exists(self.checkpoint_dir):
             self.agent.memory.save(self.checkpoint_dir, self.curr_iteration)
-            self.console.debug("Saved replay buffer")
+            self.console.info("Saved replay buffer")
 
     def _checkpoint_experiment(self):
         self._checkpoint_replay_buffer()
@@ -250,6 +251,9 @@ class Runner(ABC):
 
     # NOTE default implementations provided, override if necessary
     def eval_iteration(self) -> dict:
+        self.console.info(
+            f"Eval: {self.eval_steps} after {self.eval_period} train iterations"
+        )
         self.agent.eval_mode = True
         eval_info = OrderedDict(reward=0.0, steps=0, episodes=0)
         while eval_info["steps"] < self.eval_steps:

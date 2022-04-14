@@ -4,9 +4,10 @@ import multiprocessing as mp
 import os
 import time
 from copy import deepcopy
-from typing import List, Optional, Tuple, Union
+from typing import List, Union
 
-from thesis import offline_circular_replay_buffer, utils
+from thesis import config, utils
+from thesis.memory import offline_memory, prio_offline_memory
 from thesis.runner.FixedBatchRunner import FixedBatchRunner
 from thesis.runner.OnlineRunner import OnlineRunner
 
@@ -15,62 +16,58 @@ def mp_print(s: str):
     print(f"{datetime.datetime.now().strftime('%H:%M:%S')}-{os.getpid()}-{s}")
 
 
+def show_experiments_order(confs: List[dict]):
+    print("Experiments running order:")
+    for c in confs:
+        print(c["experiment_name"], c["runner"]["experiment"]["redundancy_nr"])
+
+
 # schedule:
 # - train (default)
 # - eval
 # - train_and_eval
-def create_runner(
-    conf: dict,
-) -> Union[OnlineRunner, FixedBatchRunner]:
+def create_runner(conf: dict) -> Union[OnlineRunner, FixedBatchRunner]:
     # set some defaults
     conf["runner"]["call_"] = conf["runner"].get("call_", OnlineRunner)
     return conf["runner"]["call_"](conf, **conf["runner"]["experiment"])
 
 
-# NOTE when repeats is > than available redundancy dirs, the latter
-# are cycled through for a total of repeats times, in all other cases
-# repeats takes the priority
-def expand_single_conf(
-    conf: dict,
-    repeats: int,
-    buffers_root_dir: str = None,
-    intermediate_dirs: str = "",
-) -> List[dict]:
+def add_redundancies(conf: dict, repeat: int) -> List[dict]:
     expanded_confs = []
-    for i in range(repeats):
+    for i in range(repeat):
         c = deepcopy(conf)
         c["runner"]["experiment"]["redundancy_nr"] = i
         expanded_confs.append(c)
-    if buffers_root_dir is not None:
-        assert (
-            conf["memory"].get("call_")
-            is offline_circular_replay_buffer.OfflineOutOfGraphReplayBuffer
-        ), f"buffers_root_dir is {buffers_root_dir}, so conf['memory']['call_'] should be {offline_circular_replay_buffer.OfflineOutOfGraphReplayBuffer}"
-        for c, buff_dir in zip(
-            expanded_confs,
-            it.cycle(
-                utils.unfold_replay_buffers_dir(buffers_root_dir, intermediate_dirs)
-            ),
-        ):
-            c["memory"]["_buffers_dir"] = buff_dir
     return expanded_confs
 
 
-def expand_configs(
-    experiments_specs: Tuple[dict, int, Optional[str], Optional[str]]
+# NOTE when repeats is > than available redundancy dirs/specified
+# iterations, the latter  are cycled through for a total of repeats
+# times, in all other cases repeats takes the priority
+def add_offline_buffers(
+    confs: List[dict],
+    buffers_root_dir: str,
+    intermediate_dirs: str = "",
+    iterations: List[List[int]] = None,
 ) -> List[dict]:
-    expanded_confs = [
-        c for args in experiments_specs for c in expand_single_conf(*args)
-    ]
-    print("Experiments running order:")
-    for c in expanded_confs:
-        print(c["experiment_name"], c["runner"]["experiment"]["redundancy_nr"])
-    return expanded_confs
+    for c, buff_dir, iters_ in zip(
+        confs,
+        it.cycle(utils.unfold_replay_buffers_dir(buffers_root_dir, intermediate_dirs)),
+        it.cycle(iterations or ([None] * len(confs))),
+    ):
+        assert c["memory"].get("call_") in [
+            offline_memory.OfflineOutOfGraphReplayBuffer,
+            prio_offline_memory.PrioritizedOfflineOutOfGraphReplayBuffer,
+        ], f"buffers_root_dir is {buffers_root_dir}, so conf['memory']['call_'] should be {offline_memory.OfflineOutOfGraphReplayBuffer}"
+        c["memory"]["_buffers_dir"] = buff_dir
+        if iters_ is not None:
+            c["memory"]["_buffers_iterations"] = iters_
+    return confs
 
 
 # NOTE starting processes sequentially to avoid race conditions in sql
 # for aim reporters
-def run_experiment_atomic(conf: dict, init_wait: float = None):
+def run_experiment_atomic(conf: dict, scratch: bool, init_wait: float = None):
     if init_wait is not None:
         mp_print(f"Sleep {init_wait}s...")
         time.sleep(init_wait)
@@ -79,19 +76,20 @@ def run_experiment_atomic(conf: dict, init_wait: float = None):
         redundancy_nr, int
     ), f"redundancy_nr should be int, got {redundancy_nr}"
     mp_print(f"Start redundancy {redundancy_nr}")
-    utils.data_dir_from_conf(conf["experiment_name"], conf)
+    utils.data_dir_from_conf(
+        conf["experiment_name"],
+        conf,
+        basedir=config.scratch_data_dir if scratch else None,
+    )
     run = create_runner(conf)
     run.run_experiment()
     mp_print("DONE!")
 
 
-def run_experiment_atomic_wrap(args):
-    return run_experiment_atomic(*args)
-
-
-def run_experiments(experiments_specs: Tuple[dict, int, Optional[str], Optional[str]]):
-    for c in expand_configs(experiments_specs):
-        run_experiment_atomic(c)
+def run_experiments(experiments_confs: List[dict], scratch: bool = False):
+    show_experiments_order(experiments_confs)
+    for c in experiments_confs:
+        run_experiment_atomic(c, scratch)
 
 
 # FIXME when SIGINT is given, something happens (the signal handler
@@ -99,13 +97,15 @@ def run_experiments(experiments_specs: Tuple[dict, int, Optional[str], Optional[
 # to the parallel code occurs, usually one process gets stuck in a
 # deadlock and the whole program never terminates. So don't start and
 # stop at all right now!
-def p_run_experiments(
-    experiments_specs: Tuple[dict, int, Optional[str], Optional[str]]
-):
-    expanded_confs = expand_configs(experiments_specs)
-    n_confs, n_workers = os.cpu_count(), len(expanded_confs)
+def p_run_experiments(experiments_confs: List[dict], scratch: bool = False):
+    show_experiments_order(experiments_confs)
+    n_confs, n_workers = os.cpu_count(), len(experiments_confs)
     n_workers = n_confs if n_confs < n_workers else n_workers
+    print(f"Worker pool size: {n_workers}")
     # NOTE processes are spawned at time instants 0, 1, 2, ...,
     # n_confs-1
     with mp.Pool(processes=n_workers) as p:
-        p.map(run_experiment_atomic_wrap, zip(expanded_confs, range(n_confs)))
+        p.starmap(
+            run_experiment_atomic,
+            zip(experiments_confs, [scratch] * n_confs, range(n_confs)),
+        )

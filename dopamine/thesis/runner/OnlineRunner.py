@@ -2,7 +2,6 @@ import operator
 from collections import OrderedDict
 
 import attr
-from dopamine.discrete_domains import gym_lib
 from thesis import utils
 from thesis.runner import Runner
 
@@ -66,7 +65,7 @@ class OnlineRunner(Runner.Runner):
             )
             train_info["episodes"] += 1
         self.global_steps += train_info["steps"]
-        aggregate_info = Runner.aggregate_losses(self.agent.loss_names, train_info)
+        aggregate_info = super().aggregate_losses(self.agent.loss_names, train_info)
         aggregate_info.update(
             {"AvgEp_return": train_info["reward"] / train_info["episodes"]}
         )

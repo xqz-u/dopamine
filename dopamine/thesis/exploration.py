@@ -1,24 +1,19 @@
 import functools as ft
 from typing import Tuple, Union
 
+import jax
 from flax import linen as nn
 from flax.core.frozen_dict import FrozenDict
-from thesis import custom_pytrees
-
-import jax
 from jax import numpy as jnp
 from jax import random as jrand
 
-# TODO it would be better to specify only the args required by
-# `linearly_decaying_epsilon` here, and pass the base egreedy args like
-# **base_egreedy. This is not supported by thesis.utils.argfinder though
-# What I can do is in intermediate abstraction, like a dataclass or
-# another map, to encapsulate the common arguments
-# NOTE another commonality is that all egreedy functions require net
-# and params separated, take this into account in agent code
+from thesis import custom_pytrees
 
 
 # taken from dopamine.jax.agents.dqn.dqn_agent
+# NOTE intermediate version with default arguments, since defaults args
+# in jitted functions behave like static_argnums and are recompiled each
+# time they change - problematic with egreedy_linear_decay
 @ft.partial(jax.jit, static_argnums=(0, 2, 3))
 def linearly_decaying_epsilon(
     decay_period: int, training_steps: int, warmup_steps: int, epsilon_target: float
@@ -47,9 +42,8 @@ def egreedy_base(
     )
 
 
-# NOTE intermediate version with default arguments, since defaults args
-# in jitted functions behave like static_argnums and get recompiled each
-# time they change (so could be a problem with egreedy_linear_decay)
+# NOTE accepts **args so that this function and egreedy_linear_decay can
+# be called the same way without binding unknown arguments at runtime...
 def egreedy(
     net: nn.Module,
     num_actions: int,
@@ -59,9 +53,16 @@ def egreedy(
     eval_mode: bool = False,
     epsilon_train: float = 0.01,
     epsilon_eval: float = 0.001,
+    **_
 ) -> Tuple[custom_pytrees.PRNGKeyWrap, jnp.DeviceArray]:
-    epsilon = epsilon_train if not eval_mode else epsilon_eval
-    return egreedy_base(net, num_actions, epsilon, rng, params, state)
+    return egreedy_base(
+        net,
+        num_actions,
+        epsilon_train if not eval_mode else epsilon_eval,
+        rng,
+        params,
+        state,
+    )
 
 
 def egreedy_linear_decay(
@@ -70,18 +71,23 @@ def egreedy_linear_decay(
     rng: custom_pytrees.PRNGKeyWrap,
     params: FrozenDict,
     state: jnp.DeviceArray,
-    training_steps: int,
-    decay_period: int = 250000,
-    warmup_steps: int = 500,
     eval_mode: bool = False,
     epsilon_train: float = 0.01,
-    epsilon_eval: float = 0.01,
+    epsilon_eval: float = 0.001,
+    training_steps: int = 0,
+    decay_period: int = 250000,
+    warmup_steps: int = 500,
+    **_
 ) -> Tuple[custom_pytrees.PRNGKeyWrap, jnp.DeviceArray]:
-    epsilon = (
+    return egreedy_base(
+        net,
+        num_actions,
         epsilon_eval
         if eval_mode
         else linearly_decaying_epsilon(
             decay_period, training_steps, warmup_steps, epsilon_train
-        )
+        ),
+        rng,
+        params,
+        state,
     )
-    return egreedy_base(net, num_actions, epsilon, rng, params, state)

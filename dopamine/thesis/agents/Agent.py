@@ -7,7 +7,7 @@ import tensorflow as tf
 from flax import linen as nn
 from flax.core.frozen_dict import FrozenDict
 from jax import numpy as jnp
-from thesis import custom_pytrees, exploration, patcher, utils
+from thesis import constants, custom_pytrees, exploration, patcher, utils
 from thesis.agents import agent_utils
 
 
@@ -18,6 +18,7 @@ class Agent(ABC):
     observation_shape: Tuple[int]
     observation_dtype: np.dtype
     stack_size: int
+    clip_rewards: bool = False
     net_sync_freq: int = 200
     min_replay_history: int = 5000
     train_freq: int = 1
@@ -32,6 +33,7 @@ class Agent(ABC):
     training_steps: int = 0
     loss_names: Tuple[str] = None
     _observation: np.ndarray = None
+    net_sync_freq_vs_upd: int = None
 
     def __attrs_post_init__(self):
         self.rng = self.rng or custom_pytrees.PRNGKeyWrap()
@@ -43,30 +45,40 @@ class Agent(ABC):
         self.loss_names = tuple(
             f"{m}_{self.models[m].loss_metric.__name__}" for m in self.model_names
         )
+        assert (
+            "eval_mode" not in self.conf["exploration"]
+        ), "eval_mode for exploration will be set by the Runner class!"
         self.act_sel_fn = self.conf["exploration"].get("call_", self.act_sel_fn)
-        self.conf["exploration"] = {
-            "call_": self.act_sel_fn,
-            **utils.callable_defaults(self.act_sel_fn),
-        }
-        self.conf["exploration"].pop("eval_mode")
+        self.conf["exploration"].update(utils.callable_defaults(self.act_sel_fn))
+        # update defaults
         self.conf["agent"].update(
             {
                 k: getattr(self, k)
-                for k in ["net_sync_freq", "min_replay_history", "train_freq", "gamma"]
+                for k in [
+                    "net_sync_freq",
+                    "min_replay_history",
+                    "train_freq",
+                    "gamma",
+                    "clip_rewards",
+                ]
             }
         )
+        self.net_sync_freq_vs_upd = self.net_sync_freq * self.train_freq
 
-    def select_args_with_self(self, fn: callable, top_level_key: str) -> dict:
-        return utils.argfinder(
-            fn, {**self.conf[top_level_key], **utils.attr_fields_d(self)}
-        )
-
+    # Since OutOfGraphReplayBuffer has a lot of parameters with
+    # defaults, its derived classes _explicitly_ take only those
+    # parameters that differ from the base. The base defaults are then
+    # restored first, and they are replaced with the corresponding
+    # values bound in self.conf/self (if any)
     def build_memory(self):
         memory_class = self.conf["memory"].pop("call_", self.memory)
-        args = self.select_args_with_self(memory_class, "memory")
-        self.conf["memory"] = args
+        args = utils.argfinder(
+            patcher.OutOfGraphReplayBuffer,
+            {**constants.default_memory_args, **utils.attr_fields_d(self)},
+        )
+        args.update(self.conf["memory"])
         self.memory = memory_class(**args)
-        self.conf["memory"]["call_"] = memory_class
+        self.conf["memory"] = {"call_": memory_class, **args}
 
     # NOTE should the static args to loss_metric be partialled?
     # consider that it can be done before passing the function in the
@@ -99,8 +111,14 @@ class Agent(ABC):
         return jnp.zeros((len(self.conf["nets"]), 1))
 
     def record_trajectory(self, reward: float, terminal: bool):
-        if not self.eval_mode:
-            self.memory.add(self._observation, self.action, reward, terminal)
+        if self.eval_mode:
+            return
+        self.memory.add(
+            self._observation,
+            self.action,
+            reward if not self.clip_rewards else np.clip(reward, -1, 1),
+            terminal,
+        )
 
     def sample_memory(self) -> dict:
         return agent_utils.sample_replay_buffer(self.memory)
@@ -114,14 +132,21 @@ class Agent(ABC):
         self.state = np.roll(self.state, -1, axis=-1)
         self.state[..., -1] = self._observation
 
+    # NOTE args to exploration fn can be gathered programmatically,
+    # avoiding it now since the two exploration fns implemented have
+    # the same interface
     def _select_action(
         self, obs: np.ndarray, net: nn.Module, params: FrozenDict
     ) -> np.ndarray:
         self.update_state(obs)
         self.rng, self.action = self.act_sel_fn(
-            **self.select_args_with_self(self.act_sel_fn, "exploration"),
+            **self.conf["exploration"],
             net=net,
+            num_actions=self.num_actions,
+            rng=self.rng,
             params=params,
+            state=self.state,
+            training_steps=self.training_steps,
         )
         self.action = np.array(self.action)
         return self.action
@@ -134,7 +159,7 @@ class Agent(ABC):
                 train_dict["loss"] = jnp.array(train_dict["loss"]).reshape(
                     len(self.models), 1
                 )
-            if self.training_steps % self.net_sync_freq == 0:
+            if self.training_steps % self.net_sync_freq_vs_upd == 0:
                 self.sync_weights()
         self.training_steps += 1
         return train_dict
