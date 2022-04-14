@@ -77,6 +77,7 @@ def egreedy_linear_decay(
     training_steps: int = 0,
     decay_period: int = 250000,
     warmup_steps: int = 500,
+    **_
 ) -> Tuple[custom_pytrees.PRNGKeyWrap, jnp.DeviceArray]:
     return egreedy_base(
         net,

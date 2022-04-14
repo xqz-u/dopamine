@@ -50,18 +50,19 @@ class Agent(ABC):
         assert (
             "eval_mode" not in self.conf["exploration"]
         ), "eval_mode for exploration will be set by the Runner class!"
-        self.act_sel_fn = self.conf["exploration"].pop("call_", self.act_sel_fn)
-        self.conf["exploration"] = {
-            "call_": self.act_sel_fn,
-            "args": {
-                **self.conf["exploration"],
-                **utils.callable_defaults(self.act_sel_fn),
-            },
-        }
+        self.act_sel_fn = self.conf["exploration"].get("call_", self.act_sel_fn)
+        self.conf["exploration"].update(utils.callable_defaults(self.act_sel_fn))
+        # update defaults
         self.conf["agent"].update(
             {
                 k: getattr(self, k)
-                for k in ["net_sync_freq", "min_replay_history", "train_freq", "gamma"]
+                for k in [
+                    "net_sync_freq",
+                    "min_replay_history",
+                    "train_freq",
+                    "gamma",
+                    "clip_rewards",
+                ]
             }
         )
         self.net_sync_freq_vs_upd = self.net_sync_freq * self.train_freq
@@ -112,13 +113,14 @@ class Agent(ABC):
         return jnp.zeros((len(self.conf["nets"]), 1))
 
     def record_trajectory(self, reward: float, terminal: bool):
-        if not self.eval_mode:
-            self.memory.add(
-                self._observation,
-                self.action,
-                reward if not self.clip_rewards else np.clip(reward, -1, 1),
-                terminal,
-            )
+        if self.eval_mode:
+            return
+        self.memory.add(
+            self._observation,
+            self.action,
+            reward if not self.clip_rewards else np.clip(reward, -1, 1),
+            terminal,
+        )
 
     def sample_memory(self) -> dict:
         return agent_utils.sample_replay_buffer(self.memory)
@@ -132,15 +134,21 @@ class Agent(ABC):
         self.state = np.roll(self.state, -1, axis=-1)
         self.state[..., -1] = self._observation
 
+    # NOTE args to exploration fn can be gathered programmatically,
+    # avoiding it now since the two exploration fns implemented have
+    # the same interface
     def _select_action(
         self, obs: np.ndarray, net: nn.Module, params: FrozenDict
     ) -> np.ndarray:
         self.update_state(obs)
         self.rng, self.action = self.act_sel_fn(
-            **self.conf["exploration"]["args"],
-            training_steps=self.training_steps,
+            **self.conf["exploration"],
             net=net,
+            num_actions=self.num_actions,
+            rng=self.rng,
             params=params,
+            state=self.state,
+            training_steps=self.training_steps,
         )
         self.action = np.array(self.action)
         return self.action
