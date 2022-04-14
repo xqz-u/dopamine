@@ -1,4 +1,3 @@
-import logging
 import os
 
 import optax
@@ -7,15 +6,15 @@ from thesis import config, exploration, patcher
 from thesis.agents import DQVMaxAgent
 from thesis.memory import offline_memory
 from thesis.reporter import reporter
-from thesis.runner import FixedBatchRunner
+from thesis.runner import FixedBatchRunner, runner
 
 # TODO
 # death by max_episode_steps?
-# test online to see that exploration works and clip_rewards too
 
 
 conv_adam = {
     "model": {"call_": patcher.NatureDQNNetwork},
+    # "model": {"hiddens": (512, 512)},
     "optim": {"call_": optax.adam, "learning_rate": 0.001, "eps": 3.125e-4},
     "loss_metric": losses.huber_loss,
 }
@@ -29,7 +28,8 @@ conf_pong_dqvmax_offline = lambda exp_name: {
         "call_": DQVMaxAgent.DQVMaxAgent,
         "net_sync_freq": 2000,
         "train_freq": 4,
-        "clip_rewards": True,
+        # "clip_rewards": True,
+        # "min_replay_history": 2000
     },
     "memory": {
         "call_": offline_memory.OfflineOutOfGraphReplayBuffer,
@@ -39,9 +39,10 @@ conf_pong_dqvmax_offline = lambda exp_name: {
         "call_": patcher.create_atari_environment,
         "environment_name": "Pong",
         "version": "v5",
+        # "environment_name": "CartPole",
+        # "version": "v1",
     },
     "runner": {
-        "log_level": logging.DEBUG,
         "call_": FixedBatchRunner.FixedBatchRunner,
         "experiment": {
             "schedule": "train_and_eval",
@@ -50,6 +51,10 @@ conf_pong_dqvmax_offline = lambda exp_name: {
             "eval_steps": int(125e3),
             "iterations": 200,
             "eval_period": 1,
+            # "steps": 700,
+            # "eval_steps": 500,
+            # "iterations": 20,
+            # "eval_period": 2,
         },
     },
     "reporters": {
@@ -58,12 +63,31 @@ conf_pong_dqvmax_offline = lambda exp_name: {
             "buffering": 50,
             "collection_name": exp_name,
         },
-        "aim": {"call_": reporter.AimReporter, "repo": str(config.data_dir)},
+        "aim": {
+            "call_": reporter.AimReporter,
+            # "repo": str(config.data_dir),
+            "repo": str(config.scratch_data_dir),
+        },
     },
 }
 
+# sample 10 replay buffers, 20% of DQN replay dataset
+# (for max only like 1 or 2)
+conf = conf_pong_dqvmax_offline("test_pong_dqvmax_off")
+redundancy = 5
+expanded_confs = runner.add_redundancies(conf, redundancy)
+pong_dqn_buffers_dir = os.path.join(config.data_dir, "Pong")
+expanded_confs = runner.add_offline_buffers(
+    expanded_confs,
+    pong_dqn_buffers_dir,
+    intermediate_dirs="replay_logs",
+    iterations=[1],
+)
+conf_0, *rest_confs = expanded_confs
+from thesis import utils
 
-def main():
-    # sample 10 replay buffers, 20% of DQN replay dataset
-    # (for max only like 1 or 2)
-    conf = ...
+utils.data_dir_from_conf(
+    conf_0["experiment_name"], conf_0, basedir=config.scratch_data_dir
+)
+run = runner.create_runner(conf_0)
+# run.run_experiment()
