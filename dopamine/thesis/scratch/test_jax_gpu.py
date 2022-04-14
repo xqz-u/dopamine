@@ -1,28 +1,22 @@
-import time
+import timeit
 
+code = """
 import numpy as np
+from jax import device_put
 from jax import numpy as jnp
 from jax import random as jrand
 
 
-def timer(expr: callable):
-    start = time.time()
-    ret = expr()
-    print(f"exec time: {time.time() - start}")
-    return ret
-
-
 key = jrand.PRNGKey(0)
-x = jrand.normal(key, (10,))
-print(x)
-
 size = 3000
 x = jrand.normal(key, (size, size), dtype=jnp.float32)
-timer(lambda: jnp.dot(x, x.T).block_until_ready())
+y = np.random.normal(size=(size, size)).astype(np.float32)
+y = device_put(y)
+"""
+# stern: 32.80970892100595
+exec_time = timeit.timeit("jnp.dot(x, x.T).block_until_ready()", setup=code, number=100)
+print(f"exec time: {exec_time}")
 
-
-from jax import device_put
-
-x = np.random.normal(size=(size, size)).astype(np.float32)
-x = device_put(x)
-timer(lambda: jnp.dot(x, x.T).block_until_ready())
+# stern: 32.76028992999636
+exec_time = timeit.timeit("jnp.dot(y, y.T).block_until_ready()", setup=code, number=100)
+print(f"exec time: {exec_time}")
