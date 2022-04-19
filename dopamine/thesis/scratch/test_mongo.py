@@ -10,11 +10,11 @@ def main():
     db = client.test_database
     # databases and collections are created lazily aka when a document is
     # first inserted, so "test_database" should not exist yet
-    client.list_database_names()
+    print(client.list_database_names())
 
     collection = db.test_collection
     # same as above comment goes here
-    db.list_collection_names()
+    print(db.list_collection_names())
 
     # add some documents with variable schemas
     new_posts = [
@@ -33,7 +33,7 @@ def main():
     ]
 
     results = collection.insert_many(new_posts)
-    results.inserted_ids
+    print(results.inserted_ids)
 
     # now the database "test_database" and the collection
     # "test_collection" exist
@@ -45,4 +45,5 @@ def main():
         pprint.pprint(post)
 
 
-# main()
+if __name__ == "__main__":
+    main()

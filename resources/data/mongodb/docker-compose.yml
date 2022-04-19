@@ -6,3 +6,10 @@ services:
       - ./database:/data/db
     ports:
       - 27017:27017
+
+
+# equivalently with bare docker:
+# docker run --name mongodb_cl -d \
+#        -p 27017:27017 \
+#        -v ~/uni/thesis/resources/data/mongodb/database:/data/db \
+#        mongo
