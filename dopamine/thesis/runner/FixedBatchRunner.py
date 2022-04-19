@@ -40,11 +40,13 @@ class FixedBatchRunner(Runner.Runner):
             loss=self.agent.init_loss(), steps=self.steps, q_estimates=0.0
         )
         for _ in range(self.steps):
+            # for i in range(self.steps):
+            # print(f"Progress: {i}%", end="\r", flush=True)
             utils.inplace_dict_assoc(
                 train_info, operator.add, update_dict=self.agent.learn()
             )
         self.global_steps += self.steps
-        aggregate_info = Runner.aggregate_losses(self.agent.loss_names, train_info)
+        aggregate_info = super().aggregate_losses(self.agent.loss_names, train_info)
         self.report_metrics(train_info, aggregate_info)
         return {"raw": train_info, "aggregate": aggregate_info}
 

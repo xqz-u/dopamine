@@ -7,10 +7,8 @@ import tensorflow as tf
 from flax import linen as nn
 from flax.core.frozen_dict import FrozenDict
 from jax import numpy as jnp
-from thesis import custom_pytrees, exploration, patcher, utils
+from thesis import constants, custom_pytrees, exploration, patcher, utils
 from thesis.agents import agent_utils
-
-default_memory_args = {"replay_capacity": int(1e6), "batch_size": 32}
 
 
 @attr.s(auto_attribs=True)
@@ -76,7 +74,7 @@ class Agent(ABC):
         memory_class = self.conf["memory"].pop("call_", self.memory)
         args = utils.argfinder(
             patcher.OutOfGraphReplayBuffer,
-            {**default_memory_args, **utils.attr_fields_d(self)},
+            {**constants.default_memory_args, **utils.attr_fields_d(self)},
         )
         args.update(self.conf["memory"])
         self.memory = memory_class(**args)

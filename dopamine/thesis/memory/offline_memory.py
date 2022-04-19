@@ -26,13 +26,17 @@ class OfflineOutOfGraphReplayBuffer(OutOfGraphReplayBuffer):
     ]
 
     def __init__(
-        self, _buffers_dir: str, _buffers_iterations: List[int] = None, **kwargs
+        self,
+        _buffers_dir: str,
+        _buffers_iterations: List[int] = None,
+        load_parallel: bool = True,
+        **kwargs,
     ):
         super().__init__(**kwargs)
         self._kwargs = kwargs
         self._buffers_dir = _buffers_dir
         self._console = utils.ConsoleLogger(name=__name__)
-        self.load_buffers(iterations=_buffers_iterations)
+        self.load_buffers(load_parallel, iterations=_buffers_iterations)
 
     @property
     def parent_necessary_attributes(self) -> List[str]:
@@ -83,15 +87,24 @@ class OfflineOutOfGraphReplayBuffer(OutOfGraphReplayBuffer):
             f"Loaded buffer {self._buffers_dir}-{suffix} add_count: {self.add_count}"
         )
 
+    def _load_buffers_serial(self, iters: List[int]):
+        for i in iters:
+            self.load_single_buffer(i)
+
+    def _load_buffers_parallel(self, iters: List[int]):
+        with futures.ThreadPoolExecutor() as thread_pool:
+            buffers = [thread_pool.submit(self._load_buffer, i) for i in iters]
+        for bf in (b.result() for b in buffers):
+            self._merge_buffers(bf)
+
     # default behavior: load all iterations in a directory if not
     # specified otherwise
-    def load_buffers(self, iterations: List[int] = None, workers: int = None):
+    def load_buffers(self, parallel: bool, iterations: List[int] = None):
         if iterations is None:
             iterations = utils.list_all_ckpt_iterations(self._buffers_dir)
             self._console.debug(f"Load all buffers in {self._buffers_dir}")
-        with futures.ThreadPoolExecutor(max_workers=workers) as thread_pool:
-            buffers = [thread_pool.submit(self._load_buffer, i) for i in iterations]
-        for bf in [b.result() for b in buffers]:
-            self._merge_buffers(bf)
+        (self._load_buffers_parallel if parallel else self._load_buffers_serial)(
+            iterations
+        )
         self._validate_capacity()
         self._console.debug(f"loaded buffers {iterations} from {self._buffers_dir}")

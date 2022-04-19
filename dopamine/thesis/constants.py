@@ -4,6 +4,8 @@ from typing import Union
 import numpy as np
 from dopamine.discrete_domains import atari_lib, gym_lib
 
+default_memory_args = {"replay_capacity": int(1e6), "batch_size": 32}
+
 opposite = lambda vs: tuple(map(lambda el: -el, vs))
 
 
