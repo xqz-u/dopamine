@@ -62,7 +62,7 @@ urllib3 = ">=1.25.10"
 Werkzeug = ">=1.0.1"
 wrapt = ">=1.12.1"
 attrs = "^21.4.0"
-aim = "^3.3.3"
+aim = "^3.8.1"
 pymongo = "^4.0.1"
 gsutil = "^5.8"
 gym = {extras = ["atari", "accept-rom-license"], version = "^0.23.1"}
