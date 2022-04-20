@@ -5,7 +5,9 @@ from pymongo import MongoClient
 
 
 def main():
-    client = MongoClient("mongodb://localhost:27017/")
+    client = MongoClient(
+        "mongodb://localhost:27017/", serverSelectionTimeoutMS=int(5e3)
+    )
 
     db = client.test_database
     # databases and collections are created lazily aka when a document is
