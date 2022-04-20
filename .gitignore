@@ -8,6 +8,7 @@ resources/data/*
 resources/data/mongodb/*
 !resources/data/mongodb/docker-compose.yml
 !resources/data/mongodb/mongoconf
+!resources/data/mongodb/Singularity
 
 resources/images
 

@@ -1,0 +1,9 @@
+# https://git.embl.de/grp-bio-it/singularity-service-example/-/blob/master/Singularity
+Bootstrap: docker
+From: mongo:latest
+
+%startscript
+  /usr/bin/mongod --config /etc/mongo/mongod.conf
+
+%post
+  chmod 777 /data/db
