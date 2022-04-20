@@ -6,4 +6,4 @@ From: mongo:latest
   /usr/bin/mongod --config /etc/mongo/mongod.conf
 
 %post
-  chmod 777 /data/db
+  chown mongodb:mongodb /data/db
