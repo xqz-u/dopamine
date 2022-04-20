@@ -7,6 +7,7 @@ resources/data/*
 !resources/data/mongodb
 resources/data/mongodb/*
 !resources/data/mongodb/docker-compose.yml
+!resources/data/mongodb/mongoconf
 
 resources/images
 
