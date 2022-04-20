@@ -25,7 +25,7 @@ grpcio = ">=1.30.0"
 h5py = ">=2.10.0"
 idna = ">=2.10"
 jax = ">=0.2.12"
-jaxlib = ">=0.1.65"
+jaxlib = {url = "https://storage.googleapis.com/jax-releases/cuda11/jaxlib-0.3.7+cuda11.cudnn82-cp39-none-manylinux2014_x86_64.whl"}
 Keras-Preprocessing = ">=1.1.2"
 kiwisolver = ">=1.2.0"
 Markdown = ">=3.2.2"
