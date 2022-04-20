@@ -1,8 +1,8 @@
 #! /usr/bin/bash
 # NOTE source this file, as it changes the $PATH
 
-modules=('Python/3.9.6-GCCcore-11.2.0'
-	 'git/2.32.0-GCCcore-10.3.0-nodocs')
+modules=('/software/software/git/2.33.1-GCCcore-11.2.0-nodocs/bin'
+	 'Python/3.9.6-GCCcore-11.2.0')
 
 for m in "${modules[@]}"
 do
