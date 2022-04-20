@@ -10,7 +10,6 @@
 cd /data/$USER
 # to install the setup:
 # echo 'export SINGULARITY_CACHEDIR=/data/$USER/.singularity' >> ~/.bashrc
-# singularity pull docker://mongo
 # mkdir mongodb mongodb_logs
 
 singularity instance start \
