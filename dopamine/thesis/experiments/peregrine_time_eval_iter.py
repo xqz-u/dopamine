@@ -1,5 +1,3 @@
-import logging
-
 from thesis import config
 from thesis.experiments import peregrine_time_train_iter
 from thesis.runner import runner
