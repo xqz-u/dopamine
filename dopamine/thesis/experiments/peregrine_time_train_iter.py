@@ -1,6 +1,7 @@
 import os
+import time
 
-from thesis import config
+from thesis import config, utils
 from thesis.agents import agents
 from thesis.runner import runner
 
@@ -45,9 +46,15 @@ def main():
 
 
 def main_peregrine():
-    runner.run_experiments(
-        doconfs(make_conf("peregrine_off_time_train"), config.peregrine_data_dir)
+    conf, *_ = doconfs(make_conf("peregrine_off_time_train"), config.peregrine_data_dir)
+    conf["reporters"]["aim"]["repo"] = str(config.peregrine_data_dir)
+    utils.data_dir_from_conf(
+        conf["experiment_name"], conf, basedir=config.peregrine_data_dir
     )
+    run = runner.create_runner(conf)
+    start = time.time()
+    run.run_experiment()
+    print(f"train iteration exec time: {time.time() - start}")
 
 
 if __name__ == "__main__":
