@@ -65,6 +65,23 @@ def add_offline_buffers(
     return confs
 
 
+def expand_conf(
+    conf: dict,
+    redundancies: int,
+    buffers_root_dir: str = None,
+    intermediate_dirs: str = "",
+    iterations: List[List[int]] = None,
+) -> List[dict]:
+    redund_confs = add_redundancies(conf, redundancies)
+    return (
+        redund_confs
+        if not buffers_root_dir
+        else add_offline_buffers(
+            redund_confs, buffers_root_dir, intermediate_dirs, iterations
+        )
+    )
+
+
 # NOTE starting processes sequentially to avoid race conditions in sql
 # for aim reporters
 def run_experiment_atomic(conf: dict, scratch: bool, init_wait: float = None):
@@ -76,11 +93,17 @@ def run_experiment_atomic(conf: dict, scratch: bool, init_wait: float = None):
         redundancy_nr, int
     ), f"redundancy_nr should be int, got {redundancy_nr}"
     mp_print(f"Start redundancy {redundancy_nr}")
-    utils.data_dir_from_conf(
+    datadir = utils.data_dir_from_conf(
         conf["experiment_name"],
         conf,
         basedir=config.scratch_data_dir if scratch else None,
     )
+    mp_print(f"Checkpoints directory: {datadir}")
+    if aim_conf := conf.get("reporters", {}).get("aim"):
+        mp_print(f"Aim repository: {aim_conf['repo']}")
+        if scratch:
+            aim_conf["repo"] = str(config.scratch_data_dir)
+            mp_print(f"scratch=True, Aim repo: {aim_conf['repo']}")
     run = create_runner(conf)
     run.run_experiment()
     mp_print("DONE!")

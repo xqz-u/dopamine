@@ -46,7 +46,7 @@ class FixedBatchRunner(Runner.Runner):
                 train_info, operator.add, update_dict=self.agent.learn()
             )
         self.global_steps += self.steps
-        aggregate_info = super().aggregate_losses(self.agent.loss_names, train_info)
+        aggregate_info = Runner.aggregate_losses(self.agent.loss_names, train_info)
         self.report_metrics(train_info, aggregate_info)
         return {"raw": train_info, "aggregate": aggregate_info}
 
