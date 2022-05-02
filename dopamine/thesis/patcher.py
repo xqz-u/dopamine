@@ -93,7 +93,7 @@ for fn in [
 
 
 def create_atari_environment(
-    environment_name: str, render_mode: str = "rgb_array"
+    environment_name: str, version: str, render_mode: str = "rgb_array"
 ) -> atari_lib.AtariPreprocessing:
     env = gym.make(environment_name, render_mode=render_mode)
     return atari_lib.AtariPreprocessing(env.env)
