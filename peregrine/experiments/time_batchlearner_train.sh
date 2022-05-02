@@ -16,4 +16,4 @@ bash peregrine/mongo_singularity.sh
 sleep 10
 
 cd dopamine
-python -m thesis.experiments.peregrine_time_train_iter
+python -m thesis.experiments.pg_time_train_iter_cc
