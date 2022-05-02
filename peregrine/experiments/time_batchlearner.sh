@@ -4,12 +4,15 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --mem=6GB
-#SBATCH --job-name=time_dqvmax_train_iter_cc
-#SBATCH --output=/home/$USER/slurms/time_dqvmax_train_iter_cc-%j.log
 #SBATCH --partition=gpu
 #SBATCH --gres=gpu:1
 #SBATCH --profile=task
+
 # NOTE last directive is for job profiling and viz on Grafana
+
+# NOTE cl switches:
+# -J, --job-name
+# -o, --output
 
 module purge
 
@@ -18,11 +21,12 @@ source peregrine/activate_thesis_env.sh
 
 bash peregrine/start_mongo.sh
 # give some time to container to startup
-sleep 10
+sleep 5
 
 cd dopamine
-python -m thesis.experiments.pg_time_train_iter_cc
+python -m $1
 
-# results:
+# results
+# -classic control (DQVMax, CartPole):
 # ~27/30s on my pc and pg interactive gpu node
 # ~0.027 on pg gpu job, x1000 speedup ?!
