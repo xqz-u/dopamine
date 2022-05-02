@@ -5,7 +5,7 @@
 #SBATCH --ntasks=1
 #SBATCH --mem=6GB
 #SBATCH --job-name=time_dqvmax_train_iter_cc
-#SBATCH --output=time_dqvmax_train_iter_cc-%j.log
+#SBATCH --output=/home/$USER/slurms/time_dqvmax_train_iter_cc-%j.log
 #SBATCH --partition=gpu
 #SBATCH --gres=gpu:1
 #SBATCH --profile=task
