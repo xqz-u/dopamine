@@ -65,5 +65,5 @@ def main_peregrine():
 
 
 if __name__ == "__main__":
-    # main_peregrine()
-    main()
+    main_peregrine()
+    # main()
