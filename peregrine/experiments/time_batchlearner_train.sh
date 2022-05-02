@@ -11,7 +11,7 @@ module purge
 cd thesis
 source peregrine/activate_thesis_env.sh
 
-bash peregrine/mongo_singularity.sh
+bash peregrine/start_mongo.sh
 # give some time to container to startup
 sleep 10
 
