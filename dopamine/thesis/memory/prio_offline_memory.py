@@ -42,7 +42,7 @@ class PrioritizedOfflineOutOfGraphReplayBuffer(
         pass
 
     # override (temporary!)
-    def load_buffers(self, iterations: List[int] = None, workers: int = None):
+    def load_buffers(self, _: bool, iterations: List[int] = None):
         if iterations is None:
             iterations = utils.list_all_ckpt_iterations(self._buffers_dir)[0]
             self._console.debug(f"TEMP iterations was none, fix to {iterations}")
