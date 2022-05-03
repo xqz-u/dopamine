@@ -2,6 +2,7 @@ import datetime
 import itertools as it
 import multiprocessing as mp
 import os
+import pathlib
 import time
 from copy import deepcopy
 from typing import List, Union
@@ -84,7 +85,9 @@ def expand_conf(
 
 # NOTE starting processes sequentially to avoid race conditions in sql
 # for aim reporters
-def run_experiment_atomic(conf: dict, scratch: bool, init_wait: float = None):
+def run_experiment_atomic(
+    conf: dict, logs_dir: Union[str, pathlib.PosixPath], init_wait: float = None
+):
     if init_wait is not None:
         mp_print(f"Sleep {init_wait}s...")
         time.sleep(init_wait)
@@ -93,26 +96,23 @@ def run_experiment_atomic(conf: dict, scratch: bool, init_wait: float = None):
         redundancy_nr, int
     ), f"redundancy_nr should be int, got {redundancy_nr}"
     mp_print(f"Start redundancy {redundancy_nr}")
-    datadir = utils.data_dir_from_conf(
-        conf["experiment_name"],
-        conf,
-        basedir=config.scratch_data_dir if scratch else None,
-    )
+    logs_dir = str(logs_dir)
+    datadir = utils.data_dir_from_conf(conf["experiment_name"], conf, basedir=logs_dir)
     mp_print(f"Checkpoints directory: {datadir}")
     if aim_conf := conf.get("reporters", {}).get("aim"):
+        aim_conf["repo"] = logs_dir
         mp_print(f"Aim repository: {aim_conf['repo']}")
-        if scratch:
-            aim_conf["repo"] = str(config.scratch_data_dir)
-            mp_print(f"scratch=True, Aim repo: {aim_conf['repo']}")
     run = create_runner(conf)
     run.run_experiment()
     mp_print("DONE!")
 
 
-def run_experiments(experiments_confs: List[dict], scratch: bool = False):
+def run_experiments(
+    experiments_confs: List[dict], logs_dir: pathlib.PosixPath = config.data_dir
+):
     show_experiments_order(experiments_confs)
     for c in experiments_confs:
-        run_experiment_atomic(c, scratch)
+        run_experiment_atomic(c, logs_dir)
 
 
 # FIXME when SIGINT is given, something happens (the signal handler
@@ -120,7 +120,9 @@ def run_experiments(experiments_confs: List[dict], scratch: bool = False):
 # to the parallel code occurs, usually one process gets stuck in a
 # deadlock and the whole program never terminates. So don't start and
 # stop at all right now!
-def p_run_experiments(experiments_confs: List[dict], scratch: bool = False):
+def p_run_experiments(
+    experiments_confs: List[dict], logs_dir: pathlib.PosixPath = config.data_dir
+):
     show_experiments_order(experiments_confs)
     n_confs, n_workers = os.cpu_count(), len(experiments_confs)
     n_workers = n_confs if n_confs < n_workers else n_workers
@@ -130,5 +132,5 @@ def p_run_experiments(experiments_confs: List[dict], scratch: bool = False):
     with mp.Pool(processes=n_workers) as p:
         p.starmap(
             run_experiment_atomic,
-            zip(experiments_confs, [scratch] * n_confs, range(n_confs)),
+            zip(experiments_confs, [logs_dir] * n_confs, range(n_confs)),
         )

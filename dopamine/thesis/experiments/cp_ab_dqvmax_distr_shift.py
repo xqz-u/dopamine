@@ -75,5 +75,8 @@ def priority_confs_pg() -> list:
 
 if __name__ == "__main__":
     # confs = classic_confs()
+    # logs_dir = config.data_dir
     confs = priority_confs_pg()
-    runner.p_run_experiments([c for c_env in confs for c in c_env])
+    logs_dir = config.peregrine_data_dir
+    confs = [c for c_env in confs for c in c_env]
+    runner.p_run_experiments(confs, logs_dir=logs_dir)
