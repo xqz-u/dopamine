@@ -1,11 +1,10 @@
-import timeit
+import time
+
+from thesis import config, utils
+from thesis.experiments import pg_time_train_iter_cc
+from thesis.runner import runner
 
 if __name__ == "__main__":
-    code = """
-    from thesis import config, utils
-    from thesis.experiments import pg_time_train_iter_cc
-    from thesis.runner import runner
-
     conf = pg_time_train_iter_cc.make_conf("time_dqvmax_jax_train")
     conf, *_ = pg_time_train_iter_cc.doconfs(conf, config.data_dir)
     conf["reporters"]["aim"]["repo"] = str(config.scratch_data_dir)
@@ -20,13 +19,10 @@ if __name__ == "__main__":
     run = runner.create_runner(conf)
     replay_elts = run.agent.sample_memory()
 
-    """
+    start = time.time()
+    run.agent.train_v(replay_elts)
+    print("vtrain_time: {time.time() - start}")
 
-    vtrain_time = timeit.timeit(
-        "run.agent.train_v(replay_elts)", setup=code, number=100
-    )
-    print("vtrain_time: {vtrain_time}")
-    qtrain_time = timeit.timeit(
-        "run.agent.train_q(replay_elts)", setup=code, number=100
-    )
-    print("qtrain_time: {qtrain_time}")
+    start = time.time()
+    run.agent.train_q(replay_elts)
+    print("qtrain_time: {time.time() - start}")
