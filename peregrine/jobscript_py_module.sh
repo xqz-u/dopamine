@@ -14,17 +14,20 @@
 # -J, --job-name
 # -o, --output
 
+
+PG_SCRIPTS=$HOME/thesis/peregrine
+
+
 module purge
+source $PG_SCRIPTS/activate_thesis_env.sh
 
-cd thesis
-source peregrine/activate_thesis_env.sh
-
-bash peregrine/start_mongo.sh
 # give some time to container to startup
-sleep 5
+./$PG_SCRIPTS/start_mongo.sh && sleep 5
 
-cd dopamine
+cd $HOME/thesis/dopamine
 python -m $1
+
+./$PG_SCRIPTS/stop_mongo.sh
 
 # results
 # -classic control (DQVMax, CartPole):
