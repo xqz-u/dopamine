@@ -21,13 +21,15 @@ PG_SCRIPTS=$HOME/thesis/peregrine
 module purge
 source $PG_SCRIPTS/activate_thesis_env.sh
 
+# close any running mongo container
+$PG_SCRIPTS/stop_mongo.sh
 # give some time to container to startup
-./$PG_SCRIPTS/start_mongo.sh && sleep 5
+$PG_SCRIPTS/start_mongo.sh && sleep 5
 
 cd $HOME/thesis/dopamine
+echo "Run python module: $1"
 python -m $1
 
-./$PG_SCRIPTS/stop_mongo.sh
 
 # results
 # -classic control (DQVMax, CartPole):
