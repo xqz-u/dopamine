@@ -21,8 +21,8 @@ if __name__ == "__main__":
 
     start = time.time()
     run.agent.train_v(replay_elts)
-    print("vtrain_time: {time.time() - start}")
+    print(f"vtrain_time: {time.time() - start}")
 
     start = time.time()
     run.agent.train_q(replay_elts)
-    print("qtrain_time: {time.time() - start}")
+    print(f"qtrain_time: {time.time() - start}")
