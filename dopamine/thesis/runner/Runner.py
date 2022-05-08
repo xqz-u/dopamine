@@ -169,6 +169,7 @@ class Runner(ABC):
         runner_info = {
             attrib: getattr(self, attrib)
             for attrib in [
+                "redundancy_nr",
                 "curr_iteration",
                 "global_steps",
                 "schedule",
