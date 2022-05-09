@@ -1,8 +1,10 @@
 **/.xqz-u-egg
 **/.aim
 **/.Rhistory
+**/__pycache__
 
 # dopamine/thesis/scratch
+peregrine/reprex
 
 resources/data/*
 !resources/data/mongodb
@@ -21,5 +23,3 @@ resources/papers/journal.tex
 resources/papers/journal.pdf
 resources/**/.pdf-view-restore
 resources/**/*.bbl
-
-**/__pycache__
