@@ -1,17 +1,15 @@
 #!/bin/bash
 
-#SBATCH --time=05:00:00
-#SBATCH --ntasks=6
-#SBATCH --mem=3GB
+# NOTE cl switches:
+# -J, --job-name
+# -o, --output
+# -c, --cpus-per-task
+# example call: sbatch --mem 3G -t 05:00:00 -J <jobname> -c 6 jobscript_py_module.sh ...
+
 # NOTE next directive is for job profiling and viz on Grafana
 #SBATCH --profile=task
 ### SBATCH --partition=gpu
 ### SBATCH --gres=gpu:1
-
-
-# NOTE cl switches:
-# -J, --job-name
-# -o, --output
 
 
 PG_SCRIPTS=$HOME/thesis/peregrine
