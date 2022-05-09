@@ -45,21 +45,21 @@ def make_confs(
     )
 
 
-def classic_confs() -> list:
+def classic_confs(datadir) -> list:
     return [
-        make_confs("cp_dqvmax_distr_shift", "CartPole", "v1", "cp", config.data_dir),
-        make_confs("ab_dqvmax_distr_shift", "Acrobot", "v1", "ab", config.data_dir),
+        make_confs("cp_dqvmax_distr_shift", "CartPole", "v1", "cp", datadir),
+        make_confs("ab_dqvmax_distr_shift", "Acrobot", "v1", "ab", datadir),
     ]
 
 
-def priority_confs_pg() -> list:
+def priority_confs(datadir) -> list:
     return [
         make_confs(
             "cp_dqvmax_distr_shift_prio",
             "CartPole",
             "v1",
             "cp",
-            config.peregrine_data_dir,
+            datadir,
             conf_builder=buildconf_priority,
         ),
         make_confs(
@@ -67,16 +67,16 @@ def priority_confs_pg() -> list:
             "Acrobot",
             "v1",
             "ab",
-            config.peregrine_data_dir,
+            datadir,
             conf_builder=buildconf_priority,
         ),
     ]
 
 
 if __name__ == "__main__":
-    # confs = classic_confs()
     # logs_dir = config.data_dir
-    confs = priority_confs_pg()
     logs_dir = config.peregrine_data_dir
+    confs = classic_confs(logs_dir)
+    # confs = priority_confs(logs_dir)
     confs = [c for c_env in confs for c in c_env]
     runner.p_run_experiments(confs, logs_dir=logs_dir)

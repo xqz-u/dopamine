@@ -53,6 +53,7 @@ class MongoReporter(Reporter.Reporter):
     collection: BufferedMongoCollection = attr.ib(init=False)
 
     def __attrs_post_init__(self):
+        super().__attrs_post_init__()
         self.client = pymongo.MongoClient(self.host, self.port)
         self.db = self.client[self.db_name]
         self.collection = BufferedMongoCollection(
@@ -63,6 +64,7 @@ class MongoReporter(Reporter.Reporter):
     def __call__(self, raw_reports: dict, agg_reports: dict, runner_info: dict):
         self.collection += {
             "experiment": self.experiment_name,
+            "run_hash": self.conf["run_hash"],
             **raw_reports,
             **runner_info,
         }

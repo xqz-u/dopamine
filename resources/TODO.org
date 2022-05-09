@@ -74,3 +74,4 @@
   - [ ] Load trained agent for evaluation (?)
   - [ ] Move everything persistence-related to Mongo (?)
   - [ ] Move the offline replay buffer classes to functions
+  - [ ] Argparser to run in a unified way

@@ -109,9 +109,10 @@ class Runner(ABC):
         exp_name = self.conf["experiment_name"]
         mongo_class, mongo_args = reporter.MongoReporter, {}
         reporters_confs = self.conf.get("reporters", {})
+        own_attrs = utils.attr_fields_d(self)
         if mongo_conf := reporters_confs.get("mongo", {}):
             mongo_class = mongo_conf["call_"]
-            mongo_args = utils.argfinder(mongo_class, mongo_conf)
+            mongo_args = utils.argfinder(mongo_class, {**mongo_conf, **own_attrs})
         self.reporters["mongo"] = mongo_class(experiment_name=exp_name, **mongo_args)
         for rep_name, rep in {
             k: v for k, v in reporters_confs.items() if k != "mongo"
@@ -119,7 +120,7 @@ class Runner(ABC):
             reporter_ = rep["call_"]
             self.reporters[rep_name] = reporter_(
                 experiment_name=exp_name,
-                **utils.argfinder(reporter_, {**rep, **utils.attr_fields_d(self)}),
+                **utils.argfinder(reporter_, {**rep, **own_attrs}),
             )
 
     def try_resuming(self) -> bool:
@@ -169,6 +170,7 @@ class Runner(ABC):
         runner_info = {
             attrib: getattr(self, attrib)
             for attrib in [
+                "redundancy_nr",
                 "curr_iteration",
                 "global_steps",
                 "schedule",

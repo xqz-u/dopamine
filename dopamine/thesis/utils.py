@@ -78,7 +78,6 @@ def data_dir_from_conf(
         exp_name,
     )
     os.makedirs(full_path, exist_ok=True)
-    conf["runner"]["base_dir"] = full_path
     return full_path
 
 
