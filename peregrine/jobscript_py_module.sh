@@ -1,14 +1,13 @@
 #!/bin/bash
 
-#SBATCH --time=00:10:00
-#SBATCH --nodes=1
-#SBATCH --ntasks=1
-#SBATCH --mem=6GB
-#SBATCH --partition=gpu
-#SBATCH --gres=gpu:1
+#SBATCH --time=05:00:00
+#SBATCH --ntasks=6
+#SBATCH --mem=3GB
+# NOTE next directive is for job profiling and viz on Grafana
 #SBATCH --profile=task
+### SBATCH --partition=gpu
+### SBATCH --gres=gpu:1
 
-# NOTE last directive is for job profiling and viz on Grafana
 
 # NOTE cl switches:
 # -J, --job-name
