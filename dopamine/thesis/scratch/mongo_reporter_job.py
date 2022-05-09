@@ -47,10 +47,10 @@ conf = pg_time_train_iter_cc.make_conf("pippo")
 conf["runner"]["experiment"]["redundancy_nr"] = 0
 mongo_rep = reporter.MongoReporter(
     experiment_name=conf["experiment_name"],
+    db_uri="mongodb://s3680622:<my Nestor password>@peregrine.hpc.rug.nl:27017",
     conf=conf,
     buffering=1,
     timeout=5,
-    host="peregrine.hpc.rug.nl",
     collection_name="test_mongo_job",
 )
 
