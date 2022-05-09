@@ -43,8 +43,7 @@ class BufferedMongoCollection:
 
 @attr.s(auto_attribs=True)
 class MongoReporter(Reporter.Reporter):
-    host: str = "localhost"
-    port: int = 27017
+    connection_string: str = "mongodb://localhost:27017"
     db_name: str = "thesis_db"
     collection_name: str = "thesis_collection"
     buffering: int = 50
@@ -56,7 +55,7 @@ class MongoReporter(Reporter.Reporter):
     def __attrs_post_init__(self):
         super().__attrs_post_init__()
         self.client = pymongo.MongoClient(
-            self.host, self.port, serverSelectionTimeoutMS=self.timeout * 1000
+            self.connection_string, serverSelectionTimeoutMS=self.timeout * 1000
         )
         self.db = self.client[self.db_name]
         self.collection = BufferedMongoCollection(
