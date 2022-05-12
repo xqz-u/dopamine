@@ -6,8 +6,11 @@ if (!require(pacman)) {
 
 packages <- c("here",
               "glue",
+              "viridis",
               "tidyverse",
-              "mongolite")
+              "mongolite",
+              "ggpubr",
+              "zeallot")
 
 library(pacman)
 pacman::p_load(char = packages)
