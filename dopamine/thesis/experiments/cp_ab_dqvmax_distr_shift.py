@@ -74,8 +74,8 @@ def priority_confs(datadir) -> list:
 
 
 if __name__ == "__main__":
-    # logs_dir = config.data_dir
-    logs_dir = config.peregrine_data_dir
+    logs_dir = config.data_dir
+    # logs_dir = config.peregrine_data_dir
     confs = classic_confs(logs_dir)
     # confs = priority_confs(logs_dir)
     confs = [c for c_env in confs for c in c_env]
