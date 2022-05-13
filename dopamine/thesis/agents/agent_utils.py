@@ -8,7 +8,6 @@ from dopamine.replay_memory import circular_replay_buffer
 from flax import linen as nn
 from flax.core.frozen_dict import FrozenDict
 from jax import numpy as jnp
-from jax import random as jrand
 from thesis import custom_pytrees, networks
 from thesis.memory import offline_memory, prio_offline_memory
 
@@ -80,9 +79,3 @@ def optimize(
 ) -> Tuple[FrozenDict, optax.OptState]:
     updates, optim_state = optim.update(grads, optim_state, params=params)
     return optax.apply_updates(params, updates), optim_state
-
-
-def uniform_action_selection(agent, obs: np.ndarray) -> np.ndarray:
-    agent.update_state(obs)
-    agent.action = np.array(jrand.randint(next(agent.rng), (), 0, agent.num_actions))
-    return agent.action
