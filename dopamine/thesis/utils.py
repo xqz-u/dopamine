@@ -3,6 +3,7 @@ import inspect
 import logging
 import os
 import time
+import types
 from collections import OrderedDict
 from itertools import groupby
 from pathlib import Path
@@ -169,3 +170,7 @@ def list_all_ckpt_iterations(base_directory: str) -> List[int]:
 # ...
 def unfold_replay_buffers_dir(base_dir: str, inter_tree: str = "") -> List[str]:
     return [os.path.join(base_dir, d, inter_tree) for d in sorted(os.listdir(base_dir))]
+
+
+def attr_method_binder(self, attribute, value):
+    setattr(self, attribute.name, types.MethodType(value, self))
