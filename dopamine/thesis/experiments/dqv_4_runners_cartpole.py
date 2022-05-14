@@ -3,13 +3,13 @@ import os
 
 import optax
 from dopamine.jax import losses
-from thesis import config, offline_circular_replay_buffer
+from thesis import constants, offline_circular_replay_buffer
 from thesis.agents import DQVAgent
 from thesis.reporter import reporter
 from thesis.runner import runner
 
 dqn_logdir = os.path.join(
-    config.data_dir, "CartPole-v0", "JaxDQNAgent", "online_train", "checkpoints"
+    constants.data_dir, "CartPole-v0", "JaxDQNAgent", "online_train", "checkpoints"
 )
 dqn_exp_conf = {
     "call_": offline_circular_replay_buffer.OfflineOutOfGraphReplayBuffer,
@@ -51,7 +51,7 @@ make_config = lambda exp_name: {
                 "collection_name": "test_collection",
                 "buffering": 100,
             },
-            "aim": {"call_": reporter.AimReporter, "repo": str(config.aim_dir)},
+            "aim": {"call_": reporter.AimReporter, "repo": str(constants.aim_dir)},
         },
     },
 }

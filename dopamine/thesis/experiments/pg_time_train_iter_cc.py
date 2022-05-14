@@ -1,7 +1,7 @@
 import os
 import time
 
-from thesis import config, utils
+from thesis import config, constants, utils
 from thesis.agents import agents
 from thesis.runner import runner
 
@@ -41,10 +41,10 @@ def doconfs(conf: dict, data_basedir: str):
 
 def main():
     conf = make_conf("peregrine_off_time_train")
-    conf, *_ = doconfs(conf, config.data_dir)
-    conf["reporters"]["aim"]["repo"] = str(config.scratch_data_dir)
+    conf, *_ = doconfs(conf, constants.data_dir)
+    conf["reporters"]["aim"]["repo"] = str(constants.scratch_data_dir)
     utils.data_dir_from_conf(
-        conf["experiment_name"], conf, basedir=config.scratch_data_dir
+        conf["experiment_name"], conf, basedir=constants.scratch_data_dir
     )
     run = runner.create_runner(conf)
     start = time.time()
@@ -53,10 +53,12 @@ def main():
 
 
 def main_peregrine():
-    conf, *_ = doconfs(make_conf("peregrine_off_time_train"), config.peregrine_data_dir)
-    conf["reporters"]["aim"]["repo"] = str(config.peregrine_data_dir)
+    conf, *_ = doconfs(
+        make_conf("peregrine_off_time_train"), constants.peregrine_data_dir
+    )
+    conf["reporters"]["aim"]["repo"] = str(constants.peregrine_data_dir)
     utils.data_dir_from_conf(
-        conf["experiment_name"], conf, basedir=config.peregrine_data_dir
+        conf["experiment_name"], conf, basedir=constants.peregrine_data_dir
     )
     run = runner.create_runner(conf)
     start = time.time()

@@ -1,6 +1,6 @@
 import os
 
-from thesis import config
+from thesis import constants
 from thesis.memory import prio_offline_memory
 from thesis.runner import runner
 from thesis.scratch import test_off_mem
@@ -13,7 +13,7 @@ def main():
 
     dqn_offline_data = [
         os.path.join(
-            config.data_dir,
+            constants.data_dir,
             env,
             f"DQNAgent/{abbr}_dqn_full_experience_%%/checkpoints/full_experience",
         )
@@ -27,7 +27,7 @@ def main():
                 "_buffers_dir": off_data,
             }
         )
-        c["reporters"]["aim"]["repo"] = str(config.data_dir)
+        c["reporters"]["aim"]["repo"] = str(constants.data_dir)
 
     redundancy = 3
     confs = [

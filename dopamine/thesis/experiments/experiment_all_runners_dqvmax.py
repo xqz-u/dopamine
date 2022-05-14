@@ -1,6 +1,6 @@
 import os
 
-from thesis import config, offline_circular_replay_buffer
+from thesis import constants, offline_circular_replay_buffer
 from thesis.experiments import dqvmax_cartpole_growingbatch_train as dqvmax_gb
 from thesis.runner import runner
 
@@ -19,7 +19,7 @@ def gb_conf():
 
 def gb_dqn_exp_conf():
     dqn_logdir = os.path.join(
-        config.data_dir, "CartPole-v0", "JaxDQNAgent", "online_train", "checkpoints"
+        constants.data_dir, "CartPole-v0", "JaxDQNAgent", "online_train", "checkpoints"
     )
     conf = dqvmax_gb.make_config("growingbatch_train_dqn_experience")
     conf["memory"] = {
@@ -32,7 +32,7 @@ def gb_dqn_exp_conf():
 
 def fb_dqn_exp_conf():
     dqn_logdir = os.path.join(
-        config.data_dir, "CartPole-v0", "JaxDQNAgent", "online_train", "checkpoints"
+        constants.data_dir, "CartPole-v0", "JaxDQNAgent", "online_train", "checkpoints"
     )
     conf = dqvmax_gb.make_config("fixedbatch_train_dqn_experience")
     conf["runner"]["call_"] = runner.FixedBatchRunner

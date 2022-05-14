@@ -2,7 +2,7 @@ import logging
 
 import optax
 from dopamine.jax import losses
-from thesis import config
+from thesis import constants
 from thesis.agents import DQNAgent
 from thesis.reporter import reporter
 from thesis.runner import runner
@@ -41,7 +41,7 @@ make_config = lambda exp_name, env, version: {
             "buffering": 25,
             "collection_name": exp_name,
         },
-        "aim": {"call_": reporter.AimReporter, "repo": str(config.data_dir)},
+        "aim": {"call_": reporter.AimReporter, "repo": str(constants.data_dir)},
     },
 }
 

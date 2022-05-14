@@ -1,24 +1,10 @@
-import os
-from pathlib import Path
-
 import optax
 from dopamine.discrete_domains import gym_lib
 from dopamine.jax import losses
 
-from thesis import exploration, networks
+from thesis import constants, exploration, networks
 from thesis.memory import offline_memory
 from thesis.reporter import reporter
-
-base_dir = Path(os.path.dirname(__file__))
-dopamine_dir = Path(base_dir.parent, "dopamine")
-
-data_dir = Path(base_dir.parent.parent, "resources", "data")
-aim_dir = data_dir
-scratch_data_dir = data_dir.joinpath("scratch")
-peregrine_data_dir = "/data/s3680622"
-
-scratch_dir = base_dir.joinpath("scratch")
-
 
 make_batch_rl_agent = lambda agent_class: {
     "call_": agent_class,
@@ -35,7 +21,7 @@ make_env = lambda env, version, creator=gym_lib.create_gym_environment: {
 }
 
 make_reporters = lambda mongo_collection_name, mongo_buffering=50, aim_repo=str(
-    data_dir
+    constants.data_dir
 ): {
     "mongo": {
         "call_": reporter.MongoReporter,

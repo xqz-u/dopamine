@@ -1,8 +1,20 @@
 import math
+import os
+from pathlib import Path
 from typing import Union
 
 import numpy as np
 from dopamine.discrete_domains import atari_lib, gym_lib
+
+base_dir = Path(os.path.dirname(__file__))
+dopamine_dir = Path(base_dir.parent, "dopamine")
+
+data_dir = Path(base_dir.parent.parent, "resources", "data")
+aim_dir = data_dir
+scratch_data_dir = data_dir.joinpath("scratch")
+peregrine_data_dir = "/data/s3680622"
+
+scratch_dir = base_dir.joinpath("scratch")
 
 default_memory_args = {"replay_capacity": int(1e6), "batch_size": 32}
 

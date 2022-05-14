@@ -11,7 +11,7 @@ from typing import Any, List, Tuple, Union
 import attr
 import jax
 
-from thesis import config
+from thesis import constants
 
 
 def jax_container_shapes(cont) -> dict[str, Tuple[int]]:
@@ -73,7 +73,7 @@ def data_dir_from_conf(
         )
     )
     full_path = os.path.join(
-        basedir or config.data_dir,
+        basedir or constants.data_dir,
         intermediate_dirs,
         exp_name,
     )

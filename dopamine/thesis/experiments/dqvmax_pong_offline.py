@@ -3,7 +3,7 @@ from typing import List
 
 import optax
 from dopamine.jax import losses
-from thesis import config, exploration, networks, patcher
+from thesis import constants, exploration, networks, patcher
 from thesis.agents import agents
 from thesis.memory import offline_memory
 from thesis.reporter import reporter
@@ -67,8 +67,8 @@ conf_pong_dqvmax_offline = lambda exp_name: {
         },
         "aim": {
             "call_": reporter.AimReporter,
-            "repo": str(config.data_dir),
-            # "repo": str(config.scratch_data_dir),
+            "repo": str(constants.data_dir),
+            # "repo": str(constants.scratch_data_dir),
         },
     },
 }
@@ -81,7 +81,7 @@ def make_configs(
 ) -> List[dict]:
     return runner.add_offline_buffers(
         runner.add_redundancies(conf_pong_dqvmax_offline(exp_name), repeats),
-        os.path.join(config.data_dir, "Pong"),
+        os.path.join(constants.data_dir, "Pong"),
         intermediate_dirs="replay_logs",
         iterations=iterations,
     )
@@ -95,7 +95,7 @@ confs = make_configs("test_pong_dqvmax_off", 5, [[1]])
 # from thesis import utils
 
 # utils.data_dir_from_conf(
-#     conf0["experiment_name"], conf0, basedir=config.scratch_data_dir
+#     conf0["experiment_name"], conf0, basedir=constants.scratch_data_dir
 # )
 # run = runner.create_runner(conf0)
 # run.run_experiment()

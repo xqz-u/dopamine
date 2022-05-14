@@ -1,4 +1,4 @@
-from thesis import config
+from thesis import constants
 from thesis.experiments import peregrine_time_train_iter
 from thesis.runner import runner
 
@@ -11,13 +11,13 @@ def make_conf():
 
 def main():
     conf = make_conf()
-    confs = peregrine_time_train_iter.doconfs(conf, config.data_dir)
+    confs = peregrine_time_train_iter.doconfs(conf, constants.data_dir)
     runner.run_experiments(confs, scratch=True)
 
 
 def main_peregrine():
     runner.run_experiments(
-        peregrine_time_train_iter.doconfs(make_conf(), config.peregrine_data_dir)
+        peregrine_time_train_iter.doconfs(make_conf(), constants.peregrine_data_dir)
     )
 
 
