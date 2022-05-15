@@ -1,18 +1,15 @@
 #!/bin/bash
 
-#SBATCH --time=00:10:00
-#SBATCH --nodes=1
-#SBATCH --ntasks=1
-#SBATCH --mem=6GB
-#SBATCH --partition=gpu
-#SBATCH --gres=gpu:1
-#SBATCH --profile=task
-
-# NOTE last directive is for job profiling and viz on Grafana
-
 # NOTE cl switches:
 # -J, --job-name
 # -o, --output
+# -c, --cpus-per-task
+# example call: sbatch --mem 3G -t 05:00:00 -J <jobname> -c 6 jobscript_py_module.sh ...
+
+# NOTE next directive is for job profiling and viz on Grafana
+#SBATCH --profile=task
+### SBATCH --partition=gpu
+### SBATCH --gres=gpu:1
 
 
 PG_SCRIPTS=$HOME/thesis/peregrine

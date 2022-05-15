@@ -5,6 +5,8 @@ import attr
 import pymongo
 from thesis.reporter import Reporter
 
+# TODO report additional info on experiment: agent, environment etc!
+
 
 @attr.s(auto_attribs=True)
 class BufferedMongoCollection:
@@ -43,17 +45,20 @@ class BufferedMongoCollection:
 
 @attr.s(auto_attribs=True)
 class MongoReporter(Reporter.Reporter):
-    host: str = "localhost"
-    port: int = 27017
+    db_uri: str = "mongodb://localhost:27017"
     db_name: str = "thesis_db"
     collection_name: str = "thesis_collection"
     buffering: int = 50
+    timeout: int = 30
     client: pymongo.MongoClient = attr.ib(init=False)
     db: pymongo.database.Database = attr.ib(init=False)
     collection: BufferedMongoCollection = attr.ib(init=False)
 
     def __attrs_post_init__(self):
-        self.client = pymongo.MongoClient(self.host, self.port)
+        super().__attrs_post_init__()
+        self.client = pymongo.MongoClient(
+            self.db_uri, serverSelectionTimeoutMS=self.timeout * 1000
+        )
         self.db = self.client[self.db_name]
         self.collection = BufferedMongoCollection(
             self.buffering, self.db[self.collection_name]
@@ -63,6 +68,7 @@ class MongoReporter(Reporter.Reporter):
     def __call__(self, raw_reports: dict, agg_reports: dict, runner_info: dict):
         self.collection += {
             "experiment": self.experiment_name,
+            "run_hash": self.conf["run_hash"],
             **raw_reports,
             **runner_info,
         }

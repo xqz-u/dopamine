@@ -20,15 +20,14 @@ make_env = lambda env, version, creator=gym_lib.create_gym_environment: {
     "version": version,
 }
 
-make_reporters = lambda mongo_collection_name, mongo_buffering=50, aim_repo=str(
-    constants.data_dir
-): {
+make_reporters = lambda mongo_collection_name, connection_string="mongodb://localhost:27017", mongo_buffering=50: {
     "mongo": {
         "call_": reporter.MongoReporter,
+        "connection_string": connection_string,
         "buffering": mongo_buffering,
         "collection_name": mongo_collection_name,
     },
-    "aim": {"call_": reporter.AimReporter, "repo": aim_repo},
+    "aim": {"call_": reporter.AimReporter},
 }
 
 make_batch_rl_memory = lambda parallel=True: {

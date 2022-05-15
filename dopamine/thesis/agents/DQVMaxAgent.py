@@ -5,7 +5,7 @@ import jax
 import numpy as np
 from flax.core.frozen_dict import FrozenDict
 from jax import numpy as jnp
-from thesis import custom_pytrees
+from thesis import custom_pytrees, utils
 from thesis.agents import agent_utils
 from thesis.agents.Agent import Agent
 
@@ -57,8 +57,73 @@ def train_q_net(
     return net_optim, train_params, loss, mean_q_estim
 
 
+def default_sync_weights(self):
+    self.models["qfunc"].params["target"] = self.models["qfunc"].params["online"]
+
+
+def default_train_v(self, replay_elts: Dict[str, np.ndarray]) -> jnp.DeviceArray:
+    v_td_targets = agent_utils.td_error(
+        self.gamma,
+        agent_utils.batch_net_eval(
+            self.models["qfunc"].net,
+            self.models["qfunc"].params["target"],
+            replay_elts["next_state"],
+        ).max(1),
+        replay_elts["reward"],
+        replay_elts["terminal"],
+    )
+    self.models["vfunc"], self.models["vfunc"].params, v_loss = train_v_net(
+        self.models["vfunc"],
+        self.models["vfunc"].params,
+        replay_elts["state"],
+        v_td_targets,
+    )
+    return v_loss
+
+
+def default_train_q(self, replay_elts: Dict[str, np.ndarray]) -> Tuple[jnp.DeviceArray]:
+    q_td_targets = agent_utils.td_error(
+        self.gamma,
+        agent_utils.batch_net_eval(
+            self.models["vfunc"].net,
+            self.models["vfunc"].params,
+            replay_elts["next_state"],
+        ),
+        replay_elts["reward"],
+        replay_elts["terminal"],
+    )
+    (
+        self.models["qfunc"],
+        self.models["qfunc"].params["online"],
+        q_loss,
+        q_estimates,
+    ) = train_q_net(
+        self.models["qfunc"],
+        self.models["qfunc"].params["online"],
+        replay_elts["state"],
+        replay_elts["action"],
+        q_td_targets,
+    )
+    return q_loss, q_estimates
+
+
+# TODO base class for DQV-fam for parametrized train_q/v_func,
+# so that attr_method_binder can become a decorator inside that class?
+# and to have training routines for single head/multiple
+# heads/generally different functions, which only need to implement
+# the same interface, share the (possibly) similar structures
 @attr.s(auto_attribs=True)
 class DQVMaxAgent(Agent):
+    train_v_func: callable = attr.ib(
+        default=default_train_v, validator=utils.attr_method_binder
+    )
+    train_q_func: callable = attr.ib(
+        default=default_train_q, validator=utils.attr_method_binder
+    )
+    sync_weights_func: callable = attr.ib(
+        default=default_sync_weights, validator=utils.attr_method_binder
+    )
+
     @property
     def model_names(self) -> Tuple[str]:
         return ("vfunc", "qfunc")
@@ -75,53 +140,9 @@ class DQVMaxAgent(Agent):
         )
 
     def train(self, replay_elts: Dict[str, np.ndarray]) -> Dict[str, jnp.DeviceArray]:
-        v_loss = self.train_v(replay_elts)
-        q_loss, q_estimates = self.train_q(replay_elts)
+        v_loss = self.train_v_func(replay_elts)
+        q_loss, q_estimates = self.train_q_func(replay_elts)
         return {"loss": (v_loss, q_loss), "q_estimates": q_estimates}
 
-    def train_v(self, replay_elts: Dict[str, np.ndarray]) -> jnp.DeviceArray:
-        v_td_targets = agent_utils.td_error(
-            self.gamma,
-            agent_utils.batch_net_eval(
-                self.models["qfunc"].net,
-                self.models["qfunc"].params["target"],
-                replay_elts["next_state"],
-            ).max(1),
-            replay_elts["reward"],
-            replay_elts["terminal"],
-        )
-        self.models["vfunc"], self.models["vfunc"].params, v_loss = train_v_net(
-            self.models["vfunc"],
-            self.models["vfunc"].params,
-            replay_elts["state"],
-            v_td_targets,
-        )
-        return v_loss
-
-    def train_q(self, replay_elts: Dict[str, np.ndarray]) -> Tuple[jnp.DeviceArray]:
-        q_td_targets = agent_utils.td_error(
-            self.gamma,
-            agent_utils.batch_net_eval(
-                self.models["vfunc"].net,
-                self.models["vfunc"].params,
-                replay_elts["next_state"],
-            ),
-            replay_elts["reward"],
-            replay_elts["terminal"],
-        )
-        (
-            self.models["qfunc"],
-            self.models["qfunc"].params["online"],
-            q_loss,
-            q_estimates,
-        ) = train_q_net(
-            self.models["qfunc"],
-            self.models["qfunc"].params["online"],
-            replay_elts["state"],
-            replay_elts["action"],
-            q_td_targets,
-        )
-        return q_loss, q_estimates
-
     def sync_weights(self):
-        self.models["qfunc"].params["target"] = self.models["qfunc"].params["online"]
+        self.sync_weights_func()
