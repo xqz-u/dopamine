@@ -244,3 +244,22 @@ class EnsembledNet:
 
 
 ensemble_mlp = EnsembledNet(3, mlp, env.action_space.n, example_input, rng)
+
+
+def dense_output_shape(in_shape: tuple, out_features: int) -> tuple:
+    return (in_shape[0], out_features)
+
+
+shared_body = networks.Sequential([nn.Dense(features=6), nn.relu, nn.Dense(5), nn.relu])
+shared_params = shared_body.init(next(rng), example_input)
+
+head_input_shape = dense_output_shape(example_input.shape, 5)
+head_0 = nn.Dense(features=2)
+head_0_params = head_0.init(next(rng), jnp.zeros(head_input_shape))
+
+target = jrand.uniform(next(rng), example_input.shape)
+
+
+body_out = shared_body.apply(shared_params, test_input)
+
+loss, grads_head_0 = mse_grad_fn(head_0_params, body_out, target, head_0)
