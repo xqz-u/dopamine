@@ -43,10 +43,10 @@ def main():
     conf = make_conf("peregrine_off_time_train")
     conf, *_ = doconfs(conf, constants.data_dir)
     conf["reporters"]["aim"]["repo"] = str(constants.scratch_data_dir)
-    utils.data_dir_from_conf(
+    logsdir = utils.data_dir_from_conf(
         conf["experiment_name"], conf, basedir=constants.scratch_data_dir
     )
-    run = runner.create_runner(conf)
+    run = runner.build_runner(conf, logsdir)
     start = time.time()
     run.run_experiment()
     print(f"train iteration exec time: {time.time() - start}")

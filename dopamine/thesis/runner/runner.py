@@ -7,7 +7,7 @@ import time
 from copy import deepcopy
 from typing import List, Union
 
-from thesis import config, utils
+from thesis import constants, utils
 from thesis.memory import offline_memory, prio_offline_memory
 from thesis.runner.FixedBatchRunner import FixedBatchRunner
 from thesis.runner.OnlineRunner import OnlineRunner
@@ -107,7 +107,7 @@ def run_experiment_atomic(
 
 
 def run_experiments(
-    experiments_confs: List[dict], logs_dir: pathlib.PosixPath = config.data_dir
+    experiments_confs: List[dict], logs_dir: pathlib.PosixPath = constants.data_dir
 ):
     show_experiments_order(experiments_confs)
     for c in experiments_confs:
@@ -120,7 +120,7 @@ def run_experiments(
 # deadlock and the whole program never terminates. So don't start and
 # stop at all right now!
 def p_run_experiments(
-    experiments_confs: List[dict], logs_dir: pathlib.PosixPath = config.data_dir
+    experiments_confs: List[dict], logs_dir: pathlib.PosixPath = constants.data_dir
 ):
     show_experiments_order(experiments_confs)
     n_confs, n_workers = os.cpu_count(), len(experiments_confs)
