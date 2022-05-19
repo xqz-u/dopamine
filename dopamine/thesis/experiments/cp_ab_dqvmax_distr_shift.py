@@ -1,6 +1,6 @@
 import os
 
-from thesis import config
+from thesis import config, constants
 from thesis.experiments import pg_time_train_iter_cc
 from thesis.memory import prio_offline_memory
 from thesis.runner import runner
@@ -47,8 +47,8 @@ def make_confs(
 
 def classic_confs(datadir) -> list:
     return [
-        make_confs("cp_dqvmax_distr_shift", "CartPole", "v1", "cp", datadir),
-        make_confs("ab_dqvmax_distr_shift", "Acrobot", "v1", "ab", datadir),
+        make_confs("cp_dqvmax_distr_shift_baseline", "CartPole", "v1", "cp", datadir),
+        make_confs("ab_dqvmax_distr_shift_baseline", "Acrobot", "v1", "ab", datadir),
     ]
 
 
@@ -74,8 +74,8 @@ def priority_confs(datadir) -> list:
 
 
 if __name__ == "__main__":
-    logs_dir = config.data_dir
-    # logs_dir = config.peregrine_data_dir
+    logs_dir = constants.data_dir
+    # logs_dir = constants.peregrine_data_dir
     confs = classic_confs(logs_dir)
     # confs = priority_confs(logs_dir)
     confs = [c for c_env in confs for c in c_env]

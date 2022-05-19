@@ -34,6 +34,7 @@ class Agent(ABC):
     loss_names: Tuple[str] = None
     _observation: np.ndarray = None
     net_sync_freq_vs_upd: int = None
+    record_max_q: bool = attr.ib(init=False, default=False)
 
     def __attrs_post_init__(self):
         self.rng = self.rng or custom_pytrees.PRNGKeyWrap()
@@ -137,22 +138,23 @@ class Agent(ABC):
     # the same interface
     def _select_action(
         self, obs: np.ndarray, net: nn.Module, params: FrozenDict
-    ) -> np.ndarray:
+    ) -> Tuple[np.ndarray, ...]:
         self.update_state(obs)
-        self.rng, self.action = self.act_sel_fn(
+        self.rng, self.action, max_q_estim = self.act_sel_fn(
             **self.conf["exploration"],
             net=net,
             num_actions=self.num_actions,
+            record_max_q=self.record_max_q,
             rng=self.rng,
             params=params,
             state=self.state,
             training_steps=self.training_steps,
         )
         self.action = np.array(self.action)
-        return self.action
+        return self.action, np.array(max_q_estim)
 
     def learn(self) -> Dict[str, jnp.DeviceArray]:
-        train_dict = {"loss": self.init_loss(), "q_estimates": jnp.array(0)}
+        train_dict = {"loss": self.init_loss()}
         if self.memory.add_count > self.min_replay_history:
             if self.training_steps % self.train_freq == 0:
                 train_dict = self.train(self.sample_memory())
@@ -196,8 +198,13 @@ class Agent(ABC):
     def model_names(self) -> Sequence[str]:
         pass
 
+    @property
     @abstractmethod
-    def select_action(self, obs: np.ndarray) -> np.ndarray:
+    def repr_name(self) -> str:
+        pass
+
+    @abstractmethod
+    def select_action(self, obs: np.ndarray) -> Tuple[np.ndarray, ...]:
         pass
 
     # NOTE the order that losses are returned must match that in which

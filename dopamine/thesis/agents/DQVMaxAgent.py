@@ -41,20 +41,17 @@ def train_q_net(
     actions: np.ndarray,
     td_targets: jnp.DeviceArray,
 ) -> Tuple[custom_pytrees.NetworkOptimWrap, jnp.DeviceArray, jnp.DeviceArray]:
-    def loss_fn(params, targets) -> Tuple[jnp.DeviceArray, ...]:
+    def loss_fn(params, targets) -> jnp.DeviceArray:
         estimates = agent_utils.batch_net_eval(net_optim.net, params, states)
         estimates = jax.vmap(lambda x, y: x[y])(estimates, actions)
-        return (
-            jnp.mean(jax.vmap(net_optim.loss_metric)(targets, estimates)),
-            estimates.mean(),
-        )
+        return jnp.mean(jax.vmap(net_optim.loss_metric)(targets, estimates))
 
-    grad_fn = jax.value_and_grad(loss_fn, has_aux=True)
-    (loss, mean_q_estim), grads = grad_fn(train_params, td_targets)
+    grad_fn = jax.value_and_grad(loss_fn)
+    loss, grads = grad_fn(train_params, td_targets)
     train_params, net_optim.optim_state = agent_utils.optimize(
         net_optim.optim, grads, train_params, net_optim.optim_state
     )
-    return net_optim, train_params, loss, mean_q_estim
+    return net_optim, train_params, loss
 
 
 def default_sync_weights(self):
@@ -96,7 +93,6 @@ def default_train_q(self, replay_elts: Dict[str, np.ndarray]) -> Tuple[jnp.Devic
         self.models["qfunc"],
         self.models["qfunc"].params["online"],
         q_loss,
-        q_estimates,
     ) = train_q_net(
         self.models["qfunc"],
         self.models["qfunc"].params["online"],
@@ -104,7 +100,7 @@ def default_train_q(self, replay_elts: Dict[str, np.ndarray]) -> Tuple[jnp.Devic
         replay_elts["action"],
         q_td_targets,
     )
-    return q_loss, q_estimates
+    return q_loss
 
 
 # TODO base class for DQV-fam for parametrized train_q/v_func,
@@ -128,21 +124,25 @@ class DQVMaxAgent(Agent):
     def model_names(self) -> Tuple[str]:
         return ("vfunc", "qfunc")
 
+    @property
+    def repr_name(self) -> str:
+        return "DQVMax"
+
     def build_networks_and_optimizers(self):
         self._build_networks_and_optimizers(self.model_names, [1, self.num_actions])
         # initialize target q network weights with online ones
         qfunc_params = self.models["qfunc"].params
         self.models["qfunc"].params = {"online": qfunc_params, "target": qfunc_params}
 
-    def select_action(self, obs: np.ndarray) -> np.ndarray:
+    def select_action(self, obs: np.ndarray) -> Tuple[np.ndarray, ...]:
         return self._select_action(
             obs, self.models["qfunc"].net, self.models["qfunc"].params["online"]
         )
 
     def train(self, replay_elts: Dict[str, np.ndarray]) -> Dict[str, jnp.DeviceArray]:
-        v_loss = self.train_v_func(replay_elts)
-        q_loss, q_estimates = self.train_q_func(replay_elts)
-        return {"loss": (v_loss, q_loss), "q_estimates": q_estimates}
+        return {
+            "loss": (self.train_v_func(replay_elts), self.train_q_func(replay_elts))
+        }
 
     def sync_weights(self):
         self.sync_weights_func()

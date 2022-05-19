@@ -36,9 +36,7 @@ class FixedBatchRunner(Runner.Runner):
             )
 
     def train_iteration(self) -> OrderedDict:
-        train_info = OrderedDict(
-            loss=self.agent.init_loss(), steps=self.steps, q_estimates=0.0
-        )
+        train_info = OrderedDict(loss=self.agent.init_loss(), steps=self.steps)
         for _ in range(self.steps):
             # for i in range(self.steps):
             # print(f"Progress: {i}%", end="\r", flush=True)

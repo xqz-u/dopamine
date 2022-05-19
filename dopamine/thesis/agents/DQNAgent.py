@@ -12,12 +12,16 @@ class DQNAgent(Agent.Agent):
     def model_names(self) -> Tuple[str]:
         return ("qfunc",)
 
+    @property
+    def repr_name(self) -> str:
+        return "DQN"
+
     def build_networks_and_optimizers(self):
         self._build_networks_and_optimizers(self.model_names, [self.num_actions])
         qfunc_params = self.models["qfunc"].params
         self.models["qfunc"].params = {"online": qfunc_params, "target": qfunc_params}
 
-    def select_action(self, obs: np.ndarray) -> np.ndarray:
+    def select_action(self, obs: np.ndarray) -> Tuple[np.ndarray, ...]:
         return DQVMaxAgent.DQVMaxAgent.select_action(self, obs)
 
     def train(self, replay_elts: Dict[str, np.ndarray]) -> Dict[str, jnp.DeviceArray]:

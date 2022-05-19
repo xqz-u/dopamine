@@ -1,6 +1,7 @@
 import functools as ft
 import inspect
 import logging
+import math
 import os
 import time
 import types
@@ -10,7 +11,9 @@ from pathlib import Path
 from typing import Any, List, Tuple, Union
 
 import attr
+import gym
 import jax
+import numpy as np
 
 from thesis import constants
 
@@ -174,3 +177,21 @@ def unfold_replay_buffers_dir(base_dir: str, inter_tree: str = "") -> List[str]:
 
 def attr_method_binder(self, attribute, value):
     setattr(self, attribute.name, types.MethodType(value, self))
+
+
+# TODO add Pendulum, which has a formula to compute reward
+def deterministic_discounted_return(env: gym.Env, discount: float = 0.99) -> float:
+    """
+    Computes the discounted return G_t for a fully deterministic problem
+    - gym's classic control environments - according to:
+
+    \[ G_t = R_{t+1}+ \gamma R_{t+2}+ \gamma R^2_{t+3} + ... = \sum_{k=0}^{\infty} \gamma^kR_{t+k+1} \]
+
+    Supported environments: CartPole, Acrobot, MountainCar (discrete).
+    """
+    rewards = {"CartPole": 1, "Acrobot": -1, "MountainCar": -1, "Pendulum": ...}
+    max_steps = env.spec.max_episode_steps
+    exponential_gammas = np.array([math.pow(discount, k) for k in range(max_steps)])
+    return np.sum(
+        np.repeat([rewards.get(env.spec.name, np.nan)], max_steps) * exponential_gammas
+    )

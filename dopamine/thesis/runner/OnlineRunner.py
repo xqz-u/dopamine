@@ -30,9 +30,7 @@ class OnlineRunner(Runner.Runner):
         super().finalize_experiment()
 
     def train_one_episode(self) -> OrderedDict:
-        ret_dict = OrderedDict(
-            reward=0.0, steps=0, loss=self.agent.init_loss(), q_estimates=0.0
-        )
+        ret_dict = OrderedDict(reward=0.0, steps=0, loss=self.agent.init_loss())
         done, observation = False, self.env.reset()
         while not done:
             if self._render_gym:
@@ -55,7 +53,6 @@ class OnlineRunner(Runner.Runner):
             steps=0,
             episodes=0,
             loss=self.agent.init_loss(),
-            q_estimates=0.0,
         )
         while train_info["steps"] < self.steps:
             # this works as long as the dict returned by

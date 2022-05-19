@@ -5,8 +5,6 @@ import attr
 import pymongo
 from thesis.reporter import Reporter
 
-# TODO report additional info on experiment: agent, environment etc!
-
 
 @attr.s(auto_attribs=True)
 class BufferedMongoCollection:

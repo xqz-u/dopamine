@@ -15,10 +15,6 @@ from thesis.agents import Agent
 from thesis.reporter import reporter
 
 
-# TODO to do evaluation the way the runner works right now, the agent
-# models should be loaded from disk; this must be taken into account
-# when creating an agent under the 'eval' schedule. for now only do
-# train_and_eval indeed...
 @attr.s(auto_attribs=True)
 class Runner(ABC):
     conf: dict
@@ -30,6 +26,7 @@ class Runner(ABC):
     eval_steps: int = 500
     eval_period: int = 1
     env: gym.Env = gym_lib.create_gym_environment
+    _optimal_q_s0: float = attr.ib(init=False)
     reporters: Dict[str, reporter.Reporter] = attr.ib(factory=dict)
     agent: Agent.Agent = attr.ib(init=False)
     curr_iteration: int = attr.ib(init=False, default=0)
@@ -79,6 +76,9 @@ class Runner(ABC):
         self._checkpointer = checkpointer.Checkpointer(self.checkpoint_dir)
         if not self.try_resuming():
             self.create_agent()
+        self._optimal_q_s0 = utils.deterministic_discounted_return(
+            self.env.environment, self.agent.gamma
+        )
         self.setup_reporters()
 
     def create_agent(self, serial_rng: dict = None):
@@ -168,14 +168,17 @@ class Runner(ABC):
 
     def report_metrics(self, raw_metrics: dict, agg_metrics: dict):
         runner_info = {
-            attrib: getattr(self, attrib)
-            for attrib in [
-                "redundancy_nr",
-                "curr_iteration",
-                "global_steps",
-                "schedule",
-                "current_schedule",
-            ]
+            "agent": self.agent.repr_name,
+            "env": self.env.environment.spec.name,
+            **{
+                attrib: getattr(self, attrib)
+                for attrib in [
+                    "redundancy_nr",
+                    "curr_iteration",
+                    "global_steps",
+                    "current_schedule",
+                ]
+            },
         }
         for reporter_name, reporter_ in self.reporters.items():
             reporter_(raw_metrics, agg_metrics, runner_info)
@@ -240,16 +243,25 @@ class Runner(ABC):
         pass
 
     def eval_one_episode(self) -> OrderedDict:
-        ep_reward, ep_steps = 0.0, 0
-        done, observation = False, self.env.reset()
-        while not done:
+        def basic_env_interaction(
+            obs: np.ndarray,
+        ) -> Tuple[np.ndarray, bool, np.ndarray]:
+            nonlocal ep_reward, ep_steps
             if self._render_gym:
                 self.env.environment.render()
-            action = self.agent.select_action(observation)
-            observation, reward, done, _ = self.step_environment(action, ep_steps)
+            action, qmax = self.agent.select_action(obs)
+            obs, reward, done, _ = self.step_environment(action, ep_steps)
             ep_reward += reward
             ep_steps += 1
-        return OrderedDict(reward=ep_reward, steps=ep_steps)
+            return obs, done, qmax
+
+        ep_reward, ep_steps = 0.0, 0
+        self.agent.record_max_q = True
+        obs, done, start_qmax = basic_env_interaction(self.env.reset())
+        self.agent.record_max_q = False
+        while not done:
+            obs, done, _ = basic_env_interaction(obs)
+        return OrderedDict(qmax_s0=start_qmax, reward=ep_reward, steps=ep_steps)
 
     # NOTE default implementations provided, override if necessary
     def eval_iteration(self) -> dict:
@@ -257,13 +269,18 @@ class Runner(ABC):
             f"Eval: {self.eval_steps} after {self.eval_period} train iterations"
         )
         self.agent.eval_mode = True
-        eval_info = OrderedDict(reward=0.0, steps=0, episodes=0)
+        eval_info = OrderedDict(reward=0.0, steps=0, episodes=0, qmax_s0=0)
         while eval_info["steps"] < self.eval_steps:
             utils.inplace_dict_assoc(
                 eval_info, operator.add, update_dict=self.eval_one_episode()
             )
             eval_info["episodes"] += 1
-        aggregate_info = {"AvgEp_return": eval_info["reward"] / eval_info["episodes"]}
+        aggregate_info = {
+            f"AvgEp_{k}": eval_info[k] / eval_info["episodes"]
+            for k in ["reward", "qmax_s0"]
+        }
+        eval_info["qstar_s0"] = self._optimal_q_s0
+        aggregate_info["qstar_s0"] = self._optimal_q_s0
         self.report_metrics(eval_info, aggregate_info)
         self.agent.eval_mode = False
         return {"raw": eval_info, "aggregate": aggregate_info}
@@ -285,19 +302,13 @@ class Runner(ABC):
 # loss by the number of steps (and not by the number of steps since
 # traning has started) is a bit optimistic only in the first tranining
 # round
-# NOTE when training has not started, loss and q_estimates are not
-# computed; using 0 as a proxy right now, maybe it is better not to
-# track at all until available
+# NOTE when training has not started, loss is not computed
 def aggregate_losses(loss_names: Tuple[str], raw_metrics: OrderedDict) -> OrderedDict:
     # cast to float to report with mongo without need to serialize
     raw_metrics["loss"] = {k: float(v) for k, v in zip(loss_names, raw_metrics["loss"])}
-    raw_metrics["q_estimates"] = float(raw_metrics["q_estimates"])
     return OrderedDict(
-        **{
+        {
             f"AvgStep_{k}": (v / raw_metrics["steps"] if v != 0 else v)
             for k, v in raw_metrics["loss"].items()
-        },
-        AvgStep_q_estimates=qs / raw_metrics["steps"]
-        if (qs := raw_metrics["q_estimates"]) != 0
-        else qs,
+        }
     )

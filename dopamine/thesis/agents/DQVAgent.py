@@ -12,7 +12,11 @@ class DQVAgent(Agent.Agent):
     def model_names(self) -> Tuple[str]:
         return ("vfunc", "qfunc")
 
-    def select_action(self, obs: np.ndarray) -> np.ndarray:
+    @property
+    def repr_name(self) -> str:
+        return "DQV"
+
+    def select_action(self, obs: np.ndarray) -> Tuple[np.ndarray, ...]:
         return self._select_action(
             obs, self.models["qfunc"].net, self.models["qfunc"].params
         )
@@ -47,7 +51,6 @@ class DQVAgent(Agent.Agent):
             self.models["qfunc"],
             self.models["qfunc"].params,
             q_loss,
-            q_estimates,
         ) = DQVMaxAgent.train_q_net(
             self.models["qfunc"],
             self.models["qfunc"].params,
@@ -55,7 +58,7 @@ class DQVAgent(Agent.Agent):
             replay_elts["action"],
             td_targets,
         )
-        return {"loss": (v_loss, q_loss), "q_estimates": q_estimates}
+        return {"loss": (v_loss, q_loss)}
 
     def sync_weights(self):
         self.models["vfunc"].params["target"] = self.models["vfunc"].params["online"]
