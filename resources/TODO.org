@@ -75,3 +75,7 @@
   - [ ] Move everything persistence-related to Mongo (?)
   - [ ] Move the offline replay buffer classes to functions
   - [ ] Argparser to run in a unified way
+  - [ ] Add paramater 'record_eval_q_values' to define a schedule to
+	record Q-values, e.g. could be 'all' for every steps, or
+	e.g. 'first' or 'last' for those particular steps of an episode;
+	right now, we record every first step
