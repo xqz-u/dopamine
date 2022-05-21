@@ -4,10 +4,8 @@ import pprint
 from pymongo import MongoClient
 
 
-def main():
-    client = MongoClient(
-        "mongodb://localhost:27017/", serverSelectionTimeoutMS=int(5e3)
-    )
+def main(mongo_uri: str = "mongodb://localhost:27017/"):
+    client = MongoClient(mongo_uri, serverSelectionTimeoutMS=int(5e3))
 
     db = client.test_database
     # databases and collections are created lazily aka when a document is
@@ -49,3 +47,8 @@ def main():
 
 if __name__ == "__main__":
     main()
+    # main("mongodb://s3680622:<pswd>@peregrine.hpc.rug.nl:27017/")
+    # main("mongodb://s3680622:<pswd>@129.125.60.96:27017/")
+    # main("mongodb://129.125.60.96:27017/")
+    # main("mongodb://peregrine.hpc.rug.nl:27017/")
+

@@ -2,7 +2,7 @@ import optax
 from dopamine.discrete_domains import gym_lib
 from dopamine.jax import losses
 
-from thesis import constants, exploration, networks
+from thesis import exploration, networks
 from thesis.memory import offline_memory
 from thesis.reporter import reporter
 
