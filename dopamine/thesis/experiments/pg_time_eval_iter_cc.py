@@ -2,7 +2,6 @@ from thesis import constants
 from thesis.experiments import pg_time_train_iter_cc
 
 
-# NOTE no aim tracking
 def make_conf():
     conf = pg_time_train_iter_cc.make_conf("peregrine_off_time_eval")
     conf["runner"]["experiment"]["schedule"] = "eval"

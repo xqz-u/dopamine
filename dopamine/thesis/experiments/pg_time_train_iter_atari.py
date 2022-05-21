@@ -40,9 +40,9 @@ def doconfs(conf: dict, data_basedir: str):
 
 def dorun(logsdir: str, off_data_dir: str):
     conf = make_conf("time_train_atari")
-    conf, *_ = doconfs(conf, os.path.join(off_data_dir, "Pong"))
+    conf, *_ = doconfs(conf, off_data_dir)
     conf["reporters"]["aim"]["repo"] = str(logsdir)
-    run = runner.create_runner(
+    run = runner.build_runner(
         conf, utils.data_dir_from_conf(conf["experiment_name"], conf, basedir=logsdir)
     )
     start = time.time()
@@ -59,5 +59,5 @@ def main_peregrine():
 
 
 if __name__ == "__main__":
-    main()
-    # main_pg()
+    # main()
+    main_peregrine()
