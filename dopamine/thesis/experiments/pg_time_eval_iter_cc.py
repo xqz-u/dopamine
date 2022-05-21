@@ -1,25 +1,24 @@
 from thesis import constants
-from thesis.experiments import peregrine_time_train_iter
-from thesis.runner import runner
+from thesis.experiments import pg_time_train_iter_cc
 
 
+# NOTE no aim tracking
 def make_conf():
-    conf = peregrine_time_train_iter.make_conf("peregrine_off_time_eval")
+    conf = pg_time_train_iter_cc.make_conf("peregrine_off_time_eval")
     conf["runner"]["experiment"]["schedule"] = "eval"
     return conf
 
 
 def main():
-    conf = make_conf()
-    confs = peregrine_time_train_iter.doconfs(conf, constants.data_dir)
-    runner.run_experiments(confs, scratch=True)
+    pg_time_train_iter_cc.dorun(constants.scratch_data_dir, constants.data_dir)
 
 
 def main_peregrine():
-    runner.run_experiments(
-        peregrine_time_train_iter.doconfs(make_conf(), constants.peregrine_data_dir)
+    pg_time_train_iter_cc.dorun(
+        constants.peregrine_data_dir, constants.peregrine_data_dir
     )
 
 
 if __name__ == "__main__":
     main_peregrine()
+    # main()

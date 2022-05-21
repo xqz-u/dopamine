@@ -39,31 +39,24 @@ def doconfs(conf: dict, data_basedir: str):
     )
 
 
-def main():
+def dorun(logsdir: str, off_data_dir: str):
     conf = make_conf("peregrine_off_time_train")
-    conf, *_ = doconfs(conf, constants.data_dir)
-    conf["reporters"]["aim"]["repo"] = str(constants.scratch_data_dir)
-    logsdir = utils.data_dir_from_conf(
-        conf["experiment_name"], conf, basedir=constants.scratch_data_dir
+    conf, *_ = doconfs(conf, off_data_dir)
+    conf["reporters"]["aim"]["repo"] = str(logsdir)
+    run = runner.build_runner(
+        conf, utils.data_dir_from_conf(conf["experiment_name"], conf, basedir=logsdir)
     )
-    run = runner.build_runner(conf, logsdir)
     start = time.time()
     run.run_experiment()
     print(f"train iteration exec time: {time.time() - start}")
+
+
+def main():
+    dorun(constants.scratch_data_dir, constants.data_dir)
 
 
 def main_peregrine():
-    conf, *_ = doconfs(
-        make_conf("peregrine_off_time_train"), constants.peregrine_data_dir
-    )
-    conf["reporters"]["aim"]["repo"] = str(constants.peregrine_data_dir)
-    utils.data_dir_from_conf(
-        conf["experiment_name"], conf, basedir=constants.peregrine_data_dir
-    )
-    run = runner.create_runner(conf)
-    start = time.time()
-    run.run_experiment()
-    print(f"train iteration exec time: {time.time() - start}")
+    dorun(constants.peregrine_data_dir, constants.peregrine_data_dir)
 
 
 if __name__ == "__main__":

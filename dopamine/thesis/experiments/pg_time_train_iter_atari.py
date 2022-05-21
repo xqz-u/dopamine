@@ -15,7 +15,7 @@ make_conf = lambda exp_name: {
     "agent": config.make_batch_rl_agent(agents.DQVMaxAgent),
     "memory": config.make_batch_rl_memory(parallel=False),
     "env": config.make_env("ALE/Pong", "v5", creator=patcher.create_atari_environment),
-    "reporters": config.make_reporters(exp_name),
+    "reporters": config.make_reporters(exp_name, mongo_buffering=1),
     "runner": {
         "call_": runner.FixedBatchRunner,
         "experiment": {
@@ -28,43 +28,36 @@ make_conf = lambda exp_name: {
 }
 
 
-def main():
+def doconfs(conf: dict, data_basedir: str):
+    return runner.expand_conf(
+        conf,
+        1,
+        os.path.join(data_basedir, "Pong"),
+        intermediate_dirs="replay_logs",
+        iterations=[[1]],
+    )
+
+
+def dorun(logsdir: str, off_data_dir: str):
     conf = make_conf("time_train_atari")
-    conf, *_ = runner.expand_conf(
-        conf,
-        1,
-        os.path.join(constants.data_dir, "Pong"),
-        intermediate_dirs="replay_logs",
-        iterations=[[1]],
+    conf, *_ = doconfs(conf, os.path.join(off_data_dir, "Pong"))
+    conf["reporters"]["aim"]["repo"] = str(logsdir)
+    run = runner.create_runner(
+        conf, utils.data_dir_from_conf(conf["experiment_name"], conf, basedir=logsdir)
     )
-    conf["reporters"]["aim"]["repo"] = str(constants.scratch_data_dir)
-    utils.data_dir_from_conf(
-        conf["experiment_name"], conf, basedir=constants.scratch_data_dir
-    )
-    run = runner.create_runner(conf)
     start = time.time()
     run.run_experiment()
     print(f"train iteration exec time: {time.time() - start}")
 
 
-def main_pg():
-    conf = make_conf("time_train_atari_pg")
-    conf, *_ = runner.expand_conf(
-        conf,
-        1,
-        os.path.join(constants.peregrine_data_dir, "Pong"),
-        intermediate_dirs="replay_logs",
-        iterations=[[1]],
-    )
-    conf["reporters"]["aim"]["repo"] = str(constants.peregrine_data_dir)
-    utils.data_dir_from_conf(
-        conf["experiment_name"], conf, basedir=constants.peregrine_data_dir
-    )
-    run = runner.create_runner(conf)
-    start = time.time()
-    run.run_experiment()
-    print(f"train iteration exec time: {time.time() - start}")
+def main():
+    dorun(constants.scratch_data_dir, constants.data_dir)
+
+
+def main_peregrine():
+    dorun(constants.peregrine_data_dir, constants.peregrine_data_dir)
 
 
 if __name__ == "__main__":
-    main_pg()
+    main()
+    # main_pg()
