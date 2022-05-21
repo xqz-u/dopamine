@@ -32,4 +32,8 @@ $PG_SCRIPTS/stop_mongo.sh
 # results for single iteration train/eval:
 # -classic control (DQVMax, CartPole):
 # ~27/30s on my pc and pg interactive gpu node / ~1.5 local eval
-# ~0.027 on pg gpu job, x1000 speedup ?!
+# ~0.027 on pg gpu job, x1000 speedup / 0.00333 pg gpu job
+
+# -Atari (Pong):
+# ~72.5 pg gpu job (but with errors, see
+# slurms/pg_time_train_iter_atari)
