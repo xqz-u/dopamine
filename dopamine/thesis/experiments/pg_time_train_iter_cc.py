@@ -15,7 +15,7 @@ make_conf = lambda exp_name: {
     "agent": config.make_batch_rl_agent(agents.DQVMaxAgent),
     "memory": config.make_batch_rl_memory(),
     "env": config.make_env("CartPole", "v1"),
-    "reporters": config.make_reporters(exp_name),
+    "reporters": config.make_reporters(exp_name, mongo_buffering=1),
     "runner": {
         "call_": runner.FixedBatchRunner,
         "experiment": {
