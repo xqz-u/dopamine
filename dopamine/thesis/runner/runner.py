@@ -119,8 +119,14 @@ def run_experiments(
 # to the parallel code occurs, usually one process gets stuck in a
 # deadlock and the whole program never terminates. So don't start and
 # stop at all right now!
+# FIXME there seems to be a limit on aim: whenever the numeber of
+# tracking objects is > than number of processes in the pool, only
+# #procesesses trackers are started! change the time.sleep approach -
+# which was never sound to start with...
 def p_run_experiments(
-    experiments_confs: List[dict], logs_dir: pathlib.PosixPath = constants.data_dir
+    experiments_confs: List[dict],
+    logs_dir: pathlib.PosixPath = constants.data_dir,
+    starting_iterval: int = 1,
 ):
     show_experiments_order(experiments_confs)
     n_confs, n_workers = os.cpu_count(), len(experiments_confs)
@@ -131,5 +137,9 @@ def p_run_experiments(
     with mp.Pool(processes=n_workers) as p:
         p.starmap(
             run_experiment_atomic,
-            zip(experiments_confs, [logs_dir] * n_confs, range(n_confs)),
+            zip(
+                experiments_confs,
+                [logs_dir] * n_confs,
+                map(lambda n: n * starting_iterval, range(n_confs)),
+            ),
         )
