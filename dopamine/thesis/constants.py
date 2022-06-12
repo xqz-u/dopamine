@@ -1,10 +1,13 @@
 import math
 import os
 from pathlib import Path
-from typing import Union
+from typing import Dict, Tuple
 
+import gin
 import numpy as np
-from dopamine.discrete_domains import atari_lib, gym_lib
+from dopamine.discrete_domains import atari_lib
+
+from thesis import types
 
 base_dir = Path(os.path.dirname(__file__))
 dopamine_dir = Path(base_dir.parent, "dopamine")
@@ -16,13 +19,12 @@ peregrine_data_dir = "/data/s3680622"
 
 scratch_dir = base_dir.joinpath("scratch")
 
+# register some constants useful in Gin config files
+gin.constant("constants.data_dir", str(data_dir))
+gin.constant("constants.scratch_data_dir", str(scratch_data_dir))
+gin.constant("constants.peregrine_data_dir", str(peregrine_data_dir))
+
 default_memory_args = {"replay_capacity": int(1e6), "batch_size": 32}
-
-opposite = lambda vs: tuple(map(lambda el: -el, vs))
-
-
-def env_preproc_info(environment_name: str = None, version: str = None, **_) -> dict:
-    return env_additional_info.get(f"{environment_name}-{version}", {})
 
 
 # NOTE when an agent is created, the relevant environment information
@@ -31,17 +33,14 @@ def env_preproc_info(environment_name: str = None, version: str = None, **_) -> 
 # for the replay buffers. #actions is not passed to keep
 # initialization compatible with both Agent and Memory (the latter
 # would be invalidated)
-def env_info(
-    env: Union[gym_lib.GymPreprocessing, atari_lib.AtariPreprocessing]
-) -> dict:
+def env_info(env: types.DiscreteEnv) -> dict:
     return dict(
         zip(
             ["observation_shape", "observation_dtype", "stack_size"],
             (
                 [
                     atari_lib.NATURE_DQN_OBSERVATION_SHAPE,
-                    # atari_lib.NATURE_DQN_DTYPE,
-                    np.uint8,
+                    np.uint8,  # atari_lib.NATURE_DQN_DTYPE,
                     atari_lib.NATURE_DQN_STACK_SIZE,
                 ]
                 if isinstance(env, atari_lib.AtariPreprocessing)
@@ -53,6 +52,15 @@ def env_info(
             ),
         )
     )
+
+
+opposite = lambda vs: tuple(map(lambda el: -el, vs))
+
+
+def env_preproc_info(
+    environment_name: str = None, version: str = None, **_
+) -> Dict[str, Tuple[float, ...]]:
+    return env_additional_info.get(f"{environment_name}-{version}", {})
 
 
 CARTPOLE_MIN_VALS = (-2.4, -5.0, -math.pi / 12.0, -math.pi * 2.0)

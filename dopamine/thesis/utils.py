@@ -1,21 +1,26 @@
 import functools as ft
-import inspect
 import logging
 import math
 import os
-import time
-import types
-from collections import OrderedDict
 from itertools import groupby
 from pathlib import Path
-from typing import Any, List, Tuple, Union
+from typing import List, Tuple
 
-import attr
 import gym
 import jax
 import numpy as np
 
 from thesis import constants
+
+
+# set root logging level to be the lowest one; submodule can decide
+# which messages to ignore
+def setup_root_logging(level: int = logging.INFO):
+    logging.basicConfig(
+        level=level,
+        format="(PID=%(process)s) [%(asctime)s] [%(levelname)-8s] -- %(message)s -- (%(name)s:%(lineno)s)",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
 
 
 def jax_container_shapes(cont) -> dict[str, Tuple[int]]:
@@ -41,27 +46,6 @@ def all_equal(iterable):
     return next(g, True) and not next(g, False)
 
 
-def timer(want_time=False):
-    def decorator(fn):
-        @ft.wraps(fn)
-        def inner(*args, **kwargs) -> Union[Any, Tuple[Any, float]]:
-            start = time.time()
-            ret = fn(*args, **kwargs)
-            end = time.time() - start
-            if not want_time:
-                print(f"`{fn.__name__}` exec time: {end}")
-            return ret if not want_time else (ret, end)
-
-        return inner
-
-    # trick to keep writing @timer, @timer() and @timer(True)
-    if callable(want_time):
-        f = want_time
-        want_time = False
-        return decorator(f)
-    return decorator
-
-
 # default folder structure:
 # basedir/ENVIRONMENT/AGENT/exp_name
 # the paths in caps lock can be omitted with build_hierarchy=True
@@ -83,71 +67,6 @@ def data_dir_from_conf(
     )
     os.makedirs(full_path, exist_ok=True)
     return full_path
-
-
-def attr_fields_d(attr_inst: object, get_props: bool = False) -> dict:
-    attr_class = type(attr_inst)
-    return {
-        **{
-            field.name: getattr(attr_inst, field.name)
-            for field in attr.fields(attr_class)
-        },
-        **(
-            {}
-            if not get_props
-            else {
-                p: getattr(attr_inst, p)
-                for p in dir(attr_class)
-                if isinstance(getattr(attr_class, p), property)
-            }
-        ),
-    }
-
-
-def argfinder(fn: callable, arg_coll: dict) -> dict:
-    return {k: v for k, v in arg_coll.items() if k in inspect.signature(fn).parameters}
-
-
-# https://stackoverflow.com/questions/12627118/get-a-function-arguments-default-value
-def callable_defaults(elt: callable) -> dict:
-    return {
-        k: default
-        for k, v in inspect.signature(elt).parameters.items()
-        if (default := v.default) is not inspect.Parameter.empty
-    }
-
-
-class ConsoleLogger(logging.Logger):
-    level: int
-    name: str
-
-    def __init__(self, level: int = logging.DEBUG, name: str = None, *args, **kwargs):
-        super().__init__(name, *args, **kwargs)
-        ch = logging.StreamHandler()
-        formatter = logging.Formatter(
-            "%(asctime)s:%(levelname)s:%(name)s\n%(message)s",
-            datefmt="%m/%d/%Y %I:%M:%S",
-        )
-        ch.setFormatter(formatter)
-        self.addHandler(ch)
-        self.setLevel(level)
-
-
-# precedence: update_dict, all_values
-def inplace_dict_assoc(
-    d: OrderedDict,
-    fn: callable,
-    *all_values,
-    update_dict: dict = None,
-):
-    assert any(
-        [update_dict, all_values]
-    ), "one of update_dict or all_values must not be None"
-    if update_dict:
-        d.update({k: fn(d[k], v) for k, v in update_dict.items()})
-    else:
-        for (k, v), nv in zip(d.items(), all_values):
-            d[k] = fn(v, nv)
 
 
 def list_all_ckpt_iterations(base_directory: str) -> List[int]:
@@ -175,11 +94,8 @@ def unfold_replay_buffers_dir(base_dir: str, inter_tree: str = "") -> List[str]:
     return [os.path.join(base_dir, d, inter_tree) for d in sorted(os.listdir(base_dir))]
 
 
-def attr_method_binder(self, attribute, value):
-    setattr(self, attribute.name, types.MethodType(value, self))
-
-
 # TODO add Pendulum, which has a formula to compute reward
+@ft.lru_cache
 def deterministic_discounted_return(env: gym.Env, discount: float = 0.99) -> float:
     """
     Computes the discounted return G_t for a fully deterministic problem
@@ -192,6 +108,69 @@ def deterministic_discounted_return(env: gym.Env, discount: float = 0.99) -> flo
     rewards = {"CartPole": 1, "Acrobot": -1, "MountainCar": -1, "Pendulum": ...}
     max_steps = env.spec.max_episode_steps
     exponential_gammas = np.array([math.pow(discount, k) for k in range(max_steps)])
+    print("called!")
     return np.sum(
         np.repeat([rewards.get(env.spec.name, np.nan)], max_steps) * exponential_gammas
     )
+
+
+# def attr_method_binder(self, attribute, value):
+#     setattr(self, attribute.name, types.MethodType(value, self))
+# def timer(want_time=False):
+#     def decorator(fn):
+#         @ft.wraps(fn)
+#         def inner(*args, **kwargs) -> Union[Any, Tuple[Any, float]]:
+#             start = time.time()
+#             ret = fn(*args, **kwargs)
+#             end = time.time() - start
+#             if not want_time:
+#                 print(f"`{fn.__name__}` exec time: {end}")
+#             return ret if not want_time else (ret, end)
+#         return inner
+#     # trick to keep writing @timer, @timer() and @timer(True)
+#     if callable(want_time):
+#         f = want_time
+#         want_time = False
+#         return decorator(f)
+#     return decorator
+# def attr_fields_d(attr_inst: object, get_props: bool = False) -> dict:
+#     attr_class = type(attr_inst)
+#     return {
+#         **{
+#             field.name: getattr(attr_inst, field.name)
+#             for field in attr.fields(attr_class)
+#         },
+#         **(
+#             {}
+#             if not get_props
+#             else {
+#                 p: getattr(attr_inst, p)
+#                 for p in dir(attr_class)
+#                 if isinstance(getattr(attr_class, p), property)
+#             }
+#         ),
+#     }
+# def argfinder(fn: callable, arg_coll: dict) -> dict:
+#     return {k: v for k, v in arg_coll.items() if k in inspect.signature(fn).parameters}
+# # https://stackoverflow.com/questions/12627118/get-a-function-arguments-default-value
+# def callable_defaults(elt: callable) -> dict:
+#     return {
+#         k: default
+#         for k, v in inspect.signature(elt).parameters.items()
+#         if (default := v.default) is not inspect.Parameter.empty
+#     }
+# # precedence: update_dict, all_values
+# def inplace_dict_assoc(
+#     d: OrderedDict,
+#     fn: callable,
+#     *all_values,
+#     update_dict: dict = None,
+# ):
+#     assert any(
+#         [update_dict, all_values]
+#     ), "one of update_dict or all_values must not be None"
+#     if update_dict:
+#         d.update({k: fn(d[k], v) for k, v in update_dict.items()})
+#     else:
+#         for (k, v), nv in zip(d.items(), all_values):
+#             d[k] = fn(v, nv)

@@ -1,88 +1,93 @@
+import logging
 from dataclasses import dataclass
-from typing import Dict, Union
+from typing import Callable, Dict, Tuple, Union
 
+import gin
 import optax
-from dopamine.jax import losses
-from flax import linen as nn
-from flax.core.frozen_dict import FrozenDict
+from flax import struct
+from flax.core import frozen_dict
+from flax.training import train_state
 from jax import numpy as jnp
 from jax import random as jrand
 from jax import tree_util
 
-from thesis import networks
+logger = logging.getLogger(__name__)
 
-
-@tree_util.register_pytree_node_class
-@dataclass
-class NetworkOptimWrap:
-    params: Union[FrozenDict, Dict[str, FrozenDict]] = None
-    optim_state: optax.OptState = None
-    net: nn.Module = networks.Sequential
-    optim: optax.GradientTransformation = optax.sgd
-    loss_metric: callable = losses.mse_loss
-
-    def tree_flatten(self) -> tuple:
-        return (
-            (self.params, self.optim_state),
-            (self.net, self.optim, self.loss_metric),
-        )
-
-    @classmethod
-    def tree_unflatten(cls, treedef, leaves):
-        return cls(*leaves, *treedef)
+# NOTE circular import; but:
+# s_tp1_fn: thesis.types.ModuleCall
+# loss_metric: thesis.types.LossMetric
+class ValueBasedTS(train_state.TrainState):
+    s_tp1_fn: Callable[
+        [frozen_dict.FrozenDict, jnp.ndarray], jnp.ndarray
+    ] = struct.field(pytree_node=False)
+    loss_metric: Callable[[jnp.ndarray, jnp.ndarray], jnp.ndarray] = struct.field(
+        pytree_node=False
+    )
+    target_params: frozen_dict.FrozenDict
 
     @property
-    def checkpointable_elements(self) -> dict:
-        return {"params": self.params, "optim_state": self.optim_state}
+    def serializable(self) -> Dict[str, Union[frozen_dict.FrozenDict, optax.OptState]]:
+        return {"params": self.params, "opt_state": self.opt_state}
 
 
-# NOTE if using a dataclass, this happens:
-# TypeError: __init__() takes from 1 to 4 positional arguments but 5 were given
+# iterable version of ValueBasedTS, stores multiple train states
+# and is used like a sequence
+# NOTE could be made a PyTreeNode if passed to jax transformed fns
+@dataclass
+class ValueBasedTSEnsemble:
+    TSS: Tuple[ValueBasedTS, ...]
+
+    def __getitem__(self, idx: int) -> ValueBasedTS:
+        return self.TSS[idx]
+
+    @property
+    def serializable(
+        self,
+    ) -> Dict[str, Dict[str, Union[frozen_dict.FrozenDict, optax.OptState]]]:
+        return {head: head_TS.serializable for head, head_TS in enumerate(self.TSS)}
+
+
+@gin.configurable
 @tree_util.register_pytree_node_class
 @dataclass
+# NOTE when key and n_splits are passed together with seed, the first
+# must correspond to real KeyArray obtained from seed after n_splits
+# in order  to be reproducible
 class PRNGKeyWrap:
-    def __init__(
-        self,
-        seed: int = 42,
-        key: jrand.KeyArray = None,
-        n_splits: int = 0,
-        _stop_seed_assign=None,
-    ):
-        self.key = key
-        self.seed = seed
-        self._stop_seed_assign = _stop_seed_assign
-        self.n_splits = n_splits
+    seed: int = 42
+    key: jrand.KeyArray = None
+    n_splits: int = 0
+
+    def __post_init__(self):
         if self.key is None:
-            self.key = jrand.PRNGKey(self.seed)
-        # NOTE _stop_seed_assign exists because the next statement
-        # would otherwise be executed on each call to next() because
-        # of how custom PyTrees work
-        elif self._stop_seed_assign is None:
-            self.seed = self.key[1].astype(int)
+            self.reset()
+        else:
+            logger.debug(f"Restored RNG: {self}")
 
     def __next__(self) -> jrand.KeyArray:
         self.key, sk = jrand.split(self.key)
         self.n_splits += 1
-        if self._stop_seed_assign is None:
-            self._stop_seed_assign = 1
         return sk
 
-    def __repr__(self) -> str:
-        return f"<seed: {self.seed} #splits: {self.n_splits} key: {self.key}>"
+    def reset(self):
+        logger.debug(f"Reset {self}")
+        self.key = jrand.PRNGKey(self.seed)
+        self.n_splits = 0
+        logger.debug(f"After reset: {self}")
 
-    def tree_flatten(self) -> tuple:
-        return ((self.seed, self.key, self.n_splits, self._stop_seed_assign), None)
+    def tree_flatten(self) -> Tuple[Tuple[int, jrand.KeyArray, int], None]:
+        return ((self.seed, self.key, self.n_splits), None)
 
     @classmethod
     def tree_unflatten(cls, _, leaves):
         return cls(*leaves)
 
     @classmethod
-    def from_dict(cls, serialized_rng: dict):
+    def from_dict(cls, serialized_rng: dict) -> "PRNGKeyWrap":
         return cls(**serialized_rng)
 
     @property
-    def checkpointable_elements(self) -> dict:
+    def serializable(self) -> Dict[str, Union[jnp.ndarray, int]]:
         # cast: when going through a jitted function, a PyTree's
         # attributes are concretized/traced and lose original type
         return {
@@ -90,3 +95,6 @@ class PRNGKeyWrap:
             "seed": int(self.seed),
             "n_splits": int(self.n_splits),
         }
+
+    def __repr__(self) -> str:
+        return f"<seed: {self.seed} #splits: {self.n_splits} key: {self.key}>"

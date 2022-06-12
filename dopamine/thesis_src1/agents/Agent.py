@@ -81,9 +81,7 @@ class Agent(ABC):
         self.memory = memory_class(**args)
         self.conf["memory"] = {"call_": memory_class, **args}
 
-    # NOTE should the static args to loss_metric be partialled?
-    # consider that it can be done before passing the function in the
-    # config at the very start...
+    # NOTE the static args to loss_metric should be partialled
     def _build_networks_and_optimizers(
         self, net_names: Sequence[str], out_dims: Sequence[int]
     ):

@@ -1,0 +1,66 @@
+import thesis.networks
+import thesis.reporter
+import thesis.constants
+import thesis.runner
+import thesis.instantiators
+import thesis.memory
+import thesis.custom_pytrees
+import thesis.exploration
+import thesis.agent
+
+EXP_NAME = "bellaraga"
+
+# rng
+PRNGKeyWrap.seed = 5
+
+# environment
+create_gym_environment.environment_name = "CartPole"
+create_gym_environment.version = "v1"
+
+# memory - online
+OutOfGraphReplayBuffer.keep_every = 1
+create_memory.memory_class = @OutOfGraphReplayBuffer
+
+# explorer
+Egreedy.epsilon_train = 1
+create_explorer.explorer_class = @Egreedy
+
+# models, optimizer, loss function
+# NOTE with gin configuration, there is no need to have
+# agent_utils.build_models - right?
+V_MLP = (@MLP, {"features": 1, "hiddens": (4,)})
+vfunc/create_model_TS_def.model_def = (@EnsembledNet, {"model": %V_MLP, "n_heads": 2})
+
+qfunc/create_model_TS_def.model_def = (@MLP, {"features": 2, "hiddens": (4,)})
+
+adam.learning_rate = 0.001
+adam.eps = 3.125e-4
+
+create_model_TS_def.opt = @adam()
+create_model_TS_def.loss_fn = @mse_loss
+
+# agent
+DQVEnsemble.V_model_def = @vfunc/create_model_TS_def()
+DQVEnsemble.Q_model_def = @qfunc/create_model_TS_def()
+DQVEnsemble.sync_weights_every = 1
+DQVEnsemble.min_replay_history = 100
+DQVEnsemble.rng = @PRNGKeyWrap()
+
+# reporters
+MongoReporter.experiment_name = %EXP_NAME
+MongoReporter.db_name = "thesis_test"
+MongoReporter.collection_name = %EXP_NAME
+MongoReporter.buffering = 4
+
+AimReporter.experiment_name = %EXP_NAME
+AimReporter.repo = %constants.scratch_data_dir
+
+
+# runner
+OnlineRunner.experiment_name = %EXP_NAME
+OnlineRunner.iterations = 10
+OnlineRunner.steps = 500
+OnlineRunner.eval_steps = 100
+OnlineRunner.eval_period = 100
+OnlineRunner.reporters = [@MongoReporter(), @AimReporter()]
+OnlineRunner.checkpoint_base_dir = %constants.scratch_data_dir

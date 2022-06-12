@@ -286,15 +286,10 @@ class Runner(ABC):
         return {"raw": eval_info, "aggregate": aggregate_info}
 
     def train_and_eval_iteration(self) -> dict:
-        train_dict = self.train_iteration()
-        eval_dict = None
+        ret = {"train": self.train_iteration()}
         if self.curr_iteration % self.eval_period == 0:
-            eval_dict = self.eval_iteration()
-        return (
-            {"train": train_dict}
-            if eval_dict is None
-            else {"train": train_dict, "eval": eval_dict}
-        )
+            return {**ret, "eval": self.eval_iteration()}
+        return ret
 
 
 # NOTE that e.g. in an iteration of 600 steps, enough experience to

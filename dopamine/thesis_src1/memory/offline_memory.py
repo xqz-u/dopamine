@@ -1,9 +1,7 @@
-import functools as ft
 import logging
 from concurrent import futures
 from typing import List
 
-import gin
 import numpy as np
 from dopamine.replay_memory.circular_replay_buffer import OutOfGraphReplayBuffer
 from thesis import utils
@@ -11,62 +9,15 @@ from thesis import utils
 logger = logging.getLogger(__name__)
 
 
-# TODO check again the semantics of add_count and replay capacity!
-def merge_buffers(
-    acc: OutOfGraphReplayBuffer, other: OutOfGraphReplayBuffer
-) -> OutOfGraphReplayBuffer:
-    acc.add_count += other.add_count
-    acc._replay_capacity += other._replay_capacity
-    acc._store = dict(
-        zip(
-            acc._store.keys(),
-            [
-                np.concatenate(arrays)
-                for arrays in zip(acc._store.values(), other._store.values())
-            ],
-        )
-    )
-    return acc
-
-
-def load_buffer(
-    buffers_dir: str, iteration_suffix: int, **kwargs
-) -> OutOfGraphReplayBuffer:
-    buff = OutOfGraphReplayBuffer(**kwargs)
-    buff.load(buffers_dir, iteration_suffix)
-    buff._replay_capacity = buff._store["observation"].shape[0]
-    return buff
-
-
-# TODO parallel version
-@gin.configurable
-def load_offline_buffers(
-    buffers_dir: str, iterations: List[int] = None, parallel: bool = False, **kwargs
-) -> OutOfGraphReplayBuffer:
-    if iterations is None:
-        iterations = utils.list_all_ckpt_iterations(buffers_dir)
-        logger.info(f"Load all buffers in {buffers_dir}")
-    first_iter, *rest_iter = iterations
-    merged_buffers = ft.reduce(
-        lambda acc, i: merge_buffers(acc, load_buffer(buffers_dir, i, **kwargs)),
-        rest_iter,
-        load_buffer(buffers_dir, first_iter, **kwargs),
-    )
-    logger.info(f"Loaded buffers {iterations} from {buffers_dir}")
-    return merge_buffers
-
-
 # NOTE the idea behind creating a new class for offline memory was
 # originally that it could share some core functionality with its
 # prioritized counterpart; if this is not true, a class can be
 # avoided: the same logic to merge OutOfGraphReplayBuffer(s) can be
-# implemented with a function which just returns the latter.
-# should implement this behavior in the future!
+# implemented with a function which just returns the latter...
 # NOTE the parameters passed as kwargs won't be detected when the
 # memory is instantiated (see thesis.agents.Agent:68); the ones
 # declared explicitly in this class' init are those which make sense
 # here
-@gin.configurable
 class OfflineOutOfGraphReplayBuffer(OutOfGraphReplayBuffer):
     _buffers_dir: str
     _parent_necessary_attributes: List[str] = [
@@ -116,14 +67,6 @@ class OfflineOutOfGraphReplayBuffer(OutOfGraphReplayBuffer):
         return buff
 
     def _merge_buffers(self, bf: OutOfGraphReplayBuffer):
-        logger.info("other:")
-        logger.info(
-            f"add_count: {bf.add_count}, rep cap: {bf._replay_capacity}, _store: {bf._store}"
-        )
-        logger.info("me:")
-        logger.info(
-            f"add_count: {self.add_count}, rep cap: {self._replay_capacity}, _store: {self._store}"
-        )
         self.add_count += bf.add_count
         self._replay_capacity += bf._replay_capacity
         self._store = dict(
@@ -134,10 +77,6 @@ class OfflineOutOfGraphReplayBuffer(OutOfGraphReplayBuffer):
                     for arrays in zip(self._store.values(), bf._store.values())
                 ],
             )
-        )
-        logger.info("MERGED!")
-        logger.info(
-            f"add_count: {self.add_count}, rep cap: {self._replay_capacity}, _store: {self._store}"
         )
 
     def load_single_buffer(self, suffix: int):
@@ -151,10 +90,7 @@ class OfflineOutOfGraphReplayBuffer(OutOfGraphReplayBuffer):
 
     def _load_buffers_serial(self, iters: List[int]):
         for i in iters:
-            # self.load_single_buffer(i)
-            buf = self._load_buffer(i)
-            self._merge_buffers(buf)
-        self._validate_capacity()
+            self.load_single_buffer(i)
 
     def _load_buffers_parallel(self, iters: List[int]):
         with futures.ThreadPoolExecutor() as thread_pool:
@@ -167,10 +103,9 @@ class OfflineOutOfGraphReplayBuffer(OutOfGraphReplayBuffer):
     def load_buffers(self, parallel: bool, iterations: List[int] = None):
         if iterations is None:
             iterations = utils.list_all_ckpt_iterations(self._buffers_dir)
-            logger.info(f"Load all buffers in {self._buffers_dir}")
-        if parallel:
-            self._load_buffers_parallel(iterations)
-        else:
-            self._load_buffers_serial(iterations)
+            logger.debug(f"Load all buffers in {self._buffers_dir}")
+        (self._load_buffers_parallel if parallel else self._load_buffers_serial)(
+            iterations
+        )
         self._validate_capacity()
-        logger.info(f"Loaded buffers {iterations} from {self._buffers_dir}")
+        logger.debug(f"loaded buffers {iterations} from {self._buffers_dir}")
