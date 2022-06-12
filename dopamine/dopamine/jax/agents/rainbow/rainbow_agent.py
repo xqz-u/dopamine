@@ -42,6 +42,7 @@ import functools
 from dopamine.jax import losses
 from dopamine.jax import networks
 from dopamine.jax.agents.dqn import dqn_agent
+from dopamine.metrics import statistics_instance
 from dopamine.replay_memory import prioritized_replay_buffer
 import gin
 import jax
@@ -418,11 +419,19 @@ class JaxRainbowAgent(dqn_agent.JaxDQNAgent):
           self._replay.set_priority(self.replay_elements['indices'],
                                     jnp.sqrt(loss + 1e-10))
 
-        if self.summary_writer is not None:
-          summary = tf.compat.v1.Summary(value=[
-              tf.compat.v1.Summary.Value(tag='CrossEntropyLoss',
-                                         simple_value=mean_loss)])
-          self.summary_writer.add_summary(summary, self.training_steps)
+        if (self.summary_writer is not None and
+            self.training_steps > 0 and
+            self.training_steps % self.summary_writing_frequency == 0):
+          with self.summary_writer.as_default():
+            tf.summary.scalar('CrossEntropyLoss', mean_loss,
+                              step=self.training_steps)
+          self.summary_writer.flush()
+          if hasattr(self, 'collector_dispatcher'):
+            self.collector_dispatcher.write(
+                [statistics_instance.StatisticsInstance(
+                    'Loss', mean_loss.to_py(), step=self.training_steps),
+                 ],
+                collector_allowlist=self._collector_allowlist)
       if self.training_steps % self.target_update_period == 0:
         self._sync_weights()
 
