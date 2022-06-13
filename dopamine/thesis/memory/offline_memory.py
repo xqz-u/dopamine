@@ -11,7 +11,12 @@ from thesis import utils
 logger = logging.getLogger(__name__)
 
 
-# TODO check again the semantics of add_count and replay capacity!
+# important attributs used to accumulate the returned buffer:
+# - add_count: the total number of calls to OutOfGraphReplayBuffer.add,
+#   so including overwritten trajectories. used to decide where to add
+#   new trajectory (although this does not occur in offline RL)
+# - store: the final trajectories are the concatenation of individual
+#   buffers
 def merge_buffers(
     acc: OutOfGraphReplayBuffer, other: OutOfGraphReplayBuffer
 ) -> OutOfGraphReplayBuffer:
@@ -34,143 +39,35 @@ def load_buffer(
 ) -> OutOfGraphReplayBuffer:
     buff = OutOfGraphReplayBuffer(**kwargs)
     buff.load(buffers_dir, iteration_suffix)
+    # infer real replay capacity of dumped buffer - the loader one might
+    # have been created with a big placeholder one
     buff._replay_capacity = buff._store["observation"].shape[0]
     return buff
 
 
-# TODO parallel version
 @gin.configurable
 def load_offline_buffers(
     buffers_dir: str, iterations: List[int] = None, parallel: bool = False, **kwargs
 ) -> OutOfGraphReplayBuffer:
+    # load all memory checkpoints available in a folder if not
+    # specified otherwise
     if iterations is None:
         iterations = utils.list_all_ckpt_iterations(buffers_dir)
         logger.info(f"Load all buffers in {buffers_dir}")
     first_iter, *rest_iter = iterations
-    merged_buffers = ft.reduce(
-        lambda acc, i: merge_buffers(acc, load_buffer(buffers_dir, i, **kwargs)),
-        rest_iter,
-        load_buffer(buffers_dir, first_iter, **kwargs),
-    )
-    logger.info(f"Loaded buffers {iterations} from {buffers_dir}")
-    return merge_buffers
-
-
-# NOTE the idea behind creating a new class for offline memory was
-# originally that it could share some core functionality with its
-# prioritized counterpart; if this is not true, a class can be
-# avoided: the same logic to merge OutOfGraphReplayBuffer(s) can be
-# implemented with a function which just returns the latter.
-# should implement this behavior in the future!
-# NOTE the parameters passed as kwargs won't be detected when the
-# memory is instantiated (see thesis.agents.Agent:68); the ones
-# declared explicitly in this class' init are those which make sense
-# here
-@gin.configurable
-class OfflineOutOfGraphReplayBuffer(OutOfGraphReplayBuffer):
-    _buffers_dir: str
-    _parent_necessary_attributes: List[str] = [
-        "add_count",
-        "_replay_capacity",
-        "invalid_range",
-        "_store",
-    ]
-
-    def __init__(
-        self,
-        _buffers_dir: str,
-        _buffers_iterations: List[int] = None,
-        load_parallel: bool = True,
-        **kwargs,
-    ):
-        super().__init__(**kwargs)
-        self._kwargs = kwargs
-        self._buffers_dir = _buffers_dir
-        self.load_buffers(load_parallel, iterations=_buffers_iterations)
-
-    @property
-    def parent_necessary_attributes(self) -> List[str]:
-        return self._parent_necessary_attributes
-
-    @parent_necessary_attributes.setter
-    def parent_necessary_attributes(self, _):
-        raise Exception(
-            f"Attribute _parent_necessary_attributes of {self.__class__} is frozen"
+    if not parallel:
+        buffers_union = ft.reduce(
+            lambda acc, i: merge_buffers(acc, load_buffer(buffers_dir, i, **kwargs)),
+            rest_iter,
+            load_buffer(buffers_dir, first_iter, **kwargs),
         )
-
-    def _validate_capacity(self):
-        if self._replay_capacity < self._update_horizon + self._stack_size:
-            raise ValueError(
-                "There is not enough capacity to cover "
-                "update_horizon and stack_size."
-            )
-        if self._replay_capacity < self._batch_size:
-            raise ValueError(
-                f"Not enough trajectories are available for sampling: capacity {self._replay_capacity}, batch size: {self._batch_size}"
-            )
-
-    def _load_buffer(self, suffix: int) -> OutOfGraphReplayBuffer:
-        buff = OutOfGraphReplayBuffer(**self._kwargs)
-        buff.load(self._buffers_dir, suffix)
-        buff._replay_capacity = buff._store["observation"].shape[0]
-        return buff
-
-    def _merge_buffers(self, bf: OutOfGraphReplayBuffer):
-        logger.info("other:")
-        logger.info(
-            f"add_count: {bf.add_count}, rep cap: {bf._replay_capacity}, _store: {bf._store}"
-        )
-        logger.info("me:")
-        logger.info(
-            f"add_count: {self.add_count}, rep cap: {self._replay_capacity}, _store: {self._store}"
-        )
-        self.add_count += bf.add_count
-        self._replay_capacity += bf._replay_capacity
-        self._store = dict(
-            zip(
-                self._store.keys(),
-                [
-                    np.concatenate(arrays)
-                    for arrays in zip(self._store.values(), bf._store.values())
-                ],
-            )
-        )
-        logger.info("MERGED!")
-        logger.info(
-            f"add_count: {self.add_count}, rep cap: {self._replay_capacity}, _store: {self._store}"
-        )
-
-    def load_single_buffer(self, suffix: int):
-        other = self._load_buffer(suffix)
-        for attr in self.parent_necessary_attributes:
-            setattr(self, attr, getattr(other, attr))
-        self._validate_capacity()
-        logger.debug(
-            f"Loaded buffer {self._buffers_dir}-{suffix} add_count: {self.add_count}"
-        )
-
-    def _load_buffers_serial(self, iters: List[int]):
-        for i in iters:
-            # self.load_single_buffer(i)
-            buf = self._load_buffer(i)
-            self._merge_buffers(buf)
-        self._validate_capacity()
-
-    def _load_buffers_parallel(self, iters: List[int]):
+    else:
+        logger.info("Load buffers in parallel with a thread pool")
         with futures.ThreadPoolExecutor() as thread_pool:
-            buffers = [thread_pool.submit(self._load_buffer, i) for i in iters]
-        for bf in (b.result() for b in buffers):
-            self._merge_buffers(bf)
-
-    # default behavior: load all iterations in a directory if not
-    # specified otherwise
-    def load_buffers(self, parallel: bool, iterations: List[int] = None):
-        if iterations is None:
-            iterations = utils.list_all_ckpt_iterations(self._buffers_dir)
-            logger.info(f"Load all buffers in {self._buffers_dir}")
-        if parallel:
-            self._load_buffers_parallel(iterations)
-        else:
-            self._load_buffers_serial(iterations)
-        self._validate_capacity()
-        logger.info(f"Loaded buffers {iterations} from {self._buffers_dir}")
+            buffers = [
+                thread_pool.submit(load_buffer, buffers_dir, i, **kwargs)
+                for i in iterations
+            ]
+        buffers_union = ft.reduce(merge_buffers, (b.result() for b in buffers))
+    logger.info(f"Loaded buffers {iterations} from {buffers_dir}")
+    return buffers_union

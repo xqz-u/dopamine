@@ -1,5 +1,5 @@
 import functools as ft
-from typing import Callable, Dict, Tuple, Union
+from typing import Callable, Dict, Tuple
 
 import jax
 import numpy as np
@@ -11,10 +11,7 @@ from thesis import custom_pytrees, memory, networks, types
 
 
 def sample_replay_buffer(
-    memory: Union[
-        memory.OutOfGraphReplayBuffer,
-        memory.OfflineOutOfGraphReplayBuffer,
-    ],
+    memory: memory.OutOfGraphReplayBuffer,
     batch_size: int = None,
     indices: int = None,
 ) -> Dict[str, jnp.ndarray]:

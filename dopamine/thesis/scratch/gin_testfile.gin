@@ -18,12 +18,11 @@ create_gym_environment.environment_name = "CartPole"
 create_gym_environment.version = "v1"
 
 # memory - online
-OutOfGraphReplayBuffer.keep_every = 1
-create_memory.memory_class = @OutOfGraphReplayBuffer
+create_memory.memory_call = @OutOfGraphReplayBuffer
 
 # explorer
 Egreedy.epsilon_train = 1
-create_explorer.explorer_class = @Egreedy
+create_explorer.explorer_call = @Egreedy
 
 # models, optimizer, loss function
 # NOTE with gin configuration, there is no need to have
@@ -58,9 +57,15 @@ AimReporter.repo = %constants.scratch_data_dir
 
 # runner
 OnlineRunner.experiment_name = %EXP_NAME
-OnlineRunner.iterations = 10
-OnlineRunner.steps = 500
 OnlineRunner.eval_steps = 100
 OnlineRunner.eval_period = 100
-OnlineRunner.reporters = [@MongoReporter(), @AimReporter()]
+# OnlineRunner.reporters = [@MongoReporter(), @AimReporter()]
 OnlineRunner.checkpoint_base_dir = %constants.scratch_data_dir
+OnlineRunner.record_experience = True
+OnlineRunner.schedule = "train"
+
+create_runner.runner_call = @OnlineRunner
+create_runner.agent_call = @DQVEnsemble
+create_runner.create_env_fn = @create_gym_environment
+create_runner.steps = 500
+create_runner.iterations = 10

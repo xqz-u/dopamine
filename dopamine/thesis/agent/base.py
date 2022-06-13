@@ -18,7 +18,7 @@ from thesis.agent import utils as agent_utils
 @define
 class Agent(ABC):
     policy_evaluator: exploration.PolicyEvaluator
-    memory: Union[memory.OutOfGraphReplayBuffer, memory.OfflineOutOfGraphReplayBuffer]
+    memory: memory.OutOfGraphReplayBuffer
     rng: custom_pytrees.PRNGKeyWrap
     clip_rewards: bool = True
     gamma: float = 0.99

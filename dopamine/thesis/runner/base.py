@@ -17,12 +17,12 @@ logger = logging.getLogger(__name__)
 
 # TODO instantiation! can use absl.flags or should use a dict config?
 #      this goes together with Config! + collection
-# TODO update git upstream and propose fix to CircularReplayBuffer
 # TODO update project dependencies
 # TODO change keys of metrics in order to avoid processing them in R?
 #      report summarised metrics to mongo to avoid doing them again
 #      in R?
-# TODO simplify offline_memory.OfflineOutOfGraphReplayBuffer?
+# TODO all numpy that goes to jitted functions (mostly in replay_buffer)
+# become jax.numpy
 # NOTE @define has slots=True, whitch prevents runtime monkeypatching
 # (see
 # https://www.attrs.org/en/stable/glossary.html#term-slotted-classes).
@@ -80,9 +80,7 @@ class Runner(ABC):
                 f"DONE Iteration {self.curr_iteration}\n{pprint.pformat(metrics)}"
             )
             self.curr_iteration += 1
-        logger.info("Finalize reporters...")
-        for reporter in self.reporters:
-            reporter.finalize()
+        self.finalize_experiment()
 
     def step_environment(
         self, action: int, episode_steps: int
@@ -167,16 +165,21 @@ class Runner(ABC):
                 },
             )
 
-    # NOTE checkpoints are taken only on training iterations, where the
-    # memory buffer grows and the agent's parameters are updated
+    # generally, additional hooks to run at the end of a run
+    def finalize_experiment(self):
+        logger.info("Running finalize hooks")
+        for reporter in self.reporters:
+            reporter.finalize()
+
+    # NOTE checkpoints are taken only on training iterations, when the
+    # agent parameters are updated
+    # NOTE checkpoint memory when OnlineRunner.record_experience; in
+    # other cases, checkpoints are only useful for start/stop
+    # functionality, not implemented now
     def checkpoint_experiment(self):
         # checkpoint agent state
+        logger.debug(f"Write agent checkpoint at {self._checkpoint_dir}")
         self._checkpointer.save_checkpoint(self.curr_iteration, self.agent.serializable)
-        # checkpoint memory
-        self.agent.memory.save(self._checkpoint_dir, self.curr_iteration)
-        logger.debug(
-            f"Wrote memory checkpoint #{self.curr_iteration} at {self._checkpoint_dir}"
-        )
 
 
 def accumulate_metrics(

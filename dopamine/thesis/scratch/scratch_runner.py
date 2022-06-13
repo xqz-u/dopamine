@@ -28,7 +28,7 @@ env_info = constants.env_info(env)
 env_state_shape = env_info["observation_shape"] + (1,)
 env_state_example = jnp.ones(env_state_shape)
 
-offline_mem = memory.OfflineOutOfGraphReplayBuffer(
+offline_mem = memory.load_offline_buffers(
     f"{constants.data_dir}/CartPole-v1/DQNAgent/cp_dqn_full_experience_%%/checkpoints/full_experience/0",
     [0],
     load_parallel=False,

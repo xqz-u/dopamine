@@ -7,8 +7,9 @@ import thesis.memory
 import thesis.custom_pytrees
 import thesis.exploration
 import thesis.agent
+import dopamine.jax.networks
 
-EXP_NAME = "bellaraga"
+EXP_NAME = "bellaraga_offline"
 
 # rng
 PRNGKeyWrap.seed = 5
@@ -18,19 +19,19 @@ create_gym_environment.environment_name = "CartPole"
 create_gym_environment.version = "v1"
 
 # memory - offline
-OfflineOutOfGraphReplayBuffer._buffers_iterations = [0]
-create_memory.memory_class = @OfflineOutOfGraphReplayBuffer
+# load_offline_buffers.iterations = [0]
+create_memory.memory_call = @load_offline_buffers
 
 # explorer
-create_explorer.explorer_class = @Egreedy
+create_explorer.explorer_call = @Egreedy
 
 # models, optimizer, loss function
 # NOTE with gin configuration, there is no need to have
 # agent_utils.build_models - right?
-V_MLP = (@MLP, {"features": 1, "hiddens": (4,)})
+V_MLP = (@MLP, {"features": 1, "hiddens": (4,), "min_vals": %jax_networks.CARTPOLE_MIN_VALS, "max_vals": %jax_networks.CARTPOLE_MAX_VALS})
 vfunc/create_model_TS_def.model_def = (@EnsembledNet, {"model": %V_MLP, "n_heads": 2})
 
-qfunc/create_model_TS_def.model_def = (@MLP, {"features": 2, "hiddens": (4,)})
+qfunc/create_model_TS_def.model_def = (@MLP, {"features": 2, "hiddens": (4,), "min_vals": %jax_networks.CARTPOLE_MIN_VALS, "max_vals": %jax_networks.CARTPOLE_MAX_VALS})
 
 adam.learning_rate = 0.001
 adam.eps = 3.125e-4
@@ -58,8 +59,12 @@ AimReporter.repo = %constants.scratch_data_dir
 # runner
 FixedBatchRunner.checkpoint_base_dir = %constants.scratch_data_dir
 FixedBatchRunner.experiment_name = %EXP_NAME
-FixedBatchRunner.iterations = 10
-FixedBatchRunner.steps = 500
 FixedBatchRunner.eval_steps = 100
 FixedBatchRunner.eval_period = 100
-FixedBatchRunner.reporters = [@MongoReporter(), @AimReporter()]
+# FixedBatchRunner.reporters = [@MongoReporter(), @AimReporter()]
+
+create_runner.runner_call = @FixedBatchRunner
+create_runner.agent_call = @DQVEnsemble
+create_runner.create_env_fn = @create_gym_environment
+create_runner.steps = 500
+create_runner.iterations = 10

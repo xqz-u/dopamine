@@ -61,8 +61,6 @@ class PRNGKeyWrap:
     def __post_init__(self):
         if self.key is None:
             self.reset()
-        else:
-            logger.debug(f"Restored RNG: {self}")
 
     def __next__(self) -> jrand.KeyArray:
         self.key, sk = jrand.split(self.key)
