@@ -34,13 +34,14 @@ def create_atari_environment(
     return atari_lib.AtariPreprocessing(gym.make(f"{environment_name}-{version}").env)
 
 
+# NOTE optimizer_fn should have bound arguments
 @gin.configurable
 def create_model_TS_def(
     model_def: types.ModelDef,
-    opt: optax.GradientTransformation,
+    optimizer_fn: Callable[[], optax.GradientTransformation],
     loss_fn: types.LossMetric,
 ) -> types.ModelTSDef:
-    return (agent_utils.build_models(model_def), opt, loss_fn)
+    return (agent_utils.build_models(model_def), optimizer_fn(), loss_fn)
 
 
 # NOTE not using **kwargs but `memory_args` since the latter can be
@@ -75,17 +76,21 @@ def create_explorer(
 
 
 # NOTE assumes the args to the create_* functions and agent_call
-# called here are already bound
+# called here are already bound. exception: environment_* parameters
+# are also given here, and override gin-defined ones, to be able to
+# query them
 @gin.configurable
 def create_runner(
     runner_call: Union[runner.OnlineRunner, runner.FixedBatchRunner],
     agent_call: agent.Agent,
     create_env_fn: Callable[[str, str, Any], types.DiscreteEnv],
+    environment_name: str,
+    environment_version: str,
     steps: int,
     iterations: int,
     replay_capacity: int = None,
 ) -> Union[runner.OnlineRunner, runner.FixedBatchRunner]:
-    env = create_env_fn()
+    env = create_env_fn(environment_name, environment_version)
     return runner_call(
         agent=agent_call(
             policy_evaluator=create_explorer(env=env),

@@ -5,7 +5,6 @@ from abc import ABC, abstractmethod
 from copy import deepcopy
 from typing import Callable, List, Tuple, Union
 
-import gin
 import jax
 import numpy as np
 from attrs import define, field
@@ -15,27 +14,20 @@ from thesis import agent, reporter, types, utils
 logger = logging.getLogger(__name__)
 
 
-# TODO instantiation! can use absl.flags or should use a dict config?
-#      this goes together with Config! + collection
-# TODO update project dependencies
 # TODO change keys of metrics in order to avoid processing them in R?
 #      report summarised metrics to mongo to avoid doing them again
 #      in R?
-# TODO all numpy that goes to jitted functions (mostly in replay_buffer)
-# become jax.numpy
 # NOTE @define has slots=True, whitch prevents runtime monkeypatching
 # (see
 # https://www.attrs.org/en/stable/glossary.html#term-slotted-classes).
 # for this reason, no mixins are run after __attrs_post_init__ rn, since
 # this limits the mixins' scope; switch to dataclasses or use
 # slots=False to fix
-@gin.configurable
 @define
 class Runner(ABC):
     agent: agent.Agent
-    checkpoint_base_dir: str
     env: Union[gym_lib.GymPreprocessing, atari_lib.AtariPreprocessing]
-    experiment_name: str
+    checkpoint_base_dir: str
     iterations: int
     steps: int
     eval_period: int = 5
@@ -54,12 +46,12 @@ class Runner(ABC):
     schedule: str = "train_and_eval"
     curr_iteration: int = field(init=False, default=0)
     global_steps: int = field(init=False, default=0)
-    _checkpoint_dir: str = field(init=False)
     _checkpointer: checkpointer.Checkpointer = field(init=False)
+    _checkpoint_dir: str = field(init=False)
 
     def __attrs_post_init__(self):
         self._checkpoint_dir = os.path.join(
-            str(self.checkpoint_base_dir), self.experiment_name, str(self.redundancy)
+            self.checkpoint_base_dir, str(self.redundancy)
         )
         self._checkpointer = checkpointer.Checkpointer(self._checkpoint_dir)
         logger.info(f"Created checkpointer at: {self._checkpointer._base_directory}")

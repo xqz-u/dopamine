@@ -1,5 +1,6 @@
 import functools as ft
 
+import gin
 import jax
 from attrs import define
 from flax.core import frozen_dict
@@ -19,6 +20,7 @@ def linearly_decaying_epsilon(
     return epsilon_target + bonus
 
 
+@gin.configurable
 @define
 class EgreedyLinearDecay(egreedy.Egreedy):
     decay_period: int = 250000
@@ -43,7 +45,7 @@ class EgreedyLinearDecay(egreedy.Egreedy):
             )
             if mode == "train"
             else self.epsilon_eval,
-            self.rng,
+            rng,
             params,
             state,
         )

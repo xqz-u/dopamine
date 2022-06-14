@@ -37,6 +37,10 @@
     instantiation is quite strict, so maybe work on that... And in
     general try to keep configurations as python dictionaries, do not
     rely on gin DONE
+    NOTE changed in new source! using gin config and relying on gin to
+    save parameter values (it gives a config string, not as good as a
+    dict but automatically collected)
+    Moreover, no start and stop functionality exists now
   + Runner should be able to work with offline data as well! Unify the
     interfaces DONE
   + Ask Matthia for Peregrine access DONE
@@ -64,18 +68,95 @@
 
 * General
   - [X] Parallelize redundancies code
-  - [ ] Offline prioritized buffer: transfer all trajectories
-	registered in some buffers to a prioritized one with equal
-	priority, then train offline. Merge trajectories! Very data
-	heavy, how to do this?
-  - [ ] Ensemble DQVMax
+  - [X] Ensemble DQVMax
   - [ ] Download the Atari DQN replay dataset on Peregrine
   - [ ] Produce distributional shift plot with DQVMax in atari games (?)
-  - [ ] Load trained agent for evaluation (?)
   - [ ] Move everything persistence-related to Mongo (?)
-  - [ ] Move the offline replay buffer classes to functions
+  - [X] Move the offline replay buffer classes to functions
   - [ ] Argparser to run in a unified way
-  - [ ] Add paramater 'record_eval_q_values' to define a schedule to
-	record Q-values, e.g. could be 'all' for every steps, or
-	e.g. 'first' or 'last' for those particular steps of an episode;
-	right now, we record every first step
+  - [ ] all numpy that goes to jitted functions (mostly in
+	replay_buffer) become jax.numpy
+
+* Wrong design choices
+  + the one related to the definition of model ts def: min and max
+    vals to mlp depend on created env, but rn they cant easily be
+    passed programmatically to mlp. this embeds env logic in a gin
+    config file; need to understand how to create different
+    configs programmitically for e.g. parallel runs to really
+    understand how to use the gin config framework in a modular way -
+    e.g. use predefined definitions of networks, optimezers etc. and
+    only bind specific parameters
+  + GIN ITSELF: don't have a dictionary of parameters anymore, which
+    was especially useful in Aim to visualize runs!!! so it makes the
+    latter less useful...
+
+    # possible experiment specification form
+# from thesis import constants, custom_pytrees, exploration, memory, networks
+
+# x = lambda env, steps, iterations: {
+#     "call_": runner.FixedBatchRunner,
+#     "agent": {
+#	"rng": {"call_": custom_pytrees.PRNGKeyWrap, "seed": 5},
+#	"policy_evaluator": {
+#	    "call_": exploration.Egreedy,
+#	    "num_actions": env.environment.action_space.n,
+#	},
+#	"memory": {
+#	    "call_": memory.load_offline_buffers,
+#	    **constants.env_info(env),
+#	    "replay_capacity": steps * iterations,
+#	    "batch_size": 8,
+#	},
+#	"models": {
+#	    "Q": {"call_": instantiators.create_model_TS_def, "model_def": ...},
+#	    "V": {
+#		"call_": instantiators.create_model_TS_def,
+#		"model_def": (
+#		    networks.MLP,
+#		    {"features": 1, "hiddens": (4,), **constants.env_preproc_info(env)},
+#		),
+#	    },
+#	},
+#     },
+# }
+
+
+# plus, if I put exp_name here, can create a hash and pass it to
+# reporters
+# --runner
+# run_hash (?)
+# _checkpoint_dir
+# iterations
+# steps
+# eval_period
+# eval_steps
+# redundancy
+# policy_eval_callbacks_names (?)
+# schedule
+# f"{env.environment.spec.name}-{env.environment.spec.version}"
+
+
+# --agent
+# rng.seed
+# clip_rewards
+# gamma
+# min_replay_history
+# sync_weights_every
+# training_period
+
+# --memory
+# observation_shape
+# observation_dtype
+# reward_dtype
+# stack_size
+# batch_size
+# update_horizon
+# replay_capacity
+
+# --policy_evaluator
+# all fields except model_call
+
+# --models
+# model_def (got it from the start)
+# optimizer (with params)
+# loss_fn

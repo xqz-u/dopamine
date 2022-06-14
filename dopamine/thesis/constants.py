@@ -17,6 +17,8 @@ peregrine_data_dir = "/data/s3680622"
 
 scratch_dir = base_dir.joinpath("scratch")
 
+gin_configs_dir = base_dir.joinpath("experiments", "configs")
+
 # register some constants useful in Gin config files
 gin.constant("constants.data_dir", str(data_dir))
 gin.constant("constants.scratch_data_dir", str(scratch_data_dir))

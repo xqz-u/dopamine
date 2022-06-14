@@ -1,0 +1,58 @@
+import thesis.networks
+import thesis.reporter
+import thesis.constants
+import thesis.runner
+import thesis.instantiators
+import thesis.memory
+import thesis.custom_pytrees
+import thesis.exploration
+import thesis.agent
+import dopamine.jax.networks
+
+EXP_NAME = "test_redundancies"
+
+# memory - offline
+create_memory.memory_call = @load_offline_buffers
+
+# explorer
+create_explorer.explorer_call = @EgreedyLinearDecay
+
+# models, optimizer, loss function
+V_MLP = (@MLP, {"features": 1, "hiddens": (4,), "min_vals": %jax_networks.CARTPOLE_MIN_VALS, "max_vals": %jax_networks.CARTPOLE_MAX_VALS})
+vfunc/create_model_TS_def.model_def = (@EnsembledNet, {"model": %V_MLP, "n_heads": 2})
+
+qfunc/create_model_TS_def.model_def = (@MLP, {"features": 2, "hiddens": (4,), "min_vals": %jax_networks.CARTPOLE_MIN_VALS, "max_vals": %jax_networks.CARTPOLE_MAX_VALS})
+
+# optimizer
+adam.learning_rate = 0.001
+adam.eps = 3.125e-4
+
+create_model_TS_def.optimizer_fn = @adam
+create_model_TS_def.loss_fn = @mse_loss
+
+# agent
+DQVEnsemble.V_model_def = @vfunc/create_model_TS_def()
+DQVEnsemble.Q_model_def = @qfunc/create_model_TS_def()
+DQVEnsemble.sync_weights_every = 1
+DQVEnsemble.min_replay_history = 100
+DQVEnsemble.rng = @PRNGKeyWrap()
+
+# reporters
+MongoReporter.experiment_name = %EXP_NAME
+MongoReporter.db_name = "thesis_db"
+MongoReporter.collection_name = %EXP_NAME
+
+AimReporter.experiment_name = %EXP_NAME
+
+# runner
+FixedBatchRunner.eval_steps = 100
+FixedBatchRunner.eval_period = 100
+FixedBatchRunner.reporters = [@MongoReporter(), @AimReporter()]
+
+create_runner.runner_call = @FixedBatchRunner
+create_runner.agent_call = @DQVEnsemble
+create_runner.create_env_fn = @create_gym_environment
+create_runner.steps = 500
+create_runner.iterations = 10
+create_runner.environment_name = "CartPole"
+create_runner.environment_version = "v1"

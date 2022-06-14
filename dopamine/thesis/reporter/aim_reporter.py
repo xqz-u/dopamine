@@ -3,7 +3,7 @@ import logging
 import aim
 import gin
 from attrs import define, field
-from thesis import types, utils
+from thesis import types
 from thesis.reporter import base
 
 logger = logging.getLogger(__name__)

@@ -5,6 +5,8 @@ from attrs import define, field
 from thesis import types
 
 
+# TODO is experiment_name really mandatory? cant we let decide the
+# values passed by the runner what is really necessary?
 @gin.configurable
 @define
 class Reporter(ABC):
@@ -16,6 +18,7 @@ class Reporter(ABC):
     def __attrs_post_init__(self):
         ...
 
+    # NOTE current reporters only use summ_reports
     @abstractmethod
     def __call__(
         self,

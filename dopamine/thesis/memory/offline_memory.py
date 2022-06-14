@@ -51,7 +51,7 @@ def load_offline_buffers(
 ) -> OutOfGraphReplayBuffer:
     # load all memory checkpoints available in a folder if not
     # specified otherwise
-    if iterations is None:
+    if not iterations:
         iterations = utils.list_all_ckpt_iterations(buffers_dir)
         logger.info(f"Load all buffers in {buffers_dir}")
     first_iter, *rest_iter = iterations

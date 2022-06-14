@@ -11,7 +11,6 @@ from thesis import custom_pytrees, exploration, memory, types
 from thesis.agent import utils as agent_utils
 
 
-# TODO config collector
 # NOTE some attrs.field are given a default in order to exist in an
 # instance, or they wouldn't until explicitly set. Conversely, those
 # fields with only init=False are created in __attrs_post_init__
@@ -24,7 +23,6 @@ class Agent(ABC):
     gamma: float = 0.99
     min_replay_history: int = 5000
     sync_weights_every: int = 200
-    training_steps: int = 0
     training_period: int = 1
     action: np.ndarray = field(init=False, default=None)
     curr_observation: np.ndarray = field(init=False, default=None)
@@ -34,6 +32,7 @@ class Agent(ABC):
     models: Dict[
         str, Union[custom_pytrees.ValueBasedTS, Iterable[custom_pytrees.ValueBasedTS]]
     ] = field(init=False, factory=dict)
+    training_steps: int = field(init=False, default=0)
     sync_weights_period: int = field(init=False)
     state: np.ndarray = field(init=False)
     name: str = field(init=False)

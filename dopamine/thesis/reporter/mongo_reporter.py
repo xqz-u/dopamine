@@ -5,6 +5,7 @@ from typing import List
 import gin
 import pymongo
 from attrs import define, field
+from thesis import types
 from thesis.reporter import base
 
 logger = logging.getLogger(__name__)
@@ -70,10 +71,10 @@ class MongoReporter(base.Reporter):
         logger.info(f"Writing on db: {self.db_name} collection: {self.collection_name}")
         signal.signal(signal.SIGINT, self.collection.flush_docs_handler)
 
-    def __call__(self, raw_reports: dict, summ_reports: dict, experiment_info: dict):
+    def __call__(self, _, summ_reports: types.MetricsDict, experiment_info: dict):
         self.collection += {
-            "experiment": self.experiment_name,
-            **raw_reports,
+            "experiment_name": self.experiment_name,
+            **summ_reports,
             **experiment_info,
         }
 
