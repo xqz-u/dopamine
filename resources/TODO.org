@@ -69,94 +69,65 @@
 * General
   - [X] Parallelize redundancies code
   - [X] Ensemble DQVMax
-  - [ ] Download the Atari DQN replay dataset on Peregrine
-  - [ ] Produce distributional shift plot with DQVMax in atari games (?)
+  - [ ] Download the full Atari DQN replay dataset on Peregrine
+  - [ ] Produce distributional shift plot with DQVMax in atari games
   - [ ] Move everything persistence-related to Mongo (?)
   - [X] Move the offline replay buffer classes to functions
   - [ ] Argparser to run in a unified way
   - [ ] all numpy that goes to jitted functions (mostly in
 	replay_buffer) become jax.numpy
 
-* Wrong design choices
-  + the one related to the definition of model ts def: min and max
-    vals to mlp depend on created env, but rn they cant easily be
-    passed programmatically to mlp. this embeds env logic in a gin
-    config file; need to understand how to create different
-    configs programmitically for e.g. parallel runs to really
-    understand how to use the gin config framework in a modular way -
-    e.g. use predefined definitions of networks, optimezers etc. and
-    only bind specific parameters
+* Sub-optimal design choices
   + GIN ITSELF: don't have a dictionary of parameters anymore, which
     was especially useful in Aim to visualize runs!!! so it makes the
     latter less useful...
+  + config collection: happening only after instantiation, it is not
+    possible to have a single config that acts as a "constructor" and
+    then gets enriched with the defaults; this is different to what is
+    achieved by e.g. Ray-RLib, but a similar approach relies on a
+    manager that knows how to create things - right now all of my
+    objects come already instantiated.
+    plus, the dict of parameters is
+    not available to any object at runtime - major drawback of keeping
+    things separated.
+  + code repetition in agents; one thing to do could be to have
+    Agent.train_fn as a parameter, then to write only one Agent.train
+    definition
 
-    # possible experiment specification form
-# from thesis import constants, custom_pytrees, exploration, memory, networks
-
-# x = lambda env, steps, iterations: {
-#     "call_": runner.FixedBatchRunner,
-#     "agent": {
-#	"rng": {"call_": custom_pytrees.PRNGKeyWrap, "seed": 5},
-#	"policy_evaluator": {
-#	    "call_": exploration.Egreedy,
-#	    "num_actions": env.environment.action_space.n,
-#	},
-#	"memory": {
-#	    "call_": memory.load_offline_buffers,
-#	    **constants.env_info(env),
-#	    "replay_capacity": steps * iterations,
-#	    "batch_size": 8,
-#	},
-#	"models": {
-#	    "Q": {"call_": instantiators.create_model_TS_def, "model_def": ...},
-#	    "V": {
-#		"call_": instantiators.create_model_TS_def,
-#		"model_def": (
-#		    networks.MLP,
-#		    {"features": 1, "hiddens": (4,), **constants.env_preproc_info(env)},
-#		),
-#	    },
-#	},
-#     },
-# }
-
-
-# plus, if I put exp_name here, can create a hash and pass it to
-# reporters
-# --runner
-# run_hash (?)
-# _checkpoint_dir
-# iterations
-# steps
-# eval_period
-# eval_steps
-# redundancy
-# policy_eval_callbacks_names (?)
-# schedule
-# f"{env.environment.spec.name}-{env.environment.spec.version}"
-
-
-# --agent
-# rng.seed
-# clip_rewards
-# gamma
-# min_replay_history
-# sync_weights_every
-# training_period
-
-# --memory
-# observation_shape
-# observation_dtype
-# reward_dtype
-# stack_size
-# batch_size
-# update_horizon
-# replay_capacity
-
-# --policy_evaluator
-# all fields except model_call
-
-# --models
-# model_def (got it from the start)
-# optimizer (with params)
-# loss_fn
+* Config collection
+  + runner DONE
+    run_hash (?)
+    _checkpoint_dir
+    iterations
+    steps
+    eval_period
+    eval_steps
+    redundancy
+    policy_eval_callbacks_name
+    schedule
+    f"{env.environment.spec.name}-{env.environment.spec.version}"
+  + agent DONE
+    rng
+    memory
+    clip_rewards
+    gamma
+    min_replay_history
+    sync_weights_every
+    training_period
+    policy_evaluator
+  + rng DONE
+    seed
+  + memory DONE
+    observation_shape
+    observation_dtype
+    reward_dtype
+    stack_size
+    batch_size
+    update_horizon
+    replay_capacity
+  + policy_evaluator DONE
+    all fields except model_call (set in base class)
+  + models DONE
+    model_def (got it from the start)
+    optimizer (with params)
+    loss_fn
