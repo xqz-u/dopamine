@@ -14,6 +14,7 @@ from thesis import agent, reporter, types, utils
 logger = logging.getLogger(__name__)
 
 
+# TODO keep having instantiators?
 # NOTE @define has slots=True, whitch prevents runtime monkeypatching
 # (see
 # https://www.attrs.org/en/stable/glossary.html#term-slotted-classes).

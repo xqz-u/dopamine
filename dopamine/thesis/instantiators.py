@@ -4,13 +4,11 @@ import gin
 import gym
 import optax
 from dopamine.discrete_domains import atari_lib
-
 # to be able to import stuff from here
 from dopamine.discrete_domains.gym_lib import create_gym_environment
 from dopamine.jax import losses
 
 from thesis import agent, constants, exploration, memory, runner, types
-from thesis.agent import utils as agent_utils
 
 # This module contains functions which are supposed to avoid defining a
 # myriad of constans in gin files, by instead configuring some functions
@@ -33,16 +31,6 @@ def create_atari_environment(
     environment_name: str, version: str, env_args: Dict[str, Any] = None
 ):
     return atari_lib.AtariPreprocessing(gym.make(f"{environment_name}-{version}").env)
-
-
-# NOTE optimizer_fn should have bound arguments
-@gin.configurable
-def create_model_TS_def(
-    model_def: types.ModelDef,
-    optimizer: optax.GradientTransformation,
-    loss_fn: types.LossMetric,
-) -> types.ModelTSDef:
-    return (agent_utils.build_models(model_def), optimizer, loss_fn)
 
 
 # NOTE not using **kwargs but `memory_args` since the latter can be
