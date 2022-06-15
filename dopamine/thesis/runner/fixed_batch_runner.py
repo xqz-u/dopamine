@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class FixedBatchRunner(base.Runner):
     def train_iteration(self) -> types.MetricsDict:
         logger.info("START offline training...")
-        episodes_dict = {"steps": self.steps, **self.agent.initial_train_dict}
+        episodes_dict = {"Steps": self.steps, **self.agent.initial_train_dict}
         for _ in range(self.steps):
             episodes_dict = self.agent.train_accumulate(
                 episodes_dict, self.agent.learn()

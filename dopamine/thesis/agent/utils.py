@@ -1,6 +1,7 @@
 import functools as ft
 from typing import Callable, Dict, Tuple
 
+import gin
 import jax
 import numpy as np
 import optax
@@ -143,9 +144,10 @@ def build_TS_ensemble(
 
 
 # save the maximum Q-value for the first state of each episode
+@gin.configurable(denylist=["episode_dict", "policy_eval_dict"])
 def t0_max_q_callback(
     episode_dict: types.MetricsDict, policy_eval_dict: types.MetricsDict
 ) -> types.MetricsDict:
-    if episode_dict["steps"] == 0:
-        episode_dict["max_q_s0"] = policy_eval_dict["max_q"]
+    if episode_dict["Steps"] == 0:
+        episode_dict["Max_Q_S0"] = policy_eval_dict["max_q"]
     return episode_dict

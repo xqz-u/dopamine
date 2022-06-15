@@ -40,8 +40,8 @@ class AimReporter(base.Reporter):
             self.writer.track(
                 val,
                 name=tag,
-                step=experiment_info["global_steps"],
-                epoch=experiment_info["iteration"],
+                step=experiment_info["Global_steps"],
+                epoch=experiment_info["Iteration"],
             )
         logger.debug("Sent summarised reports to AIM")
 

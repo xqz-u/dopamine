@@ -30,9 +30,9 @@ class OnlineRunner(base.Runner):
     def train_iteration(self) -> types.MetricsDict:
         logger.info("START online training...")
         episodes_dict = {
-            "reward": 0.0,
-            "steps": 0,
-            "episodes": 0,
+            "Reward": 0.0,
+            "Steps": 0,
+            "Episodes": 0,
             **self.agent.initial_train_dict,
         }
         while episodes_dict["steps"] < self.steps:

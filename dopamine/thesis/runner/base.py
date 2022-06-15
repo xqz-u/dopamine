@@ -14,9 +14,12 @@ from thesis import agent, reporter, types, utils
 logger = logging.getLogger(__name__)
 
 
-# TODO change keys of metrics in order to avoid processing them in R?
-#      report summarised metrics to mongo to avoid doing them again
-#      in R?
+# TODO once config collection is finalized, dump losses only by their
+# names - so modify Agent.initial_train_dict and
+# summarise_metrics. then dump
+# config-related parameters (loss, optimizer etc.) in a separate mongo
+# collection dedicated to experiments configurations
+
 # NOTE @define has slots=True, whitch prevents runtime monkeypatching
 # (see
 # https://www.attrs.org/en/stable/glossary.html#term-slotted-classes).
@@ -30,7 +33,7 @@ class Runner(ABC):
     checkpoint_base_dir: str
     iterations: int
     steps: int
-    eval_period: int = 5
+    eval_period: int = 1
     eval_steps: int = 500
     # list of callbacks which take in the dictionary of metrics
     # collected by the runner in the agent-env interaction loop, and a
@@ -84,14 +87,14 @@ class Runner(ABC):
     def agent_env_loop(self, mode: str) -> types.MetricsDict:
         evaluation = mode == "eval"
         episode_dict = {
-            "reward": 0.0,
-            "steps": 0,
+            "Reward": 0.0,
+            "Steps": 0,
             **({} if evaluation else self.agent.initial_train_dict),
         }
         obs, done = self.env.reset(), False
         while not done:
             action, more_info = self.agent.select_action(obs, mode)
-            obs, reward, done, _ = self.step_environment(action, episode_dict["steps"])
+            obs, reward, done, _ = self.step_environment(action, episode_dict["Steps"])
             for cb in self.on_policy_eval:
                 episode_dict = cb(episode_dict, more_info)
             if not evaluation:
@@ -99,23 +102,23 @@ class Runner(ABC):
                 episode_dict = self.agent.train_accumulate(
                     episode_dict, self.agent.learn()
                 )
-            episode_dict["reward"] += reward
-            episode_dict["steps"] += 1
+            episode_dict["Reward"] += reward
+            episode_dict["Steps"] += 1
         return episode_dict
 
     # NOTE default implementation, can be overridden like
     # self.train_iteration; no checkpointing performed here
     def eval_iteration(self) -> types.MetricsDict:
         logger.info("START evaluation...")
-        episodes_dict = {"reward": 0.0, "steps": 0, "episodes": 0}
-        while episodes_dict["steps"] < self.eval_steps:
+        episodes_dict = {"Reward": 0.0, "Steps": 0, "Episodes": 0}
+        while episodes_dict["Steps"] < self.eval_steps:
             episode_stats = self.agent_env_loop("eval")
             logger.debug(f"\tEval episode: {episode_stats}")
             episodes_dict = accumulate_metrics(episodes_dict, episode_stats, self)
         # during training, training steps take the precedence; same when
         # training and evaluation are interleaved
         if self.schedule == "eval":
-            self.global_steps += episodes_dict["steps"]
+            self.global_steps += episodes_dict["Steps"]
         summ_episodes_dict = summarise_metrics(episodes_dict, self)
         self.report_metrics(episodes_dict, summ_episodes_dict, "eval")
         return {"eval": {"raw": episodes_dict, "summary": summ_episodes_dict}}
@@ -147,13 +150,13 @@ class Runner(ABC):
                 metrics,
                 metrics_summary,
                 {
-                    "agent": self.agent.name,
-                    "env_name": self.env.environment.spec.name,
-                    "env_version": self.env.environment.spec.version,
-                    "iteration": self.curr_iteration,
-                    "redundancy": self.redundancy,
-                    "global_steps": self.global_steps,
-                    "schedule": mode,
+                    "Agent": self.agent.name,
+                    "Env": self.env.environment.spec.name,
+                    "Env_Version": self.env.environment.spec.version,
+                    "Iteration": self.curr_iteration,
+                    "Redundancy": self.redundancy,
+                    "Global_steps": self.global_steps,
+                    "Schedule": mode,
                 },
             )
 
@@ -179,11 +182,11 @@ def accumulate_metrics(
 ) -> types.MetricsDict:
     if "loss" in episode_dict:
         acc = runner.agent.train_accumulate(acc, episode_dict)
-    acc["reward"] += episode_dict["reward"]
-    acc["steps"] += episode_dict["steps"]
-    acc["episodes"] += 1
-    if "max_q_s0" in episode_dict:
-        acc["max_q_s0"] = acc.get("max_q_s0", 0) + episode_dict["max_q_s0"]
+    acc["Reward"] += episode_dict["Reward"]
+    acc["Steps"] += episode_dict["Steps"]
+    acc["Episodes"] += 1
+    if "Max_Q_S0" in episode_dict:
+        acc["Max_Q_S0"] = acc.get("Max_Q_S0", 0) + episode_dict["Max_Q_S0"]
     return acc
 
 
@@ -194,17 +197,17 @@ def summarise_metrics(
     if "loss" in episodes_dict:
         episodes_dict["loss"] = jax.tree_map(float, episodes_dict["loss"])
         for loss_name, loss in episodes_dict["loss"].items():
-            summ_dict[f"{loss_name}-Loss"] = loss / summ_dict["steps"]
+            summ_dict[f"{loss_name}-Loss"] = loss / summ_dict["Steps"]
         del summ_dict["loss"]
-    if "reward" in summ_dict:
-        summ_dict["reward"] /= summ_dict["episodes"]
-    if "max_q_s0" in summ_dict:
-        episodes_dict["max_q_s0"] = float(episodes_dict["max_q_s0"])
-        summ_dict["max_q_s0"] = float(summ_dict["max_q_s0"])
+    if "Reward" in summ_dict:
+        summ_dict["Reward"] /= summ_dict["Episodes"]
+    if "Max_Q_S0" in summ_dict:
+        episodes_dict["Max_Q_S0"] = float(episodes_dict["Max_Q_S0"])
+        summ_dict["Max_Q_S0"] = float(summ_dict["Max_Q_S0"])
         env_optimal_q_s0 = utils.deterministic_discounted_return(
             runner.env.environment, runner.agent.gamma
         )
-        summ_dict["max_q_s0"] /= summ_dict["episodes"]
-        summ_dict["qstar_s0"] = env_optimal_q_s0
-        episodes_dict["qstar_s0"] = env_optimal_q_s0
+        summ_dict["Max_Q_S0"] /= summ_dict["Max_Q_S0"]
+        summ_dict["QStar_S0"] = env_optimal_q_s0
+        episodes_dict["QStar_S0"] = env_optimal_q_s0
     return summ_dict
