@@ -85,6 +85,10 @@ class PRNGKeyWrap:
         return cls(**serialized_rng)
 
     @property
+    def reportable(self) -> Tuple[str]:
+        return ("seed", )
+
+    @property
     def serializable(self) -> Dict[str, Union[jnp.ndarray, int]]:
         # cast: when going through a jitted function, a PyTree's
         # attributes are concretized/traced and lose original type

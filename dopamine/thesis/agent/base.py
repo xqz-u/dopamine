@@ -21,8 +21,8 @@ class Agent(ABC):
     rng: custom_pytrees.PRNGKeyWrap
     clip_rewards: bool = True
     gamma: float = 0.99
-    min_replay_history: int = 5000
-    sync_weights_every: int = 200
+    min_replay_history: int = int(5e3)
+    sync_weights_every: int = int(2e3)
     training_period: int = 1
     action: np.ndarray = field(init=False, default=None)
     curr_observation: np.ndarray = field(init=False, default=None)
@@ -154,3 +154,15 @@ class Agent(ABC):
     @property
     def observation_shape(self) -> Tuple[int]:
         return self.memory._observation_shape
+
+    @property
+    def reportable(self) -> Tuple[str]:
+        return (
+            "policy_evaluator",
+            "rng",
+            "clip_rewards",
+            "gamma",
+            "min_replay_history",
+            "sync_weights_every",
+            "training_period",
+        )

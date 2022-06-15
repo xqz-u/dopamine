@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Tuple
 
 import gin
 from attrs import define, field
@@ -8,6 +9,7 @@ from thesis import custom_pytrees, types
 
 # NOTE always pass an RNG: it has shared state maintained by an Agent,
 # and having a reference here too implies more error-prone bookkeeping
+
 
 # model_call is set by each agent once its model and train states are
 # created
@@ -27,3 +29,7 @@ class PolicyEvaluator(ABC):
         **kwargs
     ) -> types.PolicyEvalInfo:
         ...
+
+    @property
+    def reportable(self) -> Tuple[str]:
+        return [a.name for a in self.__attrs_attrs__ if a.name != "model_call"]
