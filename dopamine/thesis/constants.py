@@ -1,3 +1,4 @@
+import math
 import os
 from pathlib import Path
 
@@ -55,3 +56,25 @@ def env_info(env: types.DiscreteEnv) -> dict:
 
 
 opposite = lambda vs: tuple(map(lambda el: -el, vs))
+
+CARTPOLE_MIN_VALS = (-2.4, -5.0, -math.pi / 12.0, -math.pi * 2.0)
+
+ACROBOT_MIN_VALS = (-1.0, -1.0, -1.0, -1.0, -5.0, -5.0)
+
+MOUNTAINCAR_MIN_VALS = (-1.2, -0.07)
+MOUNTAINCAR_MAX_VALS = (0.6, 0.07)
+
+env_preproc_info = {
+    "CartPole-v1": {
+        "min_vals": CARTPOLE_MIN_VALS,
+        "max_vals": opposite(CARTPOLE_MIN_VALS),
+    },
+    "Acrobot-v1": {
+        "min_vals": ACROBOT_MIN_VALS,
+        "max_vals": opposite(ACROBOT_MIN_VALS),
+    },
+    "MountainCar-v0": {
+        "min_vals": MOUNTAINCAR_MIN_VALS,
+        "max_vals": MOUNTAINCAR_MAX_VALS,
+    },
+}

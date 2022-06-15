@@ -4,6 +4,7 @@ import gin
 import gym
 import optax
 from dopamine.discrete_domains import atari_lib
+
 # to be able to import stuff from here
 from dopamine.discrete_domains.gym_lib import create_gym_environment
 from dopamine.jax import losses
@@ -38,10 +39,10 @@ def create_atari_environment(
 @gin.configurable
 def create_model_TS_def(
     model_def: types.ModelDef,
-    optimizer_fn: Callable[[], optax.GradientTransformation],
+    optimizer: optax.GradientTransformation,
     loss_fn: types.LossMetric,
 ) -> types.ModelTSDef:
-    return (agent_utils.build_models(model_def), optimizer_fn(), loss_fn)
+    return (agent_utils.build_models(model_def), optimizer, loss_fn)
 
 
 # NOTE not using **kwargs but `memory_args` since the latter can be
