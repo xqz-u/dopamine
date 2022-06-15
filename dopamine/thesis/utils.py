@@ -24,6 +24,46 @@ def jax_container_shapes(cont) -> dict[str, Tuple[int]]:
     return jax.tree_map(lambda el: el.shape, cont)
 
 
+def callable_name_getter(call_: callable) -> str:
+    return getattr(call_, "__name__", type(call_).__name__)
+
+
+# make a simple configuration reportable easily e.g. in Aim
+def reportable_config(conf: dict) -> dict:
+    return jax.tree_map(lambda n: callable_name_getter(n) if callable(n) else n, conf)
+
+
+# recursively create a dict of the form {key: reportable_object.key},
+# where a key is given by `reportable_object.fields_specifier`. each
+# value in `fields_specifier` can either be:
+# - a string to a field, to perform getattr(reportable_object, key)
+# - a string to a field with the `fields_specifier` attribute itself:
+#   recur and gather the attribute's values
+# - a tuple T of the form (key, callable with no parameters), such that
+#   {T[0]: T[1]()}
+def config_collector(reportable_object: object, fields_specifier: str) -> dict:
+    def inner(obj, conf_dict):
+        reportables = getattr(obj, fields_specifier, None)
+        if not reportables:
+            return conf_dict
+        for field in reportables:
+            if isinstance(field, tuple):
+                assert len(field) == 2 and callable(field[1])
+                conf_dict[field[0]] = field[1]()
+                continue
+            value = getattr(obj, field)
+            if hasattr(value, fields_specifier):
+                conf_dict[field] = {
+                    "call_": callable_name_getter(value),
+                    **inner(value, {}),
+                }
+            else:
+                conf_dict[field] = value
+        return conf_dict
+
+    return inner(reportable_object, {})
+
+
 # default folder structure:
 # basedir/ENVIRONMENT/AGENT/exp_name
 # the paths in caps lock can be omitted with build_hierarchy=True

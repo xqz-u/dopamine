@@ -47,7 +47,7 @@ def env_info(env: types.DiscreteEnv) -> dict:
                 if isinstance(env, atari_lib.AtariPreprocessing)
                 else [
                     env.observation_space.shape + (1,),
-                    env.observation_space.dtype,
+                    env.observation_space.dtype.type,
                     1,
                 ]
             ),
