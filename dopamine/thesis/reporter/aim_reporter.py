@@ -23,17 +23,7 @@ class AimReporter(base.Reporter):
             repo=self.repo,
             experiment=self.experiment_name,
         )
-        # self.writer["hparams"] = self.hparams
         logger.info(f"Initialized AIM repo at: {self.writer.repo.path}")
-
-    # @property
-    # def hparams(self) -> dict:
-    #     r_conf = utils.reportable_conf(self.conf)
-    #     for k in ["base_dir", "ckpt_file_prefix", "logging_file_prefix"]:
-    #         r_conf["runner"].pop(k, None)
-    #     r_conf["env"].pop("preproc", None)
-    #     r_conf.pop("reporters", None)
-    #     return r_conf
 
     def __call__(self, _, summ_reports: types.MetricsDict, experiment_info: dict):
         for tag, val in summ_reports.items():
@@ -42,9 +32,14 @@ class AimReporter(base.Reporter):
                 name=tag,
                 step=experiment_info["Global_steps"],
                 epoch=experiment_info["Iteration"],
+                context={"context": experiment_info["Schedule"]},
             )
         logger.debug("Sent summarised reports to AIM")
 
     # no real finalization needed here
     def finalize(self):
         ...
+
+    def register_conf(self, conf: dict):
+        logger.info("Registering experiment config in Aim...")
+        self.writer["hparams"] = conf

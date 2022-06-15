@@ -46,13 +46,15 @@ class BufferedMongoCollection:
         return f"<{self.__class__}#docs:{self.size}>"
 
 
+# NOTE experimnt_name determines the name for the `metrics_collection`
+# and `configs_collection` database
 @gin.configurable
 @define
 class MongoReporter(base.Reporter):
     db_uri: str = "mongodb://localhost:27017"
-    db_name: str = "thesis_db"
-    collection_name: str = None
-    buffering: int = 50
+    metrics_collection: str = "metrics"
+    configs_collection: str = "configs"
+    metrics_buffering: int = 50
     timeout: int = 30
     client: pymongo.MongoClient = field(init=False)
     db: pymongo.database.Database = field(init=False)
@@ -60,26 +62,35 @@ class MongoReporter(base.Reporter):
 
     def __attrs_post_init__(self):
         super().__attrs_post_init__()
-        # default collection name is experiment name
-        self.collection_name = self.collection_name or self.experiment_name
         self.client = pymongo.MongoClient(
             self.db_uri, serverSelectionTimeoutMS=self.timeout * 1000
         )
         logger.info(f"Opened Mongo client connection at {self.db_uri}")
-        self.db = self.client[self.db_name]
+        self.db = self.client[self.experiment_name]
         self.collection = BufferedMongoCollection(
-            self.buffering, self.db[self.collection_name]
+            self.metrics_buffering, self.db[self.metrics_collection]
         )
-        logger.info(f"Writing on db: {self.db_name} collection: {self.collection_name}")
+        logger.info(
+            f"Writing on db: {self.experiment_name} collection: {self.metrics_collection}"
+        )
+        # dump any pending metrics on Cc-Cc
         signal.signal(signal.SIGINT, self.collection.flush_docs_handler)
 
     def __call__(self, _, summ_reports: types.MetricsDict, experiment_info: dict):
         self.collection += {
-            "experiment_name": self.experiment_name,
             **summ_reports,
             **experiment_info,
         }
 
     def finalize(self):
         self.collection.safe_flush_docs()
-        logger.info("Flushed any pending Mongo documents")
+        logger.info("Flushed any pending Mongo metrics documents")
+
+    # write the experiment configuration to the `configs` database
+    # under collection `collection_name`, once
+    def register_conf(self, conf: dict):
+        logger.info("Registering experiment config in Mongo...")
+        configs_coll = self.client[self.experiment_name][self.configs_collection]
+        logger.info(f"db: {self.experiment_name} collection: {self.configs_collection}")
+        # mongo inserts a top-level _id key in documents
+        configs_coll.insert_one(conf.copy())

@@ -28,3 +28,6 @@ class Reporter(ABC):
     @abstractmethod
     def finalize(self):
         ...
+
+    def register_conf(self, conf: dict):
+        ...
