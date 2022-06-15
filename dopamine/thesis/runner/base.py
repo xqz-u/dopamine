@@ -14,12 +14,6 @@ from thesis import agent, reporter, types, utils
 logger = logging.getLogger(__name__)
 
 
-# TODO once config collection is finalized, dump losses only by their
-# names - so modify Agent.initial_train_dict and
-# summarise_metrics. then dump
-# config-related parameters (loss, optimizer etc.) in a separate mongo
-# collection dedicated to experiments configurations
-
 # NOTE @define has slots=True, whitch prevents runtime monkeypatching
 # (see
 # https://www.attrs.org/en/stable/glossary.html#term-slotted-classes).
@@ -30,6 +24,7 @@ logger = logging.getLogger(__name__)
 class Runner(ABC):
     agent: agent.Agent
     env: Union[gym_lib.GymPreprocessing, atari_lib.AtariPreprocessing]
+    experiment_name: str
     checkpoint_base_dir: str
     iterations: int
     steps: int
@@ -176,6 +171,28 @@ class Runner(ABC):
         logger.debug(f"Write agent checkpoint at {self._checkpoint_dir}")
         self._checkpointer.save_checkpoint(self.curr_iteration, self.agent.serializable)
 
+    @property
+    def reportable(self) -> Tuple[str]:
+        return (
+            "agent",
+            "_checkpoint_dir",
+            "experiment_name",
+            "iterations",
+            "steps",
+            "eval_period",
+            "eval_steps",
+            "redundancy",
+            "schedule",
+            (
+                "env",
+                lambda: f"{self.env.environment.spec.name}-v{self.env.environment.spec.version}",
+            ),
+            (
+                "on_policy_eval",
+                lambda: [utils.callable_name_getter(c) for c in self.on_policy_eval],
+            ),
+        )
+
 
 def accumulate_metrics(
     acc: types.MetricsDict, episode_dict: types.MetricsDict, runner: Runner
@@ -207,7 +224,7 @@ def summarise_metrics(
         env_optimal_q_s0 = utils.deterministic_discounted_return(
             runner.env.environment, runner.agent.gamma
         )
-        summ_dict["Max_Q_S0"] /= summ_dict["Max_Q_S0"]
+        summ_dict["Max_Q_S0"] /= summ_dict["Episodes"]
         summ_dict["QStar_S0"] = env_optimal_q_s0
         episodes_dict["QStar_S0"] = env_optimal_q_s0
     return summ_dict

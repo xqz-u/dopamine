@@ -160,6 +160,7 @@ class Agent(ABC):
         return (
             "policy_evaluator",
             "rng",
+            "memory",
             "clip_rewards",
             "gamma",
             "min_replay_history",

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Tuple
+from typing import Sequence
 
 import gin
 from attrs import define, field
@@ -31,5 +31,5 @@ class PolicyEvaluator(ABC):
         ...
 
     @property
-    def reportable(self) -> Tuple[str]:
+    def reportable(self) -> Sequence[str]:
         return [a.name for a in self.__attrs_attrs__ if a.name != "model_call"]

@@ -1,4 +1,5 @@
 import logging
+from typing import Tuple
 
 import numpy as np
 from dopamine.replay_memory.circular_replay_buffer import OutOfGraphReplayBuffer
@@ -68,6 +69,20 @@ def full_experience_initializer(self, checkpoint_dir: str, steps: int, iteration
     OutOfGraphReplayBuffer.add = add_with_full_exp
 
 
+@property
+def reportable(self) -> Tuple[str]:
+    return (
+        "_observation_shape",
+        "_observation_dtype",
+        "_reward_dtype",
+        "_stack_size",
+        "_batch_size",
+        "_update_horizon",
+        "_replay_capacity",
+    )
+
+
+OutOfGraphReplayBuffer.reportable = reportable
 OutOfGraphReplayBuffer._og_add = OutOfGraphReplayBuffer.add
 for fn in [
     save_buff_subset,

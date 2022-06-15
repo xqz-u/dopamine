@@ -13,6 +13,7 @@ from jax import tree_util
 
 logger = logging.getLogger(__name__)
 
+
 # NOTE circular import; but:
 # s_tp1_fn: thesis.types.ModuleCall
 # loss_metric: thesis.types.LossMetric
@@ -86,7 +87,7 @@ class PRNGKeyWrap:
 
     @property
     def reportable(self) -> Tuple[str]:
-        return ("seed", )
+        return ("seed",)
 
     @property
     def serializable(self) -> Dict[str, Union[jnp.ndarray, int]]:
