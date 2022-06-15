@@ -51,7 +51,7 @@ class BufferedMongoCollection:
 class MongoReporter(base.Reporter):
     db_uri: str = "mongodb://localhost:27017"
     db_name: str = "thesis_db"
-    collection_name: str = "thesis_collection"
+    collection_name: str = None
     buffering: int = 50
     timeout: int = 30
     client: pymongo.MongoClient = field(init=False)
@@ -60,6 +60,8 @@ class MongoReporter(base.Reporter):
 
     def __attrs_post_init__(self):
         super().__attrs_post_init__()
+        # default collection name is experiment name
+        self.collection_name = self.collection_name or self.experiment_name
         self.client = pymongo.MongoClient(
             self.db_uri, serverSelectionTimeoutMS=self.timeout * 1000
         )
