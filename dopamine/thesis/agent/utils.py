@@ -1,10 +1,11 @@
 import functools as ft
-from typing import Callable, Dict, Tuple
+from typing import Callable, Dict, Sequence, Tuple
 
 import gin
 import jax
 import numpy as np
 import optax
+from attrs import define, field
 from flax import linen as nn
 from flax.core import frozen_dict
 from jax import numpy as jnp
@@ -94,37 +95,60 @@ def mark_trainable_params(
     )
 
 
+# small class to hold a simple spec of the model architecture, loss
+# function and optimizer with their own parameters
+@define
+class ModelDefStore:
+    net_def: types.ModelDef
+    opt: optax.GradientTransformation
+    opt_params: dict
+    loss_fn: types.LossMetric
+    loss_fn_params: dict = field(factory=dict)
+    net: nn.Module = field(init=False, default=None)
+
+    def __attrs_post_init__(self):
+        self.net = build_models(self.net_def)
+
+    @property
+    def reportable(self) -> Sequence[str]:
+        return [a.name for a in self.__attrs_attrs__ if a.name != "net"]
+
+
 def build_TS(
-    learner_def: types.ModelTSDef,
+    learner_def: ModelDefStore,
     rng: custom_pytrees.PRNGKeyWrap,
     input_shape: Tuple[int, ...],
     s_t_fn_def: types.ModuleCall,
     s_tp1_fn_def: types.ModuleCall,
     has_target_model: bool,
 ) -> custom_pytrees.ValueBasedTS:
-    params = learner_def[0].init(next(rng), jnp.zeros(input_shape))
+    params = learner_def.net.init(next(rng), jnp.zeros(input_shape))
     return custom_pytrees.ValueBasedTS.create(
         apply_fn=s_t_fn_def,
         s_tp1_fn=s_tp1_fn_def,
         params=params,
         target_params=params if has_target_model else None,
-        tx=learner_def[1],
-        loss_metric=learner_def[2],
+        tx=learner_def.opt(**learner_def.opt_params),
+        loss_metric=ft.partial(learner_def.loss_fn, **learner_def.loss_fn_params),
     )
 
 
+# NOTE s_t_fn used for online estimation, whereas s_tp1_fn is used for
+# regression predictions (s_t1); in an ensemble, the first is done
+# independently by each individual head, while the second by averaging
+# the predictions of all heads (on which the TD-error depends, which
+# is then passed to each head for individual optimization)
 def build_TS_ensemble(
-    learner_def: types.ModelTSDef,
+    learner_def: ModelDefStore,
     rng: custom_pytrees.PRNGKeyWrap,
     input_shape: Tuple[int, ...],
     s_t_fn_def: Callable[..., types.ModuleCall],
     s_tp1_fn_def: types.ModuleCall,
     has_target_model: bool,
 ) -> custom_pytrees.ValueBasedTSEnsemble:
-    model, optimizer, loss_metric = learner_def
-    assert isinstance(model, networks.EnsembledNet)
-    params = model.init(next(rng), jnp.zeros(input_shape))
-    zero_optimizer = optax.set_to_zero()
+    assert isinstance(learner_def.net, networks.EnsembledNet)
+    params = learner_def.net.init(next(rng), jnp.zeros(input_shape))
+    partial_loss_fn = ft.partial(learner_def.loss_fn, **learner_def.loss_fn_params)
     return custom_pytrees.ValueBasedTSEnsemble(
         tuple(
             custom_pytrees.ValueBasedTS.create(
@@ -133,12 +157,15 @@ def build_TS_ensemble(
                 params=params,
                 target_params=params if has_target_model else None,
                 tx=optax.multi_transform(
-                    {"trainable": optimizer, "zero": zero_optimizer},
+                    {
+                        "trainable": learner_def.opt(**learner_def.opt_params),
+                        "zero": optax.set_to_zero(),
+                    },
                     mark_trainable_params(i, params),
                 ),
-                loss_metric=loss_metric,
+                loss_metric=partial_loss_fn,
             )
-            for i in range(model.n_heads)
+            for i in range(learner_def.net.n_heads)
         )
     )
 
