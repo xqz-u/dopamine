@@ -86,7 +86,7 @@ def sync_weights_ensemble(
 @gin.configurable
 @define
 class DQN(base.Agent):
-    Q_model_def: types.ModelTSDef = field(kw_only=True)
+    Q_model_def: agent_utils.ModelDefStore = field(kw_only=True)
 
     def __attrs_post_init__(self):
         super().__attrs_post_init__()
@@ -98,9 +98,9 @@ class DQN(base.Agent):
             self.Q_model_def,
             self.rng,
             self.observation_shape,
-            self.Q_model_def[0].apply,
+            self.Q_model_def.net.apply,
             lambda params, xs: agent_utils.batch_net_eval(
-                self.Q_model_def[0].apply, params, xs
+                self.Q_model_def.net.apply, params, xs
             ).max(
                 1  # max across Q-values (col index == action)
             ),
@@ -127,6 +127,10 @@ class DQN(base.Agent):
         )
         return train_info
 
+    @property
+    def reportable(self) -> Tuple[str]:
+        return super().reportable + ("Q_model_def",)
+
 
 @gin.configurable
 @define
@@ -136,9 +140,9 @@ class DQNEnsemble(DQN):
             self.Q_model_def,
             self.rng,
             self.observation_shape,
-            lambda head, params, xs: self.Q_model_def[0].apply(params, xs, head=head),
+            lambda head, params, xs: self.Q_model_def.net.apply(params, xs, head=head),
             lambda params, xs: agent_utils.batch_net_eval(
-                self.Q_model_def[0].apply, params, xs
+                self.Q_model_def.net.apply, params, xs
             )
             .mean(axis=1)  # average across heads (columns)
             .max(axis=1),
@@ -146,9 +150,9 @@ class DQNEnsemble(DQN):
         )
 
     def _set_exploration_fn(self):
-        self.policy_evaluator.model_call = (
-            lambda params, x: self.Q_model_def[0].apply(params, x).mean(axis=0)
-        )
+        self.policy_evaluator.model_call = lambda params, x: self.Q_model_def.net.apply(
+            params, x
+        ).mean(axis=0)
 
     @property
     def act_selection_params(self) -> frozen_dict.FrozenDict:

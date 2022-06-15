@@ -69,7 +69,7 @@ def train_ensembled(
 @gin.configurable
 @define
 class DQVMax(dqn.DQN):
-    V_model_def: types.ModelTSDef = field(kw_only=True)
+    V_model_def: agent_utils.ModelDefStore = field(kw_only=True)
 
     def __attrs_post_init__(self):
         super().__attrs_post_init__()
@@ -83,11 +83,15 @@ class DQVMax(dqn.DQN):
         train_info, self.models = train(experience_batch, self.models, self.gamma)
         return train_info
 
+    @property
+    def reportable(self):
+        return super().reportable + ("V_model_def",)
+
 
 @gin.configurable
 @define
 class DQVMaxEnsemble(dqn.DQNEnsemble):
-    V_model_def: types.ModelTSDef = field(kw_only=True)
+    V_model_def: agent_utils.ModelDefStore = field(kw_only=True)
 
     def __attrs_post_init__(self):
         super().__attrs_post_init__()

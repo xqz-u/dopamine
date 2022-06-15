@@ -76,8 +76,8 @@ def train_ensembled(
 @gin.configurable
 @define
 class DQV(base.Agent):
-    Q_model_def: types.ModelTSDef = field(kw_only=True)
-    V_model_def: types.ModelTSDef = field(kw_only=True)
+    Q_model_def: agent_utils.ModelDefStore = field(kw_only=True)
+    V_model_def: agent_utils.ModelDefStore = field(kw_only=True)
 
     def __attrs_post_init__(self):
         super().__attrs_post_init__()
@@ -86,22 +86,25 @@ class DQV(base.Agent):
             self.Q_model_def,
             self.rng,
             self.observation_shape,
-            self.Q_model_def[0].apply,
-            lambda x: x,  # placeholder, not used in DQV
+            self.Q_model_def.net.apply,
+            lambda x: x,  # placeholder, DQV Q's regresssion target == V's
             False,
         )
-        self.policy_evaluator.model_call = self.models["Q"].apply_fn
+        self._set_exploration_fn()
+
+    def _set_exploration_fn(self):
+        dqn.DQN._set_exploration_fn(self)
 
     # DQV-Max also uses a V model, but the latter has no target network
-    # in DQV-Max
+    # in DQV-Max; differentiate on target_model
     def _make_V_train_state(self, target_model: bool) -> custom_pytrees.ValueBasedTS:
         return agent_utils.build_TS(
             self.V_model_def,
             self.rng,
             self.observation_shape,
-            self.V_model_def[0].apply,
+            self.V_model_def.net.apply,
             lambda params, xs: agent_utils.batch_net_eval(
-                self.V_model_def[0].apply, params, xs
+                self.V_model_def.net.apply, params, xs
             ),
             target_model,
         )
@@ -121,6 +124,10 @@ class DQV(base.Agent):
         train_info, self.models = train(experience_batch, self.models, self.gamma)
         return train_info
 
+    @property
+    def reportable(self):
+        return super().reportable + ("Q_model_def", "V_model_def")
+
 
 @gin.configurable
 @define
@@ -132,12 +139,15 @@ class DQVEnsemble(DQV):
             self.V_model_def,
             self.rng,
             self.observation_shape,
-            lambda head, params, xs: self.V_model_def[0].apply(params, xs, head=head),
+            lambda head, params, xs: self.V_model_def.net.apply(params, xs, head=head),
             lambda params, xs: agent_utils.batch_net_eval(
-                self.V_model_def[0].apply, params, xs
+                self.V_model_def.net.apply, params, xs
             ).mean(axis=1),
             target_model,
         )
+
+    def _set_exploration_fn(self):
+        dqn.DQNEnsemble._set_exploration_fn(self)
 
     def sync_weights(self):
         self.models["V"] = dqn.sync_weights_ensemble(self.models["V"])
