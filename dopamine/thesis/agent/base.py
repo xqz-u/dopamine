@@ -21,8 +21,8 @@ class Agent(ABC):
     rng: custom_pytrees.PRNGKeyWrap
     clip_rewards: bool = True
     gamma: float = 0.99
-    min_replay_history: int = int(5e3)
-    sync_weights_every: int = int(2e3)
+    min_replay_history: int = int(2e4)
+    sync_weights_every: int = int(5e3)
     training_period: int = 1
     action: np.ndarray = field(init=False, default=None)
     curr_observation: np.ndarray = field(init=False, default=None)

@@ -35,11 +35,11 @@ class OnlineRunner(base.Runner):
             "Episodes": 0,
             **self.agent.initial_train_dict,
         }
-        while episodes_dict["steps"] < self.steps:
+        while episodes_dict["Steps"] < self.steps:
             episodes_dict = base.accumulate_metrics(
                 episodes_dict, self.agent_env_loop("train"), self
             )
-        self.global_steps += episodes_dict["steps"]
+        self.global_steps += episodes_dict["Steps"]
         summ_episodes_dict = base.summarise_metrics(episodes_dict, self)
         self.report_metrics(episodes_dict, summ_episodes_dict, "train")
         self.checkpoint_experiment()

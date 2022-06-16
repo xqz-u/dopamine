@@ -29,7 +29,7 @@ class Runner(ABC):
     checkpoint_base_dir: str
     iterations: int
     steps: int
-    eval_period: int = 1
+    eval_period: int = 10
     eval_steps: int = 500
     # list of callbacks which take in the dictionary of metrics
     # collected by the runner in the agent-env interaction loop, and a
