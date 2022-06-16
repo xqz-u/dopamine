@@ -1,12 +1,15 @@
 import os
 import pprint
 
+import optax
+from dopamine.jax import losses
 from thesis import (
     agent,
+    configs,
     constants,
     custom_pytrees,
+    experiments,
     exploration,
-    instantiators,
     memory,
     networks,
     reporter,
@@ -14,7 +17,6 @@ from thesis import (
     utils,
 )
 from thesis.agent import utils as agent_utils
-from thesis.scratch import dqv_cartpole_acrobot_offline_gin
 
 utils.setup_root_logging()
 
@@ -30,7 +32,7 @@ def make_runner_conf(
     iterations: int = 1000,
     steps: int = 600,
 ) -> runner.Runner:
-    env = instantiators.create_gym_environment(*env_name.split("-"))
+    env = configs.create_gym_environment(*env_name.split("-"))
     logs_dir = utils.data_dir_from_conf(
         experiment_name, env_name, agent.DQV.__name__, logs_base_dir
     )
@@ -48,12 +50,12 @@ def make_runner_conf(
             ),
             #     },
             # )
-            "opt": instantiators.adam,
+            "opt": optax.adam,
             "opt_params": {
                 "learning_rate": 0.001,
                 "eps": 3.125e-4,
             },
-            "loss_fn": instantiators.mse_loss,
+            "loss_fn": losses.mse_loss,
         }
     )
     return {
@@ -94,15 +96,20 @@ def make_runner_conf(
     }
 
 
+CARTPOLE_START_SEED = 12
+ACROBOT_START_SEED = CARTPOLE_START_SEED
+REDUNDANCY = 3
+
+
 args = []
-for i in range(dqv_cartpole_acrobot_offline_gin.REDUNDANCY):
+for i in range(REDUNDANCY):
     args.append(
         [
             # "test_dqv_cartpole_offline",
             "dqv_cartpole_offline",
             "CartPole-v1",
-            dqv_cartpole_acrobot_offline_gin.CARTPOLE_START_SEED + i,
-            dqv_cartpole_acrobot_offline_gin.dqn_cartpole_replay_buffers_root,
+            CARTPOLE_START_SEED + i,
+            experiments.dqn_cartpole_replay_buffers_root,
             i,
             constants.data_dir,
             # constants.scratch_data_dir,
@@ -113,8 +120,8 @@ for i in range(dqv_cartpole_acrobot_offline_gin.REDUNDANCY):
             # "test_dqv_acrobot_offline",
             "dqv_acrobot_offline",
             "Acrobot-v1",
-            dqv_cartpole_acrobot_offline_gin.ACROBOT_START_SEED + i,
-            dqv_cartpole_acrobot_offline_gin.dqn_acrobot_replay_buffers_root,
+            ACROBOT_START_SEED + i,
+            experiments.dqn_acrobot_replay_buffers_root,
             i,
             constants.data_dir,
             # constants.scratch_data_dir,

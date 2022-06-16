@@ -68,14 +68,19 @@
 
 * General
   - [X] Parallelize redundancies code
-  - [X] Ensemble DQVMax
-  - [ ] Download the full Atari DQN replay dataset on Peregrine
+  - [X] Ensemble DQVMax, DQN, DQV
   - [ ] Produce distributional shift plot with DQVMax in atari games
   - [ ] Move everything persistence-related to Mongo (?)
   - [X] Move the offline replay buffer classes to functions
   - [ ] Argparser to run in a unified way
   - [ ] all numpy that goes to jitted functions (mostly in
-	replay_buffer) become jax.numpy
+	replay_buffer) becomes jax.numpy
+  - [ ] Linode server that hosts Mongodb instance, which receives my
+	data from Peregrine and forwards them locally through a ssh
+	tunnel (?). Mostly for atari games, can run classic control
+	ones on my pc
+  - [ ] jax.pmap to better use cpu on peregrine for atari games (?)
+
 
 * Sub-optimal design choices
   + GIN ITSELF: don't have a dictionary of parameters anymore, which
@@ -93,6 +98,21 @@
   + code repetition in agents; one thing to do could be to have
     Agent.train_fn as a parameter, then to write only one Agent.train
     definition
+  + Dopamine: while it provided good inspiration and insights -
+    especially into JAX code and how to structure it - I mainly wanted
+    to use it for:
+    - checkpointing + start and stop functionality
+    - metrics logging
+    - serious replay buffer
+    - a runner already implemented
+    Of these, I'm using only Dopamine's checkpointer - which is kinda
+    overkill without start/stop - and the replay buffer. Especially, I
+    had to design the runner myself, and twice, together with the
+    metric reporters (customizable ones were added only recently). For
+    the final version after the presentation, maybe I can look into
+    https://github.com/rlworkgroup/garage to migrate the overall
+    infrastructure - if there is time and it is not too much a hustle
+    to use JAX there.
 
 * Config collection
   + runner DONE

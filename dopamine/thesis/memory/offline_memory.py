@@ -45,6 +45,9 @@ def load_buffer(
     return buff
 
 
+# TODO loading in parallel with this function is useless e.g. in another
+# process, it adds N additional overheads to create the thread pool;
+# should instead load them first with the thread pool, then just merge
 @gin.configurable
 def load_offline_buffers(
     buffers_dir: str, iterations: List[int] = None, parallel: bool = False, **kwargs

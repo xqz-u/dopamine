@@ -1,4 +1,3 @@
-import logging
 import math
 import os
 from pathlib import Path
@@ -8,8 +7,6 @@ import numpy as np
 from dopamine.discrete_domains import atari_lib
 
 from thesis import types
-
-logger = logging.getLogger(__name__)
 
 base_dir = Path(os.path.dirname(__file__))
 dopamine_dir = Path(base_dir.parent, "dopamine")
@@ -81,23 +78,3 @@ env_preproc_info = {
         "max_vals": MOUNTAINCAR_MAX_VALS,
     },
 }
-
-
-# used in experiments
-
-dqn_cartpole_replay_buffers_root = os.path.join(
-    str(data_dir),
-    "CartPole-v1/DQNAgent/cp_dqn_full_experience_%%/checkpoints/full_experience",
-)
-
-dqn_acrobot_replay_buffers_root = os.path.join(
-    str(data_dir),
-    "Acrobot-v1/DQNAgent/ab_dqn_full_experience_%%/checkpoints/full_experience",
-)
-
-for var_name, var in [
-    ("dqn_cartpole_replay_buffers_root", dqn_cartpole_replay_buffers_root),
-    ("dqn_acrobot_replay_buffers_root", dqn_acrobot_replay_buffers_root),
-]:
-    if not os.path.exists(var):
-        logger.warning(f"Expected `{var_name}` at {var} does not exist!")

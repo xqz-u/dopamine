@@ -11,6 +11,10 @@ from thesis import custom_pytrees, exploration, memory, types
 from thesis.agent import utils as agent_utils
 
 
+# TODO make it so that initial_train_dict and train always return the
+# loss dict as first argument, not under a fixed string: if this key
+# changes e.g. in train_accumulate or elsewhere, all references need
+# updates
 # NOTE some attrs.field are given a default in order to exist in an
 # instance, or they wouldn't until explicitly set. Conversely, those
 # fields with only init=False are created in __attrs_post_init__

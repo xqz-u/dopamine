@@ -1,26 +1,38 @@
-import os
-from typing import Dict
+from typing import Any, Dict
 
+import gym
 import optax
+from dopamine.discrete_domains import atari_lib
+from dopamine.discrete_domains.gym_lib import create_gym_environment
 from dopamine.jax import losses
 
-from thesis import (agent, constants, custom_pytrees, exploration,
-                    instantiators, memory, networks, reporter, utils)
+from thesis import (constants, custom_pytrees, exploration, memory, networks,
+                    reporter)
 from thesis.agent import utils as agent_utils
+
+
+# -------------------------------------------------------------
+# env
+# see dopamine.discrete_domains.atari_lib.create_atari_environment's
+# docs for more comments; rewrote here to allow creation of environments
+# under the ALE/ namespace too
+def create_atari_environment(
+    environment_name: str, version: str, env_args: Dict[str, Any] = None
+):
+    return atari_lib.AtariPreprocessing(gym.make(f"{environment_name}-{version}").env)
+
 
 # -------------------------------------------------------------
 # networks, loss metrics, optimizers definitions
-# (use as agent_utils.ModelDefStore)
+# (enpoints return agent_utils.ModelDefStore)
 
-make_mlp_def = (
-    lambda features, env_name, **kwargs: (
-        networks.MLP,
-        {
-            "features": features,
-            **constants.env_preproc_info.get(env_name, {}),
-            **kwargs,
-        },
-    )
+make_mlp_def = lambda features, env_name, **kwargs: (
+    networks.MLP,
+    {
+        "features": features,
+        **constants.env_preproc_info.get(env_name, {}),
+        **kwargs,
+    },
 )
 
 
@@ -31,14 +43,12 @@ make_ensemble_def = lambda n_heads, heads_model: (
 
 
 make_adam_mse_def = lambda: {
-    "opt": instantiators.adam,
-    # "opt": optax.adam,
+    "opt": optax.adam,
     "opt_params": {
         "learning_rate": 0.001,
         "eps": 3.125e-4,
     },
-    "loss_fn": instantiators.mse_loss,
-    # "loss_fn": losses.mse_loss,
+    "loss_fn": losses.mse_loss,
 }
 
 
@@ -55,12 +65,33 @@ adam_mse_ensemble_mlp = lambda n_heads, features, env_name: agent_utils.ModelDef
 )
 
 
+# NOTE pickle cannot serialize some elements, e.g. flax.linen.relu.
+# one hack is to serialize such elements with cloudpickle, then to
+# deserialize them in the spawned process; or pass to mp.Pool.map a
+# function that returns the args you wanted to pass in.
+# the solution would be to swap mp.Pool's serializer with cloudpickle
+# one's, but I can't make it work
+
+# named functions accepted by base mp.Pool serializer
+def dqn_model_maker(
+    env_name: str, out_dim: int
+) -> Dict[str, agent_utils.ModelDefStore]:
+    return {"Q_model_def": adam_mse_mlp(out_dim, env_name)}
+
+
+def dqvmax_model_maker(
+    env_name: str, q_out_dim: int
+) -> Dict[str, agent_utils.ModelDefStore]:
+    return {
+        **dqn_model_maker(env_name, q_out_dim),
+        "V_model_def": adam_mse_mlp(1, env_name),
+    }
+
+
 # -------------------------------------------------------------
 # policy evaluators, default to Egreedy
-make_explorer = (
-    lambda num_actions, expl_class=exploration.Egreedy, **kwargs: expl_class(
-        num_actions=num_actions, **kwargs
-    )
+make_explorer = lambda env, expl_class=exploration.Egreedy, **kwargs: expl_class(
+    num_actions=env.action_space.n, **kwargs
 )
 
 
@@ -77,14 +108,13 @@ make_online_memory = lambda env, **kwargs: memory.OutOfGraphReplayBuffer(
 
 # steps and iterations have defaults to pass replay_capacity in kwargs
 # too - that is the only case when they are not required
-make_offline_memory = lambda env, buffers_dir, buffers_iterations=None, steps=0, iterations=0, parallel=False, **kwargs: memory.load_offline_buffers(
+make_offline_memory = lambda env, buffers_dir, buffers_iterations=None, parallel=False, **kwargs: memory.load_offline_buffers(
     buffers_dir=buffers_dir,
     iterations=buffers_iterations,
-    parallel=parallel
-    ** {
+    parallel=parallel,
+    **{
         **constants.default_memory_args,
         **constants.env_info(env),
-        **{"replay_capacity": steps * iterations},
         **kwargs,
     },
 )
@@ -97,115 +127,7 @@ make_rng = lambda seed: custom_pytrees.PRNGKeyWrap(seed)
 
 
 # -------------------------------------------------------------
-# reporters, makes all currently available ones by default
-
-make_reporters = lambda exp_name, aim_repo_dir: [
-    reporter.MongoReporter(experiment_name=exp_name),
-    reporter.AimReporter(
-        experiment_name=exp_name,
-        repo=str(aim_repo_dir),
-    ),
+# reporters
+make_reporters = lambda *reporter_confs: [
+    reporter.AVAILABLE_REPORTERS[k](**v) for k, v in reporter_confs
 ]
-
-
-# -------------------------------------------------------------
-# full configuration factories
-# NOTE these are simple functions which make many parameters
-# default, and accept only a limited number of configurable
-# parameters; gin's or sacred's approach of partialling or composing
-# configurations is better and more general. use these simple
-# functions as long as only limited configurability is desired, can
-# also break them in smaller functions, they are almost equal
-
-
-# NOTE when schedule == 'train_and_eval' and full_experience, give high
-# eval_period for better efficiency
-def make_online_runner_conf(
-    experiment_name: str,
-    env_name: str,
-    agent_class: agent.Agent,
-    models_dict: Dict[str, agent_utils.ModelDefStore],
-    seed: int,
-    redundancy: int,
-    logs_base_dir: str = constants.scratch_data_dir,
-    iterations: int = 1000,
-    steps: int = 600,
-    env_creator: callable = instantiators.create_gym_environment,
-    **runner_kwargs
-) -> dict:
-    env = env_creator(*env_name.split("-"))
-    logs_dir = utils.data_dir_from_conf(
-        experiment_name,
-        env_name,
-        utils.callable_name_getter(agent_class),
-        logs_base_dir,
-    )
-    return {
-        **runner_kwargs,
-        "iterations": iterations,
-        "steps": steps,
-        "eval_steps": steps,
-        "redundancy": redundancy,
-        "experiment_name": experiment_name,
-        "env": env,
-        "checkpoint_base_dir": logs_dir,
-        "reporters": make_reporters(experiment_name, logs_base_dir),
-        "agent": agent_class(
-            **{
-                "rng": make_rng(seed),
-                "policy_evaluator": make_explorer(env.environment.action_space.n),
-                "memory": make_online_memory(env),
-                **models_dict,
-            }
-        ),
-    }
-
-
-# NOTE loads all replay buffers iterations
-def make_offline_runner_conf(
-    experiment_name: str,
-    env_name: str,
-    agent_class: agent.Agent,
-    models_dict: Dict[str, agent_utils.ModelDefStore],
-    seed: int,
-    offline_data_dir: str,
-    redundancy: int,
-    logs_base_dir: str = constants.scratch_data_dir,
-    iterations: int = 1000,
-    steps: int = 600,
-    env_creator: callable = instantiators.create_gym_environment,
-    **runner_kwargs
-) -> dict:
-    env = env_creator(*env_name.split("-"))
-    logs_dir = utils.data_dir_from_conf(
-        experiment_name,
-        env_name,
-        utils.callable_name_getter(agent_class),
-        logs_base_dir,
-    )
-    redundancy_offline_data_dir = os.path.join(offline_data_dir, str(redundancy))
-    return {
-        **runner_kwargs,
-        "iterations": iterations,
-        "steps": steps,
-        "eval_steps": steps,
-        "redundancy": redundancy,
-        "experiment_name": experiment_name,
-        "env": env,
-        "checkpoint_base_dir": logs_dir,
-        "reporters": make_reporters(experiment_name, logs_base_dir),
-        "on_policy_eval": [agent_utils.t0_max_q_callback],
-        "agent": agent_class(
-            **{
-                "rng": make_rng(seed),
-                "policy_evaluator": make_explorer(env.environment.action_space.n),
-                "memory": make_offline_memory(
-                    env,
-                    redundancy_offline_data_dir,
-                    steps=steps,
-                    iterations=iterations,
-                ),
-                **models_dict,
-            }
-        ),
-    }
