@@ -143,7 +143,8 @@ def run_once(conf_args):
     run.run()
 
 
-import multiprocessing as mp
+if __name__ == "__main__":
+    import multiprocessing as mp
 
-with mp.Pool() as pool:
-    pool.map(run_once, [arg for arg in args])
+    with mp.Pool() as pool:
+        pool.map(run_once, [arg for arg in args])

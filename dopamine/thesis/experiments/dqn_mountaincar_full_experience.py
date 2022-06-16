@@ -51,13 +51,14 @@ def make_online_runner_conf(
         "experiment_name": experiment_name,
         "env": env,
         "checkpoint_base_dir": logs_dir,
-        "reporters": configs.make_reporters(experiment_name, logs_base_dir),
+        "reporters": configs.make_reporters(
+            ("mongo", {"experiment_name": experiment_name}),
+            ("aim", {"experiment_name": experiment_name, "repo": str(logs_base_dir)}),
+        ),
         "agent": agent_class(
             **{
                 "rng": configs.make_rng(seed),
-                "policy_evaluator": configs.make_explorer(
-                    env.environment.action_space.n
-                ),
+                "policy_evaluator": configs.make_explorer(env),
                 "memory": configs.make_online_memory(env),
                 **models_dict,
             }
@@ -68,26 +69,24 @@ def make_online_runner_conf(
 def run_once(conf_args, conf_kwargs):
     # NOTE put here MLP.activation_fn is not pickle-serializable -
     # necessary for pool.map
-    conf_args[3] = {"Q_model_def": configs.adam_mse_mlp(2, "MountainCar-v0")}
+    conf_args.insert(3, {"Q_model_def": configs.adam_mse_mlp(2, "MountainCar-v0")})
     experiments.run_experiment(
-        runner.OnlineRunner(
-            **configs.make_online_runner_conf(*conf_args, **conf_kwargs)
-        )
+        runner.OnlineRunner(**make_online_runner_conf(*conf_args, **conf_kwargs))
     )
 
 
 args = [
     (
         [
-            "test_dqn_mountaincar_record_experience",
-            # "dqn_mountaincar_record_experience",
+            # "test_dqn_mountaincar_record_experience",
+            "dqn_mountaincar_record_experience",
             "MountainCar-v0",
             agent.DQN,
             # {"Q_model_def": configs.adam_mse_mlp(2, "MountainCar-v0")},
             START_SEED + i,
             i,
-            # str(constants.scratch_data_dir),
-            str(constants.data_dir),
+            str(constants.scratch_data_dir),
+            # str(constants.data_dir),
         ],
         {"record_experience": True, "eval_period": 50, "steps": 500},
     )
