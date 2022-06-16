@@ -66,9 +66,7 @@ def make_runner_conf(
         "env": env,
         "checkpoint_base_dir": logs_dir,
         "reporters": [
-            reporter.MongoReporter(
-                experiment_name=experiment_name, metrics_buffering=4
-            ),
+            reporter.MongoReporter(experiment_name=experiment_name),
             reporter.AimReporter(
                 experiment_name=experiment_name,
                 repo=str(logs_base_dir),
@@ -100,7 +98,8 @@ args = []
 for i in range(dqv_cartpole_acrobot_offline_gin.REDUNDANCY):
     args.append(
         [
-            "test_dqv_cartpole_offline",
+            # "test_dqv_cartpole_offline",
+            "dqv_cartpole_offline",
             "CartPole-v1",
             dqv_cartpole_acrobot_offline_gin.CARTPOLE_START_SEED + i,
             dqv_cartpole_acrobot_offline_gin.dqn_cartpole_replay_buffers_root,
@@ -111,7 +110,8 @@ for i in range(dqv_cartpole_acrobot_offline_gin.REDUNDANCY):
     )
     args.append(
         [
-            "test_dqv_acrobot_offline",
+            # "test_dqv_acrobot_offline",
+            "dqv_acrobot_offline",
             "Acrobot-v1",
             dqv_cartpole_acrobot_offline_gin.ACROBOT_START_SEED + i,
             dqv_cartpole_acrobot_offline_gin.dqn_acrobot_replay_buffers_root,
