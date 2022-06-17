@@ -81,7 +81,6 @@
 	ones on my pc
   - [ ] jax.pmap to better use cpu on peregrine for atari games (?)
 
-
 * Sub-optimal design choices
   + GIN ITSELF: don't have a dictionary of parameters anymore, which
     was especially useful in Aim to visualize runs!!! so it makes the
@@ -105,6 +104,8 @@
     - metrics logging
     - serious replay buffer
     - a runner already implemented
+    - observation preprocissing (although this is kinda interesting,
+      and gym has something in place for that too...)
     Of these, I'm using only Dopamine's checkpointer - which is kinda
     overkill without start/stop - and the replay buffer. Especially, I
     had to design the runner myself, and twice, together with the
@@ -113,6 +114,22 @@
     https://github.com/rlworkgroup/garage to migrate the overall
     infrastructure - if there is time and it is not too much a hustle
     to use JAX there.
+  + Runner: giving each field already instantiated has also the
+    downside that the configuration contains objects that potentially
+    do side effects - e.g. reporters - and is not just pure data!
+    major downside; one solution is to make such attributes lazy,
+    i.e. passing their args together with them - as in the first
+    runner version - or partialling their args. The first option seems
+    sensible as long as config collection is handled properly in a
+    non-convoluted way, is in the first runner I wrote
+  + reporters: maybe better to call them at each step and let them
+    handle their work independently?
+  + always have to give different experiment_name and logs folder when
+    wanting to change between testing and not, pass SCRATCH bool param
+    instead and switch on this one
+  + there was some sort of bug in
+    dopamine.discrete_domains.gym_lib.GymPreprocessing; consider
+    migrating to gym's wrapper in the case of atari experiments too
 
 * Config collection
   + runner DONE
