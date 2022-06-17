@@ -3,12 +3,12 @@ import os
 import pprint
 from abc import ABC, abstractmethod
 from copy import deepcopy
-from typing import Callable, List, Tuple, Union
+from typing import Callable, List, Tuple
 
 import jax
 import numpy as np
 from attrs import define, field
-from dopamine.discrete_domains import atari_lib, checkpointer, gym_lib
+from dopamine.discrete_domains import checkpointer
 from thesis import agent, reporter, types, utils
 
 logger = logging.getLogger(__name__)
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 @define
 class Runner(ABC):
     agent: agent.Agent
-    env: Union[gym_lib.GymPreprocessing, atari_lib.AtariPreprocessing]
+    env: types.DiscreteEnv
     experiment_name: str
     checkpoint_base_dir: str
     iterations: int
@@ -33,17 +33,18 @@ class Runner(ABC):
     # list of callbacks which take in the dictionary of metrics
     # collected by the runner in the agent-env interaction loop, and a
     # dict of additional information returned by a PolicyEvaluator
-    # e.g. Egreedy; these callbacks run at every action selection
-    # step, when they returned a the original dict enriched with by
-    # their own logic
+    # e.g. Egreedy, plus a string specifying training/evaluation;
+    # these callbacks run at every action selection step, when they
+    # returned a the original dict enriched with by their own logic
     on_policy_eval: List[
-        Callable[[types.MetricsDict, types.MetricsDict], types.MetricsDict]
+        Callable[[types.MetricsDict, types.MetricsDict, str], types.MetricsDict]
     ] = field(factory=list)
     redundancy: int = 0
     reporters: List[reporter.Reporter] = field(factory=list)
     schedule: str = "train_and_eval"
     curr_iteration: int = field(init=False, default=0)
     global_steps: int = field(init=False, default=0)
+    env_name: str = field(init=False)
     _checkpointer: checkpointer.Checkpointer = field(init=False)
     _checkpoint_dir: str = field(init=False)
 
@@ -56,6 +57,7 @@ class Runner(ABC):
         logger.info("Configured reporters:")
         for rep in self.reporters:
             logger.info(rep)
+        self.env_name = f"{self.env.spec.name}-v{self.env.spec.version}"
 
     @abstractmethod
     def train_iteration(self) -> types.MetricsDict:
@@ -67,32 +69,24 @@ class Runner(ABC):
         while self.curr_iteration < self.iterations:
             metrics = getattr(self, f"{self.schedule}_iteration")()
             logger.info(
-                f"DONE Iteration {self.curr_iteration}\n{pprint.pformat(metrics)}"
+                f"DONE Iteration {self.curr_iteration}\nAgent: {self.agent.name} Environment: {self.env_name}\n{pprint.pformat(metrics)}"
             )
             self.curr_iteration += 1
         self.finalize_experiment()
 
-    def step_environment(
-        self, action: int, episode_steps: int
-    ) -> Tuple[np.array, float, bool, dict]:
-        observation, reward, done, info = self.env.step(action)
-        done = done or episode_steps >= self.env.environment.spec.max_episode_steps
-        return observation, reward, done, info
-
     def agent_env_loop(self, mode: str) -> types.MetricsDict:
-        evaluation = mode == "eval"
         episode_dict = {
             "Reward": 0.0,
             "Steps": 0,
-            **({} if evaluation else self.agent.initial_train_dict),
+            **({} if mode == "eval" else self.agent.initial_train_dict),
         }
         obs, done = self.env.reset(), False
         while not done:
             action, more_info = self.agent.select_action(obs, mode)
-            obs, reward, done, _ = self.step_environment(action, episode_dict["Steps"])
+            obs, reward, done, _ = self.env.step(action)
             for cb in self.on_policy_eval:
-                episode_dict = cb(episode_dict, more_info)
-            if not evaluation:
+                episode_dict = cb(episode_dict, more_info, mode)
+            if mode == "train":
                 self.agent.record_trajectory(reward, done)
                 episode_dict = self.agent.train_accumulate(
                     episode_dict, self.agent.learn()
@@ -134,7 +128,7 @@ class Runner(ABC):
         np.random.seed(seed)
         logger.info("Seeded numpy's RNG")
         # set gym's state
-        self.env.environment.reset(seed=seed)
+        self.env.reset(seed=seed)
         logger.info("Seeded gym's RNG")
 
     def report_metrics(
@@ -146,8 +140,7 @@ class Runner(ABC):
                 metrics_summary,
                 {
                     "Agent": self.agent.name,
-                    "Env": self.env.environment.spec.name,
-                    "Env_Version": self.env.environment.spec.version,
+                    "Env": self.env_name,
                     "Iteration": self.curr_iteration,
                     "Redundancy": self.redundancy,
                     "Global_steps": self.global_steps,
@@ -183,10 +176,7 @@ class Runner(ABC):
             "eval_steps",
             "redundancy",
             "schedule",
-            (
-                "env",
-                lambda: f"{self.env.environment.spec.name}-v{self.env.environment.spec.version}",
-            ),
+            "env_name",
             (
                 "on_policy_eval",
                 lambda: [utils.callable_name_getter(c) for c in self.on_policy_eval],
@@ -222,7 +212,7 @@ def summarise_metrics(
         episodes_dict["Max_Q_S0"] = float(episodes_dict["Max_Q_S0"])
         summ_dict["Max_Q_S0"] = float(summ_dict["Max_Q_S0"])
         env_optimal_q_s0 = utils.deterministic_discounted_return(
-            runner.env.environment, runner.agent.gamma
+            runner.env, runner.agent.gamma
         )
         summ_dict["Max_Q_S0"] /= summ_dict["Episodes"]
         summ_dict["QStar_S0"] = env_optimal_q_s0
