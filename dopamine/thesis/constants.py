@@ -25,7 +25,7 @@ gin.constant("constants.data_dir", str(data_dir))
 gin.constant("constants.scratch_data_dir", str(scratch_data_dir))
 gin.constant("constants.peregrine_data_dir", str(peregrine_data_dir))
 
-default_memory_args = {"replay_capacity": int(1e6), "batch_size": 32}
+default_memory_args = {"replay_capacity": int(5e5), "batch_size": 32}
 
 
 # NOTE when an agent is created, the relevant environment information
