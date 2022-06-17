@@ -1,7 +1,8 @@
 from typing import Any, Callable, Dict, Tuple, Union
 
+import gym
 import numpy as np
-from dopamine.discrete_domains import atari_lib, gym_lib
+from dopamine.discrete_domains import atari_lib
 from flax import linen as nn
 from flax.core import frozen_dict
 from jax import numpy as jnp
@@ -34,5 +35,6 @@ MetricsDict = Dict[str, Union[MetricValue, "MetricsDict"]]
 # itself
 PolicyEvalInfo = Tuple[custom_pytrees.PRNGKeyWrap, jnp.ndarray, MetricsDict]
 
-# tyes of discrete environments supported
-DiscreteEnv = Union[gym_lib.GymPreprocessing, atari_lib.AtariPreprocessing]
+# tyes of discrete environments supported - although gym.Env contains
+# continous ones too...
+DiscreteEnv = Union[gym.Env, atari_lib.AtariPreprocessing]

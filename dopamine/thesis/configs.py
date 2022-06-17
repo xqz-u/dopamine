@@ -3,23 +3,22 @@ from typing import Any, Dict
 import gym
 import optax
 from dopamine.discrete_domains import atari_lib
-from dopamine.discrete_domains.gym_lib import create_gym_environment
 from dopamine.jax import losses
 
-from thesis import (constants, custom_pytrees, exploration, memory, networks,
-                    reporter)
+from thesis import constants, custom_pytrees, exploration, memory, networks, reporter
 from thesis.agent import utils as agent_utils
-
 
 # -------------------------------------------------------------
 # env
+
+
 # see dopamine.discrete_domains.atari_lib.create_atari_environment's
 # docs for more comments; rewrote here to allow creation of environments
 # under the ALE/ namespace too
 def create_atari_environment(
-    environment_name: str, version: str, env_args: Dict[str, Any] = None
-):
-    return atari_lib.AtariPreprocessing(gym.make(f"{environment_name}-{version}").env)
+    env_name: str, env_args: Dict[str, Any] = None
+) -> atari_lib.AtariPreprocessing:
+    return atari_lib.AtariPreprocessing(gym.make(env_name).env)
 
 
 # -------------------------------------------------------------
