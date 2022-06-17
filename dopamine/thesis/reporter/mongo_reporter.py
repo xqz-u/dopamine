@@ -39,7 +39,7 @@ class BufferedMongoCollection:
     def flush_docs_handler(self, signum: int, frame):
         n_pending_docs = self.size
         self.safe_flush_docs()
-        logger.warn(f"Mongo: handle {signum} flushing {n_pending_docs} documents")
+        logger.warning(f"Mongo: handle {signum} flushing {n_pending_docs} documents")
         raise KeyboardInterrupt
 
     def __repr__(self) -> str:

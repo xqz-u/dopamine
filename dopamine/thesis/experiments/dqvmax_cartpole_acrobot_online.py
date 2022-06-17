@@ -4,17 +4,13 @@ utils.setup_root_logging()
 
 from thesis import agent, configs, constants, experiments, runner
 
-CARTPOLE_START_SEED = 12
-ACROBOT_START_SEED = CARTPOLE_START_SEED
-REDUNDANCY = 3
-
 confs = [
     {
-        "seed": CARTPOLE_START_SEED + i,
+        "seed": experiments.DEFAULT_SEED + i,
         "redundancy": i,
-        "agent_class": agent.DQV,
+        "agent_class": agent.DQVMax,
         "env_name": env_name,
-        "experiment_name": exp_name,
+        "experiment_name": f"DQVMax_{env_name}_online",
         "model_maker_fn": configs.dqvmax_model_maker,
         "logs_base_dir": constants.data_dir,
         "experiment": {
@@ -24,13 +20,10 @@ confs = [
             "eval_period": 2,
         },
     }
-    for env_name, exp_name in [
-        ("CartPole-v1", "dqv_cartpole_offline"),
-        ("Acrobot-v1", "dqv_acrobot_offline"),
-    ]
-    for i in range(REDUNDANCY)
+    for env_name in ["CartPole-v1", "Acrobot-v1"]
+    for i in range(experiments.DEFAULT_REDUNDANCY)
 ]
 
 
 if __name__ == "__main__":
-    runner.run_parallel(confs, runner.FixedBatchRunner)
+    runner.run_parallel(confs, runner.OnlineRunner)
