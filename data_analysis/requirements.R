@@ -1,7 +1,7 @@
 #! /usr/bin/Rscript
 
 if (!require(pacman)) {
-    install.packages("pacman", repos = "https://cloud.r-project.org")
+    install.packages("pacman", lib = "~/", repos = "https://cloud.r-project.org")
 }
 
 packages <- c("here",
@@ -9,7 +9,7 @@ packages <- c("here",
               "viridis",
               "tidyverse",
               "mongolite",
-              "ggpubr",
+              "ggpubr", # NOTE needs cmake and gcc-fortran (on Arch)
               "zeallot")
 
 library(pacman)

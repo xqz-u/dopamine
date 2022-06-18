@@ -122,7 +122,6 @@ def deterministic_discounted_return(env: gym.Env, discount: float = 0.99) -> flo
     rewards = {"CartPole": 1, "Acrobot": -1, "MountainCar": -1, "Pendulum": ...}
     max_steps = env.spec.max_episode_steps
     exponential_gammas = np.array([math.pow(discount, k) for k in range(max_steps)])
-    print("called!")
     return np.sum(
         np.repeat([rewards.get(env.spec.name, np.nan)], max_steps) * exponential_gammas
     )

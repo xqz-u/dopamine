@@ -102,12 +102,12 @@ summarise_redundancies <- function(df, metrics, step_var="steps") {
 }
 
 
-## env <- "cp"
-env <- "ab"
+env <- "cp"
+## env <- "ab"
 coll_name <- glue("{env}_dqvmax_distr_shift")
 coll <- mongo(collection = coll_name,
               db = "thesis_db",
-              url = xxx_mongodb_uri)
+              url = local_mongodb_uri)
 
 alldata <- coll$find("{}") %>% as_tibble()
 

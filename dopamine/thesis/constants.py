@@ -12,6 +12,7 @@ base_dir = Path(os.path.dirname(__file__))
 dopamine_dir = Path(base_dir.parent, "dopamine")
 
 data_dir = Path(base_dir.parent.parent, "resources", "data")
+pics_dir = Path(base_dir.parent.parent, "resources", "images")
 aim_dir = data_dir
 scratch_data_dir = data_dir.joinpath("scratch")
 peregrine_data_dir = "/data/s3680622"

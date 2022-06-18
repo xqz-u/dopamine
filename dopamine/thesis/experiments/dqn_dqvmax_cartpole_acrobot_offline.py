@@ -1,8 +1,20 @@
+import itertools as it
+
 from thesis import utils
 
 utils.setup_root_logging()
 
 from thesis import agent, configs, constants, experiments, runner
+
+exp_name_fn = (
+    lambda ag, env, prefix="": f"{prefix}{utils.callable_name_getter(ag)}_{env}_offline"
+)
+
+
+EXPERIMENT_NAMES = [
+    exp_name_fn(*arg)
+    for arg in it.product([agent.DQN, agent.DQVMax], ["CartPole-v1", "Acrobot-v1"])
+]
 
 confs = [
     c
@@ -21,8 +33,9 @@ confs = [
             "agent_class": agent_class,
             "env_name": env_name,
             "offline_root_data_dir": offline_buff_dir,
-            "experiment_name": f"fake_{utils.callable_name_getter(agent_class)}_{env_name}_offline",
+            "experiment_name": exp_name_fn(agent_class, env_name),
             "model_maker_fn": model_maker,
+            # "logs_base_dir": constants.data_dir,
             "logs_base_dir": constants.scratch_data_dir,
             "experiment": {
                 "iterations": 10,
