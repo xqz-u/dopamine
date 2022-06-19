@@ -9,17 +9,27 @@ from thesis.agent import utils as agent_utils
 
 logger = logging.getLogger(__name__)
 
-
 DEFAULT_REDUNDANCY = 3
-
 DEFAULT_SEED = 42
 
+
 dqn_cartpole_replay_buffers_root = os.path.join(
+    str(constants.data_dir),
+    "CartPole-v1/DQN/DQN_CartPole-v1_full_experience_dopamine_params",
+)
+
+dqn_acrobot_replay_buffers_root = os.path.join(
+    str(constants.data_dir),
+    "Acrobot-v1/DQN/DQN_Acrobot-v1_full_experience_dopamine_params",
+)
+
+
+dqn_cartpole_replay_buffers_root_v0 = os.path.join(
     str(constants.data_dir),
     "CartPole-v1/DQNAgent/cp_dqn_full_experience_%%/checkpoints/full_experience",
 )
 
-dqn_acrobot_replay_buffers_root = os.path.join(
+dqn_acrobot_replay_buffers_root_v0 = os.path.join(
     str(constants.data_dir),
     "Acrobot-v1/DQNAgent/ab_dqn_full_experience_%%/checkpoints/full_experience",
 )
@@ -35,6 +45,7 @@ for var_name, var in [
 # NOTE
 # model_maker_fn gets environment name (str) and environment #actions
 # (Q model predictions in discrete envs) as first 2 args
+# all other arguments should be bound with functools.partial
 @gin.configurable
 def make_conf(
     experiment_name: str,
@@ -104,3 +115,8 @@ def make_conf(
             }
         ),
     }
+
+
+base_exp_name_fn = (
+    lambda ag, env, prefix="": f"{prefix}{utils.callable_name_getter(ag)}_{env}"
+)

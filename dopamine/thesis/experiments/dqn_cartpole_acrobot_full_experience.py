@@ -66,7 +66,6 @@ def confs_cp_dopamine(environments=envs):
                     "iterations": 500,
                     "steps": 1000,
                     "eval_steps": 1000,
-                    "eval_period": 50,
                     "record_experience": True,
                     "schedule": "train",
                 },

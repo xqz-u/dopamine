@@ -93,6 +93,7 @@ TODO pyqt5 does not work in the thesis env, but it does in test envs?!
 	ones on my pc
   - [ ] jax.pmap to better use cpu on peregrine for atari games (?)
   - [ ] shared body - different heads ensemble models!
+  - [ ] record some videos to see how training progresses!!!
 
 * Config collection
   + runner DONE

@@ -41,6 +41,7 @@ make_ensemble_def = lambda n_heads, heads_model: (
 )
 
 
+# like Dopamine's
 make_adam_mse_def = lambda: {
     "opt": optax.adam,
     "opt_params": {
@@ -51,16 +52,20 @@ make_adam_mse_def = lambda: {
 }
 
 
-adam_mse_mlp = lambda features, env_name, **kwargs: agent_utils.ModelDefStore(
-    **{"net_def": make_mlp_def(features, env_name, **kwargs), **make_adam_mse_def()}
+adam_mse_mlp = lambda features, env_name, **mlp_kwargs: agent_utils.ModelDefStore(
+    **{"net_def": make_mlp_def(features, env_name, **mlp_kwargs), **make_adam_mse_def()}
 )
 
 
-adam_mse_ensemble_mlp = lambda n_heads, features, env_name: agent_utils.ModelDefStore(
-    **{
-        "net_def": make_ensemble_def(n_heads, make_mlp_def(features, env_name)),
-        **make_adam_mse_def(),
-    }
+adam_mse_ensemble_mlp = (
+    lambda n_heads, features, env_name, **mlp_kwargs: agent_utils.ModelDefStore(
+        **{
+            "net_def": make_ensemble_def(
+                n_heads, make_mlp_def(features, env_name, **mlp_kwargs)
+            ),
+            **make_adam_mse_def(),
+        }
+    )
 )
 
 
@@ -71,6 +76,11 @@ adam_mse_ensemble_mlp = lambda n_heads, features, env_name: agent_utils.ModelDef
 # the solution would be to swap mp.Pool's serializer with cloudpickle
 # one's, but I can't make it work
 
+# NOTE these functions create all models with same kwargs; if different
+# parameters are desired across models, e.g. a Q ensemble with different
+# heads than the V one for DQVMax, create ad-hoc function which accepts
+# env_name, out_dim, **kwargs; it can build upon some of these fns
+
 # named functions accepted by base mp.Pool serializer
 def dqn_model_maker(
     env_name: str, out_dim: int, **kwargs
@@ -79,36 +89,36 @@ def dqn_model_maker(
 
 
 def dqvmax_model_maker(
-    env_name: str, q_out_dim: int
+    env_name: str, q_out_dim: int, **kwargs
 ) -> Dict[str, agent_utils.ModelDefStore]:
     return {
-        **dqn_model_maker(env_name, q_out_dim),
-        "V_model_def": adam_mse_mlp(1, env_name),
+        **dqn_model_maker(env_name, q_out_dim, **kwargs),
+        "V_model_def": adam_mse_mlp(1, env_name, **kwargs),
     }
 
 
 # ensembles
 def dqn_ensemble_model_maker(
-    env_name: str, out_dim: int, heads: int
+    env_name: str, out_dim: int, heads: int, **kwargs
 ) -> Dict[str, agent_utils.ModelDefStore]:
-    return {"Q_model_def": adam_mse_ensemble_mlp(heads, out_dim, env_name)}
+    return {"Q_model_def": adam_mse_ensemble_mlp(heads, out_dim, env_name, **kwargs)}
 
 
 def dqv_ensemble_model_maker(
-    env_name: str, q_out_dim: int, heads: int
+    env_name: str, q_out_dim: int, heads: int, **kwargs
 ) -> Dict[str, agent_utils.ModelDefStore]:
     return {
-        "V_model_def": adam_mse_ensemble_mlp(heads, 1, env_name),
-        **dqn_model_maker(env_name, q_out_dim),
+        "V_model_def": adam_mse_ensemble_mlp(heads, 1, env_name, **kwargs),
+        **dqn_model_maker(env_name, q_out_dim, **kwargs),
     }
 
 
 def dqvmax_ensemble_model_maker(
-    env_name: str, q_out_dim: int, heads: int
+    env_name: str, q_out_dim: int, heads: int, **kwargs
 ) -> Dict[str, agent_utils.ModelDefStore]:
     return {
-        **dqn_ensemble_model_maker(env_name, q_out_dim, env_name),
-        "V_model_def": adam_mse_ensemble_mlp(heads, 1, env_name),
+        **dqn_ensemble_model_maker(env_name, q_out_dim, env_name, **kwargs),
+        "V_model_def": adam_mse_ensemble_mlp(heads, 1, env_name, **kwargs),
     }
 
 
