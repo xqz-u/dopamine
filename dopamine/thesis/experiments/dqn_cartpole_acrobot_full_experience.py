@@ -4,13 +4,14 @@ utils.setup_root_logging()
 
 from thesis import agent, configs, constants, experiments, runner
 
+agents_and_models = [(agent.DQN, configs.dqn_model_maker)]
+envs = ["CartPole-v1", "Acrobot-v1"]
+exp_name_fn = (
+    lambda ag, env, prefix="": f"{prefix}{utils.callable_name_getter(ag)}_{env}_full_experience"
+)
+
 
 def main():
-    exp_name_fn = (
-        lambda ag, env, prefix="": f"{prefix}{utils.callable_name_getter(ag)}_{env}_full_experience"
-    )
-    agents_and_models = [(agent.DQN, configs.dqn_model_maker)]
-    envs = ["CartPole-v1", "Acrobot-v1"]
     return [
         c
         for agent_class, model_maker in agents_and_models
@@ -41,28 +42,26 @@ def main():
     ]
 
 
-# TODO net size
-def confs_cp_dopamine():
-    exp_name_fn = (
-        lambda ag, env, prefix="": f"{prefix}{utils.callable_name_getter(ag)}_{env}_full_experience_dopamine_params"
+# NOTE only cartpole!
+def confs_cp_dopamine(environments=envs):
+    exp_name_fn_new = (
+        lambda *args, **kwargs: f"{exp_name_fn(*args, **kwargs)}_dopamine_params"
     )
-    agents_and_models = [(agent.DQN, configs.dqn_model_maker)]
-    envs = ["CartPole-v1"]
     return [
         c
         for agent_class, model_maker in agents_and_models
-        for env_name in envs
+        for env_name in environments
         for c in [
             {
                 "seed": experiments.DEFAULT_SEED + i,
                 "redundancy": i,
                 "agent_class": agent_class,
                 "env_name": env_name,
-                "experiment_name": exp_name_fn(agent_class, env_name, prefix="fake_"),
-                # "experiment_name": exp_name_fn(agent_class, env_name),
+                # "experiment_name": exp_name_fn(agent_class, env_name, prefix="fake_"),
+                "experiment_name": exp_name_fn_new(agent_class, env_name),
                 "model_maker_fn": model_maker,
-                # "logs_base_dir": constants.data_dir,
-                "logs_base_dir": constants.scratch_data_dir,
+                "logs_base_dir": constants.data_dir,
+                # "logs_base_dir": constants.scratch_data_dir,
                 "experiment": {
                     "iterations": 500,
                     "steps": 1000,
@@ -85,11 +84,12 @@ def confs_cp_dopamine():
 
 
 confs = main()
-EXPERIMENT_NAMES = [c["experiment_name"] for c in confs]
-
-confs_dopamine = confs_cp_dopamine()
+# EXPERIMENT_NAMES = [c["experiment_name"] for c in confs]
+# confs_dopamine = confs_cp_dopamine()
+confs_dopamine = confs_cp_dopamine(["Acrobot-v1"])
 
 
 if __name__ == "__main__":
     # runner.run_parallel(confs, runner.OnlineRunner)
-    runner.run_parallel(confs_dopamine, runner.OnlineRunner)
+    # runner.run_parallel(confs_dopamine, runner.OnlineRunner)
+    ...
