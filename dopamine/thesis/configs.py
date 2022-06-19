@@ -5,8 +5,7 @@ import optax
 from dopamine.discrete_domains import atari_lib
 from dopamine.jax import losses
 
-from thesis import (constants, custom_pytrees, exploration, memory, networks,
-                    reporter)
+from thesis import constants, custom_pytrees, exploration, memory, networks, reporter
 from thesis.agent import utils as agent_utils
 
 # -------------------------------------------------------------
@@ -52,8 +51,8 @@ make_adam_mse_def = lambda: {
 }
 
 
-adam_mse_mlp = lambda features, env_name: agent_utils.ModelDefStore(
-    **{"net_def": make_mlp_def(features, env_name), **make_adam_mse_def()}
+adam_mse_mlp = lambda features, env_name, **kwargs: agent_utils.ModelDefStore(
+    **{"net_def": make_mlp_def(features, env_name, **kwargs), **make_adam_mse_def()}
 )
 
 
@@ -74,9 +73,9 @@ adam_mse_ensemble_mlp = lambda n_heads, features, env_name: agent_utils.ModelDef
 
 # named functions accepted by base mp.Pool serializer
 def dqn_model_maker(
-    env_name: str, out_dim: int
+    env_name: str, out_dim: int, **kwargs
 ) -> Dict[str, agent_utils.ModelDefStore]:
-    return {"Q_model_def": adam_mse_mlp(out_dim, env_name)}
+    return {"Q_model_def": adam_mse_mlp(out_dim, env_name, **kwargs)}
 
 
 def dqvmax_model_maker(

@@ -93,7 +93,10 @@ def make_conf(
                         **kwargs.get("memory", {}),
                     )
                     if offline_root_data_dir
-                    else configs.make_online_memory(env)
+                    else configs.make_online_memory(
+                        env,
+                        **kwargs.get("memory", {}),
+                    )
                 ),
                 **model_maker_fn(
                     env_name, env.action_space.n, **kwargs.get("model_args", {})
