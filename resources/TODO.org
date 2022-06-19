@@ -12,6 +12,18 @@
   branch? DONE see =thesis.patcher=
 
 
+NOTE my DQN agent learns slower than Dopamine's one, e.g. on CartPole!
+need to check why again, although I am pretty sure my algorithm is
+correct... but the number of total steps required is too high!!!
+- check: try running Dopamine on cartpole with the parameters I use
+  and see if performance is similar
+  DONE running my agent with dopamine parameters works so much better!
+  I think it is especially the network sizes which make the difference
+- NOTE: dopamine dose not accumulate loss and then divide by #steps! I
+  think the way I am plotting it is wrong, reason about it
+
+TODO pyqt5 does not work in the thesis env, but it does in test envs?!
+
 * Logger
   + Agent has a list of logger classes. When these classes are called,
     they perform their logging. They can be configured beforehand to
@@ -66,7 +78,7 @@
     the point of having to care both of regular files and a db then?
     Portability gets more complicated, it is an incomplete design...
 
-* General
+* TODOS
   - [X] Parallelize redundancies code
   - [X] Ensemble DQVMax, DQN, DQV
   - [ ] Produce distributional shift plot with DQVMax in atari games
@@ -82,6 +94,43 @@
   - [ ] jax.pmap to better use cpu on peregrine for atari games (?)
   - [ ] shared body - different heads ensemble models!
 
+* Config collection
+  + runner DONE
+    run_hash (?)
+    _checkpoint_dir
+    iterations
+    steps
+    eval_period
+    eval_steps
+    redundancy
+    policy_eval_callbacks_name
+    schedule
+    f"{env.environment.spec.name}-{env.environment.spec.version}"
+  + agent DONE
+    rng
+    memory
+    clip_rewards
+    gamma
+    min_replay_history
+    sync_weights_every
+    training_period
+    policy_evaluator
+  + rng DONE
+    seed
+  + memory DONE
+    observation_shape
+    observation_dtype
+    reward_dtype
+    stack_size
+    batch_size
+    update_horizon
+    replay_capacity
+  + policy_evaluator DONE
+    all fields except model_call (set in base class)
+  + models DONE
+    model_def (got it from the start)
+    optimizer (with params)
+    loss_fn
 * Sub-optimal design choices
   + GIN ITSELF: don't have a dictionary of parameters anymore, which
     was especially useful in Aim to visualize runs!!! so it makes the
@@ -131,41 +180,3 @@
   + there was some sort of bug in
     dopamine.discrete_domains.gym_lib.GymPreprocessing; consider
     migrating to gym's wrapper in the case of atari experiments too
-
-* Config collection
-  + runner DONE
-    run_hash (?)
-    _checkpoint_dir
-    iterations
-    steps
-    eval_period
-    eval_steps
-    redundancy
-    policy_eval_callbacks_name
-    schedule
-    f"{env.environment.spec.name}-{env.environment.spec.version}"
-  + agent DONE
-    rng
-    memory
-    clip_rewards
-    gamma
-    min_replay_history
-    sync_weights_every
-    training_period
-    policy_evaluator
-  + rng DONE
-    seed
-  + memory DONE
-    observation_shape
-    observation_dtype
-    reward_dtype
-    stack_size
-    batch_size
-    update_horizon
-    replay_capacity
-  + policy_evaluator DONE
-    all fields except model_call (set in base class)
-  + models DONE
-    model_def (got it from the start)
-    optimizer (with params)
-    loss_fn
