@@ -93,6 +93,7 @@ def make_conf(
                         os.path.join(offline_root_data_dir, str(redundancy)),
                         replay_capacity=kwargs["experiment"]["steps"]
                         * kwargs["experiment"]["iterations"],
+                        **kwargs.get("memory", {}),
                     )
                     if offline_root_data_dir
                     else configs.make_online_memory(env)
