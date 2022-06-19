@@ -2,7 +2,6 @@ import math
 import os
 from pathlib import Path
 
-import gin
 import numpy as np
 from dopamine.discrete_domains import atari_lib
 
@@ -19,12 +18,7 @@ peregrine_data_dir = "/data/s3680622"
 
 scratch_dir = base_dir.joinpath("scratch")
 
-gin_configs_dir = base_dir.joinpath("experiments", "configs")
-
-# register some constants useful in Gin config files
-gin.constant("constants.data_dir", str(data_dir))
-gin.constant("constants.scratch_data_dir", str(scratch_data_dir))
-gin.constant("constants.peregrine_data_dir", str(peregrine_data_dir))
+xxx_mongo_uri = "mongodb://192.168.2.17:27017"
 
 default_memory_args = {"replay_capacity": int(5e5), "batch_size": 32}
 

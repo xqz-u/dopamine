@@ -78,12 +78,12 @@ def get_experiment_metrics(
 
 
 # TODO facet by agent/env!
-def main():
+def main(mongo_uri="mongodb://localhost:27017/"):
     all_experiments = (
         dqn_dqvmax_cartpole_acrobot_offline.EXPERIMENT_NAMES
         + dqv_cartpole_acrobot_offline_vanilla.EXPERIMENT_NAMES
     )
-    client = pymongo.MongoClient("mongodb://localhost:27017/")
+    client = pymongo.MongoClient(mongo_uri)
 
     # get all data
     all_exp_metrics = [
@@ -109,5 +109,8 @@ def main():
         plot.save(filename=os.path.join(constants.pics_dir, title), width=20, height=15)
 
 
-if __name__ == "__main__":
-    main()
+mongo_uri = constants.xxx_mongo_uri
+
+
+# if __name__ == "__main__":
+# main()

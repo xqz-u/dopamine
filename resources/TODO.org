@@ -80,6 +80,7 @@
 	tunnel (?). Mostly for atari games, can run classic control
 	ones on my pc
   - [ ] jax.pmap to better use cpu on peregrine for atari games (?)
+  - [ ] shared body - different heads ensemble models!
 
 * Sub-optimal design choices
   + GIN ITSELF: don't have a dictionary of parameters anymore, which

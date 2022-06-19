@@ -32,12 +32,9 @@ for var_name, var in [
         logger.warning(f"Expected `{var_name}` at {var} does not exist!")
 
 
-# NOTE runner_args are:
-# record_experience: bool
-# iterations: int
-# steps: int
-# eval_steps: int
-# eval_period: int
+# NOTE
+# model_maker_fn gets environment name (str) and environment #actions
+# (Q model predictions in discrete envs) as first 2 args
 @gin.configurable
 def make_conf(
     experiment_name: str,
@@ -98,7 +95,9 @@ def make_conf(
                     if offline_root_data_dir
                     else configs.make_online_memory(env)
                 ),
-                **model_maker_fn(env_name, env.action_space.n),
+                **model_maker_fn(
+                    env_name, env.action_space.n, **kwargs.get("model_args", {})
+                ),
             }
         ),
     }

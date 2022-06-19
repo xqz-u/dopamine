@@ -5,7 +5,8 @@ import optax
 from dopamine.discrete_domains import atari_lib
 from dopamine.jax import losses
 
-from thesis import constants, custom_pytrees, exploration, memory, networks, reporter
+from thesis import (constants, custom_pytrees, exploration, memory, networks,
+                    reporter)
 from thesis.agent import utils as agent_utils
 
 # -------------------------------------------------------------
@@ -84,6 +85,31 @@ def dqvmax_model_maker(
     return {
         **dqn_model_maker(env_name, q_out_dim),
         "V_model_def": adam_mse_mlp(1, env_name),
+    }
+
+
+# ensembles
+def dqn_ensemble_model_maker(
+    env_name: str, out_dim: int, heads: int
+) -> Dict[str, agent_utils.ModelDefStore]:
+    return {"Q_model_def": adam_mse_ensemble_mlp(heads, out_dim, env_name)}
+
+
+def dqv_ensemble_model_maker(
+    env_name: str, q_out_dim: int, heads: int
+) -> Dict[str, agent_utils.ModelDefStore]:
+    return {
+        "V_model_def": adam_mse_ensemble_mlp(heads, 1, env_name),
+        **dqn_model_maker(env_name, q_out_dim),
+    }
+
+
+def dqvmax_ensemble_model_maker(
+    env_name: str, q_out_dim: int, heads: int
+) -> Dict[str, agent_utils.ModelDefStore]:
+    return {
+        **dqn_ensemble_model_maker(env_name, q_out_dim, env_name),
+        "V_model_def": adam_mse_ensemble_mlp(heads, 1, env_name),
     }
 
 

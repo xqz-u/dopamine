@@ -37,7 +37,6 @@ class Agent(ABC):
         str, Union[custom_pytrees.ValueBasedTS, Iterable[custom_pytrees.ValueBasedTS]]
     ] = field(init=False, factory=dict)
     training_steps: int = field(init=False, default=0)
-    sync_weights_period: int = field(init=False)
     state: np.ndarray = field(init=False)
     name: str = field(init=False)
 
@@ -47,7 +46,6 @@ class Agent(ABC):
             self.observation_shape + (self.memory._stack_size,),
             dtype=self.memory._observation_dtype,
         )
-        self.sync_weights_period = self.training_period * self.sync_weights_every
         self.name = type(self).__name__
 
     @property
@@ -102,7 +100,7 @@ class Agent(ABC):
         if self.memory.add_count > self.min_replay_history:
             if not self.training_steps % self.training_period:
                 train_dict = self.train(self.sample_memory())
-            if not self.training_steps % self.sync_weights_period:
+            if not self.training_steps % self.sync_weights_every:
                 self.sync_weights()
         self.training_steps += 1
         return train_dict
