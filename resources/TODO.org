@@ -22,8 +22,6 @@ correct... but the number of total steps required is too high!!!
 - NOTE: dopamine dose not accumulate loss and then divide by #steps! I
   think the way I am plotting it is wrong, reason about it
 
-TODO pyqt5 does not work in the thesis env, but it does in test envs?!
-
 * Logger
   + Agent has a list of logger classes. When these classes are called,
     they perform their logging. They can be configured beforehand to

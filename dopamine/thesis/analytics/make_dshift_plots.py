@@ -3,6 +3,7 @@ from typing import Tuple
 
 import gym
 import pandas as pd
+import patchworklib as pw
 import plotnine as p9
 import pymongo
 from thesis import constants, utils
@@ -77,8 +78,10 @@ def get_experiment_metrics(
     )
 
 
-# TODO facet by agent/env!
-def main(mongo_uri="mongodb://localhost:27017/"):
+# TODO use env name and agents as faceting operators instead of arranging
+# individual plots! dumb!
+# TODO get rewards too and add to plots
+def main(mongo_uri="mongodb://localhost:27017/", save: bool = False) -> list:
     all_experiments = (
         dqn_dqvmax_cartpole_acrobot_offline.EXPERIMENT_NAMES
         + dqv_cartpole_acrobot_offline_vanilla.EXPERIMENT_NAMES
@@ -105,12 +108,25 @@ def main(mongo_uri="mongodb://localhost:27017/"):
         (dshift_plot(dshift_df(df), title, *rest), title)
         for df, title, *rest in eval_exp_metrics
     ]
-    for plot, title in all_plots:
-        plot.save(filename=os.path.join(constants.pics_dir, title), width=20, height=15)
+    if save:
+        for plot, title in all_plots:
+            plot.save(
+                filename=os.path.join(constants.pics_dir, title), width=20, height=15
+            )
+    return all_plots
 
 
-mongo_uri = constants.xxx_mongo_uri
+# order: dqn, dqvmax, dqv
+def combine_3_plots(plots, title) -> pw.Bricks:
+    combined = (pw.load_ggplot(plots[0]) | pw.load_ggplot(plots[2])) / pw.load_ggplot(
+        plots[1]
+    )
+    combined.savefig(fname=os.path.join(constants.pics_dir, title))
+    return combined
 
 
-# if __name__ == "__main__":
-# main()
+if __name__ == "__main__":
+    plots_and_titles = main(constants.xxx_mongo_uri)
+    plots = [p for p, _ in plots_and_titles]
+    cartpole_combined = combine_3_plots(plots[::2], "all_agents_offline_cartpole.png")
+    acrobot_combined = combine_3_plots(plots[1::2], "all_agents_offline_acrobot.png")
