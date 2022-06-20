@@ -72,7 +72,7 @@ def classic_confs(logsdir, off_data_dir) -> list:
 
 
 if __name__ == "__main__":
-    logs_dir, off_data_dir = constants.scratch_data_dir, constants.data_dir
-    # logs_dir, off_data_dir = [constants.peregrine_data_dir] * 2
+    # logs_dir, off_data_dir = constants.scratch_data_dir, constants.data_dir
+    logs_dir, off_data_dir = [constants.peregrine_data_dir] * 2
     confs = classic_confs(logs_dir, off_data_dir)
     runner.p_run_experiments(confs, logs_dir=logs_dir)
