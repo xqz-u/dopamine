@@ -1,3 +1,5 @@
+import itertools as it
+
 from thesis import utils
 
 utils.setup_root_logging()
@@ -11,27 +13,34 @@ agents_and_models = [
     # (agent.DQVMaxEnsemble, configs.dqvmax_ensemble_model_maker),
 ]
 envs_and_trajectories = all_cartpole_acrobot_offline.envs_and_trajectories
-envs_and_trajectories = [envs_and_trajectories[0]]
-exp_name_fn = all_cartpole_acrobot_offline.exp_name_fn
+exp_name_fn = (
+    lambda *args, **kwargs: f"{experiments.base_exp_name_fn(*args, **kwargs)}_offline_v0"
+)
+# n_heads = [2, 4, 7]
+n_heads = [2]
+configurables = list(it.product(agents_and_models, envs_and_trajectories, n_heads))
 
 
 def do_confs():
     return [
         c
-        for agent_class, model_maker in agents_and_models
-        for env_name, offline_buff_dir in envs_and_trajectories
+        for (agent_class, model_maker), (
+            env_name,
+            offline_buff_dir,
+        ), head in configurables
         for c in [
             {
+                "runner": runner.FixedBatchRunner,
                 "seed": experiments.DEFAULT_SEED + i,
                 "redundancy": i,
                 "agent_class": agent_class,
                 "env_name": env_name,
                 "offline_root_data_dir": offline_buff_dir,
-                "experiment_name": exp_name_fn(agent_class, env_name, prefix="fake_"),
-                # "experiment_name": exp_name_fn(agent_class, env_name),
+                # "experiment_name": exp_name_fn(agent_class, env_name, prefix="fake_"),
+                "experiment_name": exp_name_fn(agent_class, env_name),
                 "model_maker_fn": model_maker,
-                "logs_base_dir": constants.scratch_data_dir,
-                # "logs_base_dir": constants.data_dir,
+                # "logs_base_dir": constants.scratch_data_dir,
+                "logs_base_dir": constants.data_dir,
                 "experiment": {
                     "iterations": 500,
                     "steps": 1000,
@@ -40,19 +49,33 @@ def do_confs():
                 },
                 "memory": {"batch_size": 128},
                 "agent": {"sync_weights_every": 100},
-                "model_args": {"hiddens": (512, 512), "heads": 2},
+                "model_args": {"hiddens": (512, 512), "heads": head},
             }
             for i in range(experiments.DEFAULT_REDUNDANCY)
         ]
     ]
 
 
-EXPERIMENT_NAMES = lambda: [c["experiment_name"] for c in do_confs()]
+# initially run some online counterparts to see how they compare
+def online_confs():
+    confs = do_confs()
+    for c in confs:
+        c["runner"] = runner.OnlineRunner
+        c["agent"] = {
+            "min_replay_history": 500,
+            "training_period": 4,
+            "sync_weights_every": 100,
+        }
+        c.pop("offline_root_data_dir")
+        c["experiment_name"] = c["experiment_name"].replace("offline", "online")
+    return confs
 
-confs = do_confs()
-run = runner.FixedBatchRunner(**experiments.make_conf(**confs[0]))
+
+EXPERIMENT_NAMES = lambda: [c["experiment_name"] for c in do_confs()]
 
 
 if __name__ == "__main__":
-    confs = do_confs()
-    runner.run_parallel(confs, runner.FixedBatchRunner)
+    # confs = do_confs()
+    # run offline and online versions at the same time
+    confs = list(it.chain(*zip(do_confs(), online_confs())))
+    runner.run_parallel(confs)

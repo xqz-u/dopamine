@@ -8,7 +8,8 @@ from thesis.runner.fixed_batch_runner import FixedBatchRunner
 from thesis.runner.online_runner import OnlineRunner
 
 
-def run_experiment(conf: dict, runner_class: Runner):
+def run_experiment(conf: dict):
+    runner_class = conf.pop("runner")
     run = runner_class(**experiments.make_conf(**conf))
     c = utils.reportable_config(
         {
@@ -22,11 +23,9 @@ def run_experiment(conf: dict, runner_class: Runner):
     run.run()
 
 
-# return results to caller for completion - there won't be any here
-def run_parallel(confs_subsets: List[dict], runner_class: Runner) -> List[Any]:
+# TODO change previous experiments, they still pass runner_class and
+# should instead be saved inside confs
+def run_parallel(confs: List[dict]) -> List[Any]:
     with mp.Pool() as pool:
-        res = pool.starmap(
-            run_experiment,
-            zip(confs_subsets, [runner_class] * len(confs_subsets)),
-        )
+        res = pool.map(run_experiment, confs)
     return res
