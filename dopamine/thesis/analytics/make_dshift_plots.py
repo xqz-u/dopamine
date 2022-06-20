@@ -3,7 +3,6 @@ from typing import Tuple
 
 import gym
 import pandas as pd
-import patchworklib as pw
 import plotnine as p9
 import pymongo
 from thesis import constants, utils
@@ -68,6 +67,13 @@ def get_experiment_metrics(
     exp_name: str, mongo_client: pymongo.MongoClient
 ) -> Tuple[pd.DataFrame, str, str]:
     db = mongo_client[exp_name]
+    return pd.DataFrame(list(db.metrics.find())).drop(columns="_id")
+
+
+def get_experiment_metrics_(
+    exp_name: str, mongo_client: pymongo.MongoClient
+) -> pd.DataFrame:
+    db = mongo_client[exp_name]
     configs_coll = db.configs
     metrics_coll = db.metrics
     exp_config_0 = configs_coll.find_one()
@@ -87,7 +93,6 @@ def main(mongo_uri="mongodb://localhost:27017/", save: bool = False) -> list:
         + dqv_cartpole_acrobot_offline_vanilla.EXPERIMENT_NAMES
     )
     client = pymongo.MongoClient(mongo_uri)
-
     # get all data
     all_exp_metrics = [
         get_experiment_metrics(exp_name, client) for exp_name in all_experiments
@@ -116,17 +121,81 @@ def main(mongo_uri="mongodb://localhost:27017/", save: bool = False) -> list:
     return all_plots
 
 
-# order: dqn, dqvmax, dqv
-def combine_3_plots(plots, title) -> pw.Bricks:
-    combined = (pw.load_ggplot(plots[0]) | pw.load_ggplot(plots[2])) / pw.load_ggplot(
-        plots[1]
+mongo_uri = constants.xxx_mongo_uri
+client = pymongo.MongoClient(mongo_uri)
+all_experiments = (
+    dqn_dqvmax_cartpole_acrobot_offline.EXPERIMENT_NAMES
+    + dqv_cartpole_acrobot_offline_vanilla.EXPERIMENT_NAMES
+)
+
+# all_exp_metrics
+
+# if __name__ == "__main__":
+# main()
+
+all_dfs = [get_experiment_metrics(exp_name, client) for exp_name in all_experiments]
+all_dfs = pd.concat(all_dfs)
+all_dfs_eval = all_dfs[all_dfs["Schedule"] == "eval"]
+
+# maxq_dfs = all_dfs_eval.pivot_table(
+#     index=["Global_steps", "Agent", "Env"], columns=["Redundancy"], values=["Max_Q_S0"]
+# )
+# maxq_dfs["Mean"] = maxq_dfs["Max_Q_S0"].mean(1)
+# maxq_dfs["Std"] = maxq_dfs["Max_Q_S0"].std(1)
+# maxq_dfs.reset_index(level=["Agent", "Env"], inplace=True)
+# x = maxq_dfs["Max_Q_S0"].rename(columns=lambda r: f"Redundancy_{r}")
+
+
+subs = all_dfs_eval.loc[:, ["Agent", "Env", "Global_steps", "Redundancy", "Max_Q_S0"]]
+subs = subs.groupby(["Agent", "Env", "Global_steps"])["Max_Q_S0"].agg(["mean", "std"])
+subs.reset_index(level=["Agent", "Env"], inplace=True)
+
+
+plot = (
+    p9.ggplot(subs, p9.aes("subs.index", "mean"))
+    + p9.geom_line(size=0.7)
+    + p9.geom_hline(yintercept=100, color="red", linetype="dashed", size=0.7)
+    + p9.facet_grid("Agent ~ Env")
+)
+print(plot)
+
+plot.save("/home/xqz-u/uni/thesis/dopamine/thesis/analytics/pippo.png")
+
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+
+def myfun(data, **kws):
+    print(data)
+    print(kws)
+    env_name = data["Env"].unique()[0]
+    ax = plt.gca()
+    ax.axhline(
+        y=utils.deterministic_discounted_return(gym.make(env_name)),
+        ls="--"
+        # color=kws["color"],
     )
-    combined.savefig(fname=os.path.join(constants.pics_dir, title))
-    return combined
 
 
-if __name__ == "__main__":
-    plots_and_titles = main(constants.xxx_mongo_uri)
-    plots = [p for p, _ in plots_and_titles]
-    cartpole_combined = combine_3_plots(plots[::2], "all_agents_offline_cartpole.png")
-    acrobot_combined = combine_3_plots(plots[1::2], "all_agents_offline_acrobot.png")
+unique_envs_color_palette = subs["Env"].unique()
+envs_color_palette = dict(
+    zip(
+        unique_envs_color_palette,
+        sns.color_palette(n_colors=len(unique_envs_color_palette)),
+    )
+)
+p = sns.relplot(
+    data=subs.reset_index(),
+    x="Global_steps",
+    y="mean",
+    kind="line",
+    hue="Env",
+    row="Env",
+    col="Agent",
+    palette=envs_color_palette,
+)
+p.map_dataframe(myfun)
+p.tight_layout()
+fig = p.figure
+fig.savefig("/home/xqz-u/uni/thesis/dopamine/thesis/analytics/pippo_seaborn.png")
