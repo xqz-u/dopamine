@@ -6,6 +6,7 @@ import numpy as np
 from attrs import define, field
 from flax.core import frozen_dict
 from jax import numpy as jnp
+from jax import random as jrand
 from thesis import custom_pytrees, types
 from thesis.agent import base
 from thesis.agent import utils as agent_utils
@@ -46,8 +47,10 @@ def train_ensembled(
     experience_batch: Dict[str, np.ndarray],
     q_model: custom_pytrees.ValueBasedTSEnsemble,
     gamma: float,
+    rng: custom_pytrees.PRNGKeyWrap,
 ) -> Tuple[types.MetricsDict, custom_pytrees.ValueBasedTSEnsemble]:
-    a_head = q_model[0]
+    # pick random prediction head
+    a_head = q_model[jrand.randint(next(rng), len(q_model))]
     td_targets = agent_utils.apply_td_loss(
         a_head.s_tp1_fn, a_head.target_params, experience_batch, gamma
     )
@@ -163,6 +166,6 @@ class DQNEnsemble(DQN):
 
     def train(self, experience_batch: Dict[str, np.ndarray]) -> types.MetricsDict:
         train_info, self.models["Q"] = train_ensembled(
-            experience_batch, self.models["Q"], self.gamma
+            experience_batch, self.models["Q"], self.gamma, self.rng
         )
         return train_info

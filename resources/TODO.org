@@ -93,7 +93,9 @@ correct... but the number of total steps required is too high!!!
   - [ ] shared body - different heads ensemble models!
   - [ ] record some videos to see how training progresses!!!
   - [ ] Gym's vectorized environment API - only useful for online
-    training/evaluation though
+	training/evaluation though
+  - [ ] compute TD targets inside training functions to allow jit to
+	trace everything properly in a single routine
 
 * Config collection
   + runner DONE

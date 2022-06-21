@@ -21,7 +21,7 @@ n_heads = [2]
 configurables = list(it.product(agents_and_models, envs_and_trajectories, n_heads))
 
 
-def do_confs():
+def do_confs(redundancy=experiments.DEFAULT_REDUNDANCY):
     return [
         c
         for (agent_class, model_maker), (
@@ -51,14 +51,14 @@ def do_confs():
                 "agent": {"sync_weights_every": 100},
                 "model_args": {"hiddens": (512, 512), "heads": head},
             }
-            for i in range(experiments.DEFAULT_REDUNDANCY)
+            for i in range(redundancy)
         ]
     ]
 
 
 # initially run some online counterparts to see how they compare
-def online_confs():
-    confs = do_confs()
+def online_confs(redundancy=experiments.DEFAULT_REDUNDANCY):
+    confs = do_confs(redundancy)
     for c in confs:
         c["runner"] = runner.OnlineRunner
         c["agent"] = {
