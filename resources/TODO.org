@@ -92,6 +92,8 @@ correct... but the number of total steps required is too high!!!
   - [ ] jax.pmap to better use cpu on peregrine for atari games (?)
   - [ ] shared body - different heads ensemble models!
   - [ ] record some videos to see how training progresses!!!
+  - [ ] Gym's vectorized environment API - only useful for online
+    training/evaluation though
 
 * Config collection
   + runner DONE

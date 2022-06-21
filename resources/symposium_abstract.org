@@ -1,0 +1,23 @@
+While being notoriously successful in the online setting,
+model-free, Q-learning based Reinforcement Learning agents often fail
+in the offline (batch) setting. This happens for multiple reasons:
+different state visitation frequencies between the training and
+testing distributions; function approximation errors that cannot be
+corrected with additional exploration; and action distributional
+shift, where an agent learns a policy that is far from the behavioral
+one
+of the training data, therefore its Q values cannot be properly
+computed. In the case of deep off-policy algorithms such as DQN and
+DQV-Max, such poor approximation of the Q-values becomes an
+overestimation error.
+In this project, we hypothesize that the QV-Learning family of
+algorithms also suffers from action distributional shift in offline
+RL. We evaluate this prediction on two classic control Gym environments
+and on the Atari 2600 problems suite.
+To address the problem of distributional shift, we hypothesize that an
+ensemble of
+learners - which approximates the Q or V function Temporal Difference
+targets with multiple neural networks - performs on pair or even
+better than an online deep Q agent, and that it mitigates the
+distributional shift effect. Results for the classic control tasks are
+presented.

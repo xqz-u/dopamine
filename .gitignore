@@ -1,7 +1,8 @@
-**/.xqz-u-egg
+# /.xqz-u-egg
 **/.aim
 **/.Rhistory
 **/__pycache__
+**/.ipynb_checkpoints
 
 # dopamine/thesis/scratch
 peregrine/reprex
