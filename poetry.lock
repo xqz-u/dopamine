@@ -826,7 +826,7 @@ tpu = ["jaxlib (==0.3.10)", "libtpu-nightly (==0.1.dev20220504)", "requests"]
 
 [[package]]
 name = "jaxlib"
-version = "0.3.7+cuda11.cudnn805"
+version = "0.3.10+cuda11.cudnn82"
 description = "XLA library for JAX"
 category = "main"
 optional = false
@@ -840,8 +840,7 @@ scipy = "*"
 
 [package.source]
 type = "url"
-url = "https://storage.googleapis.com/jax-releases/cuda11/jaxlib-0.3.7+cuda11.cudnn805-cp39-none-manylinux2014_x86_64.whl"
-
+url = "https://storage.googleapis.com/jax-releases/cuda11/jaxlib-0.3.10+cuda11.cudnn82-cp39-none-manylinux2014_x86_64.whl"
 [[package]]
 name = "jinja2"
 version = "3.1.2"
@@ -1435,15 +1434,16 @@ scipy = ">=1.0"
 
 [[package]]
 name = "setuptools-scm"
-version = "6.4.2"
+version = "7.0.0"
 description = "the blessed package to manage your versions by scm tags"
 category = "main"
 optional = false
-python-versions = ">=3.6"
+python-versions = ">=3.7"
 
 [package.dependencies]
 packaging = ">=20.0"
 tomli = ">=1.0.0"
+typing-extensions = "*"
 
 [package.extras]
 test = ["pytest (>=6.2)", "virtualenv (>20)"]
@@ -1788,7 +1788,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = "3.9.6"
-content-hash = "19ac5a3d9b1d057fa991ab55fe089a5ff040c244d5f0039a72c57f05d6cdfcc8"
+content-hash = "d63ce6838d7ae4ebc7bdbce4f1004a68baf0dbcc790866bb594e94c7ef1bd6f1"
 
 [metadata.files]
 absl-py = [
@@ -3215,8 +3215,8 @@ seaborn = [
     {file = "seaborn-0.11.2.tar.gz", hash = "sha256:cf45e9286d40826864be0e3c066f98536982baf701a7caa386511792d61ff4f6"},
 ]
 setuptools-scm = [
-    {file = "setuptools_scm-6.4.2-py3-none-any.whl", hash = "sha256:acea13255093849de7ccb11af9e1fb8bde7067783450cee9ef7a93139bddf6d4"},
-    {file = "setuptools_scm-6.4.2.tar.gz", hash = "sha256:6833ac65c6ed9711a4d5d2266f8024cfa07c533a0e55f4c12f6eff280a5a9e30"},
+    {file = "setuptools_scm-7.0.0-py3-none-any.whl", hash = "sha256:187cd31d78998d8226b68d4066dbfbf9c1fa8b61c10ff65cebe950379d3b9175"},
+    {file = "setuptools_scm-7.0.0.tar.gz", hash = "sha256:136fe07547645fee2dcc7d21b192dad95932e70aa4b603f45b8907ed78f44a11"},
 ]
 six = [
     {file = "six-1.16.0-py2.py3-none-any.whl", hash = "sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254"},
