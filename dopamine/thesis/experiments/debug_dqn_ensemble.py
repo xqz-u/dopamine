@@ -26,7 +26,7 @@ def do_confs(params: list):
         {
             "runner": runner.OnlineRunner,
             "seed": seed,
-            "redundancy": repeat,
+            "redundancy": 1,
             "agent_class": ag,
             "env_name": env,
             # "experiment_name": exp_name_fn(ag, env, prefix="fake_"),
@@ -36,14 +36,14 @@ def do_confs(params: list):
             "logs_base_dir": constants.data_dir,
             "experiment": {
                 "iterations": 500,
-                "steps": 1000,
-                "eval_steps": 1000,
+                "steps": 2000,
+                "eval_steps": 2000,
                 "eval_period": 5,
             },
             "memory": {"batch_size": 32},
             "agent": {
-                "sync_weights_every": 100,
-                "min_replay_history": 500,
+                "sync_weights_every": 1000,
+                "min_replay_history": 5000,
                 "training_period": 4,
             },
             "model_args": {"heads": n_heads},
