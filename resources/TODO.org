@@ -89,7 +89,8 @@ correct... but the number of total steps required is too high!!!
 	data from Peregrine and forwards them locally through a ssh
 	tunnel (?). Mostly for atari games, can run classic control
 	ones on my pc
-  - [ ] jax.pmap to better use cpu on peregrine for atari games (?)
+  - [ ] jax.pmap to better use cpu on peregrine for atari games! and
+	not only, e.g. k=10 on classic control environments is very expensive...
   - [ ] shared body - different heads ensemble models!
   - [ ] record some videos to see how training progresses!!!
   - [ ] Gym's vectorized environment API - only useful for online
