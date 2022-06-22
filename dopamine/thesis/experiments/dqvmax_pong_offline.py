@@ -5,7 +5,7 @@ from thesis import utils
 
 utils.setup_root_logging()
 
-from thesis import agent, configs, constants, experiments, runner
+from thesis import agent, configs, constants, experiments, exploration, runner
 
 exp_name_fn = (
     lambda *args, **kwargs: f"{experiments.base_exp_name_fn(*args, **kwargs)}_offline"
@@ -23,9 +23,11 @@ configurables = list(
 )
 
 
-# TODO min replay history?
+# TODO is min replay history correct? what linear decay params?
+# actually Im comparing against offline agents, not online, so I can be
+# more lax respecting the latter parameters
 # TODO load only a fraction of replay data
-# TODO optimal qstar_s0?
+# TODO how to compute optimal qstar_s0?
 # NOTE hyperparameters taken from https://stable-baselines3.readthedocs.io/en/master/modules/dqn.html
 # NOTE check with https://arxiv.org/abs/1907.04543 some hyperparameters
 # - dataset size, exploration function settings
@@ -49,9 +51,13 @@ def do_confs(params: list, exp_name_fn: callable) -> list:
                 "eval_steps": int(125e3),
                 "eval_period": 5,
             },
-            "memory": {"batch_size": 32, "replay_capacity": int(1e6)},
-            "agent": {"sync_weights_every": int(10e3)},
-            "model_args": {"hiddens": (512, 512)},
+            "memory": {
+                "batch_size": 32,
+                "replay_capacity": int(1e6),
+                "iterations": [[]],
+            },
+            "agent": {"sync_weights_every": int(10e3), "min_replay_history": int(50e3)},
+            "exploration": {"expl_class": exploration.EgreedyLinearDecay},
         }
         for (agent_class, model_maker), (env_name, offline_buff_dir), (
             redundancy,
