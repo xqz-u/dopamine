@@ -170,12 +170,12 @@ def build_TS_ensemble(
     )
 
 
-# save the maximum Q-value for the first state of each evaluation
-# episode
+# save the maximum Q-value for the first state of each episode,
+# both during evaluation and training
 @gin.configurable(denylist=["episode_dict", "policy_eval_dict"])
 def t0_max_q_callback(
-    episode_dict: types.MetricsDict, policy_eval_dict: types.MetricsDict, mode: str
+    episode_dict: types.MetricsDict, policy_eval_dict: types.MetricsDict
 ) -> types.MetricsDict:
-    if mode == "eval" and episode_dict["Steps"] == 0:
+    if episode_dict["Steps"] == 0:
         episode_dict["Max_Q_S0"] = policy_eval_dict["max_q"]
     return episode_dict

@@ -56,7 +56,7 @@ def make_conf(
     seed: int,
     redundancy: int,
     policy_eval_callbacks: List[
-        Callable[[types.MetricsDict, types.MetricsDict, str], types.MetricsDict]
+        Callable[[types.MetricsDict, types.MetricsDict], types.MetricsDict]
     ] = [agent_utils.t0_max_q_callback],
     env_creator_fn: Callable[[str, str], types.DiscreteEnv] = gym.make,
     offline_root_data_dir: str = None,

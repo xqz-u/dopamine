@@ -37,7 +37,7 @@ class Runner(ABC):
     # these callbacks run at every action selection step, when they
     # returned a the original dict enriched with by their own logic
     on_policy_eval: List[
-        Callable[[types.MetricsDict, types.MetricsDict, str], types.MetricsDict]
+        Callable[[types.MetricsDict, types.MetricsDict], types.MetricsDict]
     ] = field(factory=list)
     redundancy: int = 0
     reporters: List[reporter.Reporter] = field(factory=list)
@@ -85,7 +85,7 @@ class Runner(ABC):
             action, more_info = self.agent.select_action(obs, mode)
             obs, reward, done, _ = self.env.step(action)
             for cb in self.on_policy_eval:
-                episode_dict = cb(episode_dict, more_info, mode)
+                episode_dict = cb(episode_dict, more_info)
             if mode == "train":
                 self.agent.record_trajectory(reward, done)
                 episode_dict = self.agent.train_accumulate(
