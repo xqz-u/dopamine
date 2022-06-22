@@ -4,6 +4,7 @@ import gin
 import numpy as np
 from attrs import define, field
 from jax import numpy as jnp
+from jax import random as jrand
 from thesis import custom_pytrees, types
 from thesis.agent import dqn, dqv
 from thesis.agent import utils as agent_utils
@@ -33,8 +34,11 @@ def train_ensembled(
     experience_batch: Dict[str, np.ndarray],
     models: dqv.DQVModelTypes,
     gamma: float,
+    rng: custom_pytrees.PRNGKeyWrap,
 ) -> Tuple[types.MetricsDict, dqv.DQVModelTypes]:
-    v_head, q_head = models["V"][0], models["Q"][0]
+    # NOTE assumes v and q model have same number of heads
+    q_i, v_i = jrand.randint(next(rng), (2,), 0, len(models["V"]))
+    v_head, q_head = models["V"][v_i], models["Q"][q_i]
     v_td_targets = agent_utils.apply_td_loss(
         q_head.s_tp1_fn, q_head.target_params, experience_batch, gamma
     )
@@ -103,6 +107,6 @@ class DQVMaxEnsemble(dqn.DQNEnsemble):
 
     def train(self, experience_batch: Dict[str, np.ndarray]) -> types.MetricsDict:
         train_info, self.models = train_ensembled(
-            experience_batch, self.models, self.gamma
+            experience_batch, self.models, self.gamma, self.rng
         )
         return train_info

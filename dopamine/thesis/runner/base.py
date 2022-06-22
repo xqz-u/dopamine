@@ -69,7 +69,7 @@ class Runner(ABC):
         while self.curr_iteration < self.iterations:
             metrics = getattr(self, f"{self.schedule}_iteration")()
             logger.info(
-                f"DONE Iteration {self.curr_iteration}\nAgent: {self.agent.name} Environment: {self.env_name}\n{pprint.pformat(metrics)}\n\n"
+                f"DONE Iteration {self.curr_iteration}\nName: {self.experiment_name} Agent: {self.agent.name} Environment: {self.env_name}\n{pprint.pformat(metrics)}\n\n"
             )
             self.curr_iteration += 1
         self.finalize_experiment()

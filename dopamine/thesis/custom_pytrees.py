@@ -41,6 +41,9 @@ class ValueBasedTSEnsemble:
     def __getitem__(self, idx: int) -> ValueBasedTS:
         return self.TSS[idx]
 
+    def __len__(self) -> int:
+        return len(self.TSS)
+
     @property
     def serializable(
         self,

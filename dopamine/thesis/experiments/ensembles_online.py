@@ -1,29 +1,59 @@
 import itertools as it
 
-from thesis import agent, configs, runner
-from thesis.experiments import ensemble_all_cartpole_acrobot_offline
+from thesis import utils
 
-agents = [
-    agent.DQNEnsemble,
+utils.setup_root_logging()
+
+from thesis import agent, configs, constants, experiments, runner
+
+agents_and_models = [
+    # (agent.DQNEnsemble, configs.dqn_ensemble_model_maker)
+    (agent.DQVMaxEnsemble, configs.dqvmax_ensemble_model_maker),
+    # (agent.DQVEnsemble, configs.dqv_ensemble_model_maker)
     # agent.DQVMaxEnsemble
 ]
+heads = [2]
 envs = ["CartPole-v1"]
-combs = list(it.product(agents, envs))
+configurables = list(it.product(agents_and_models, envs, heads))
+redund = 1
 
 
-online_confs = lambda: [
-    c
-    | {
-        "agent_class": ag,
-        "model_maker_fn": configs.dqvmax_model_maker,
-        "experiment_name": f"{ag.__name__}_{env}_online_v0",
-    }
-    for ag, env in combs
-    for c in ensemble_all_cartpole_acrobot_offline.online_confs(1)
-    if c["env_name"] in envs
-]
+def do_confs(redundancy=experiments.DEFAULT_REDUNDANCY):
+    name_fn = lambda ag, env, prefix="": f"{prefix}{ag.__name__}_{env}_online_v0_ensure"
+    return [
+        c
+        for (agent_class, model_maker), env_name, head in configurables
+        for c in [
+            {
+                "runner": runner.OnlineRunner,
+                "seed": experiments.DEFAULT_SEED + i,
+                "redundancy": i,
+                "agent_class": agent_class,
+                "env_name": env_name,
+                # "experiment_name": name_fn(agent_class, env_name, prefix="fake_"),
+                "experiment_name": name_fn(agent_class, env_name),
+                "model_maker_fn": model_maker,
+                # "logs_base_dir": constants.scratch_data_dir,
+                "logs_base_dir": constants.data_dir,
+                "experiment": {
+                    "iterations": 500,
+                    "steps": 1000,
+                    "eval_steps": 1000,
+                    "eval_period": 5,
+                },
+                "memory": {"batch_size": 128},
+                "agent": {
+                    "sync_weights_every": 100,
+                    "min_replay_history": 500,
+                    "training_period": 4,
+                },
+                "model_args": {"hiddens": (512, 512), "heads": head},
+            }
+            for i in range(redundancy)
+        ]
+    ]
 
 
 if __name__ == "__main__":
-    on_confs = online_confs()
+    on_confs = do_confs(redund)
     runner.run_parallel(on_confs)

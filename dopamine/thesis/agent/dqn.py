@@ -50,7 +50,7 @@ def train_ensembled(
     rng: custom_pytrees.PRNGKeyWrap,
 ) -> Tuple[types.MetricsDict, custom_pytrees.ValueBasedTSEnsemble]:
     # pick random prediction head
-    a_head = q_model[jrand.randint(next(rng), len(q_model))]
+    a_head = q_model[jrand.randint(next(rng), (), 0, len(q_model))]
     td_targets = agent_utils.apply_td_loss(
         a_head.s_tp1_fn, a_head.target_params, experience_batch, gamma
     )

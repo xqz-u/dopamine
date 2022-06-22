@@ -6,6 +6,7 @@ import numpy as np
 from attrs import define, field
 from flax.core import frozen_dict
 from jax import numpy as jnp
+from jax import random as jrand
 from thesis import custom_pytrees, types
 from thesis.agent import base, dqn
 from thesis.agent import utils as agent_utils
@@ -51,8 +52,9 @@ def train_ensembled(
     experience_batch: Dict[str, np.ndarray],
     models: DQVModelTypes,
     gamma: float,
+    rng: custom_pytrees.PRNGKeyWrap,
 ) -> Tuple[types.MetricsDict, DQVModelTypes]:
-    a_head = models["V"][0]
+    a_head = models["V"][jrand.randint(next(rng), (), 0, len(models["V"]))]
     td_targets = agent_utils.apply_td_loss(
         a_head.s_tp1_fn, a_head.target_params, experience_batch, gamma
     )
@@ -154,6 +156,6 @@ class DQVEnsemble(DQV):
 
     def train(self, experience_batch: Dict[str, np.ndarray]) -> types.MetricsDict:
         train_info, self.models = train_ensembled(
-            experience_batch, self.models, self.gamma
+            experience_batch, self.models, self.gamma, self.rng
         )
         return train_info
