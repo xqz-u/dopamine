@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Callable, Dict
+from typing import Callable, Dict, List
 
 import gin
 import gym
@@ -55,6 +55,9 @@ def make_conf(
     logs_base_dir: str,
     seed: int,
     redundancy: int,
+    policy_eval_callbacks: List[
+        Callable[[types.MetricsDict, types.MetricsDict, str], types.MetricsDict]
+    ] = [agent_utils.t0_max_q_callback],
     env_creator_fn: Callable[[str, str], types.DiscreteEnv] = gym.make,
     offline_root_data_dir: str = None,
     **kwargs,
@@ -89,12 +92,14 @@ def make_conf(
                 },
             ),
         ),
-        "on_policy_eval": [agent_utils.t0_max_q_callback],
+        "on_policy_eval": policy_eval_callbacks,
         "agent": agent_class(
             **{
                 **kwargs.get("agent", {}),
                 "rng": configs.make_rng(seed),
-                "policy_evaluator": configs.make_explorer(env),
+                "policy_evaluator": configs.make_explorer(
+                    env, **kwargs.get("exploration", {})
+                ),
                 "memory": (
                     configs.make_offline_memory(
                         env,
