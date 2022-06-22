@@ -8,14 +8,14 @@ python-versions = ">=3.6"
 
 [[package]]
 name = "aim"
-version = "3.10.3"
+version = "3.11.0"
 description = "A super-easy way to record, search and compare AI experiments."
 category = "main"
 optional = false
 python-versions = ">=3.6.0"
 
 [package.dependencies]
-aim-ui = "3.10.3"
+aim-ui = "3.11.0"
 aimrecords = "0.0.7"
 aimrocks = "0.2.1"
 aiofiles = ">=0.5.0"
@@ -43,7 +43,7 @@ uvicorn = ">=0.12.0"
 
 [[package]]
 name = "aim-ui"
-version = "3.10.3"
+version = "3.11.0"
 description = "Aim UI"
 category = "main"
 optional = false
@@ -452,7 +452,7 @@ python-versions = "*"
 
 [[package]]
 name = "cryptography"
-version = "37.0.2"
+version = "37.0.3"
 description = "cryptography is a package which provides cryptographic recipes and primitives to Python developers."
 category = "main"
 optional = false
@@ -592,7 +592,7 @@ python-versions = "*"
 
 [[package]]
 name = "flax"
-version = "0.5.1"
+version = "0.5.2"
 description = "Flax: A neural network library for JAX designed for flexibility"
 category = "main"
 optional = false
@@ -604,7 +604,8 @@ matplotlib = "*"
 msgpack = "*"
 numpy = ">=1.12"
 optax = "*"
-rich = ">=11.1.0,<11.2.0"
+PyYAML = ">=5.4.1"
+rich = ">=11.1,<12.0"
 typing-extensions = ">=4.1.1"
 
 [package.extras]
@@ -1899,7 +1900,7 @@ python-versions = ">=3.7"
 name = "pyyaml"
 version = "6.0"
 description = "YAML parser and emitter for Python"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.6"
 
@@ -2006,7 +2007,7 @@ python-versions = "*"
 
 [[package]]
 name = "rich"
-version = "11.1.0"
+version = "11.2.0"
 description = "Render rich text, tables, progress bars, syntax highlighting, markdown and more to the terminal"
 category = "main"
 optional = false
@@ -2071,7 +2072,7 @@ win32 = ["pywin32"]
 
 [[package]]
 name = "setuptools-scm"
-version = "7.0.0"
+version = "7.0.1"
 description = "the blessed package to manage your versions by scm tags"
 category = "main"
 optional = false
@@ -2534,23 +2535,23 @@ absl-py = [
     {file = "absl_py-1.1.0-py3-none-any.whl", hash = "sha256:db97287655e30336938f8058d2c81ed2be6af1d9b6ebbcd8df1080a6c7fcd24e"},
 ]
 aim = [
-    {file = "aim-3.10.3-cp310-cp310-macosx_10_14_x86_64.whl", hash = "sha256:2939e9cb19ed9af1391f284a5905dde153bd1b54b1915f4b4f8c1f3d0792e41c"},
-    {file = "aim-3.10.3-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:48c5b4e7d59e08dba2e3266258452141a5388cb89545409b44320db73cfc3cd9"},
-    {file = "aim-3.10.3-cp310-cp310-manylinux_2_24_x86_64.whl", hash = "sha256:888aa61d9e9fe7760935d59dbcc44eac920713e6b0138e002059d9a6a4462833"},
-    {file = "aim-3.10.3-cp36-cp36m-macosx_10_14_x86_64.whl", hash = "sha256:a0271671e731c636e8aed0d4c2bfb63d5a58565f6dc80ea5b656447aa473e8b8"},
-    {file = "aim-3.10.3-cp36-cp36m-manylinux_2_24_x86_64.whl", hash = "sha256:671554c07863155118103d211ca3e347ebab5a60559ada01c6ba75a4c04f0cc1"},
-    {file = "aim-3.10.3-cp37-cp37m-macosx_10_14_x86_64.whl", hash = "sha256:cf778210bf9a99e2f4f9f60177f583bdcb39d2a45c1520fa1fcf55233fad37bf"},
-    {file = "aim-3.10.3-cp37-cp37m-manylinux_2_24_x86_64.whl", hash = "sha256:f60fcf2e475ff05ef8c176b12dd1507814ffdeadf07de2a0e91720bfeac5693a"},
-    {file = "aim-3.10.3-cp38-cp38-macosx_10_14_x86_64.whl", hash = "sha256:31a436b3b9a44806e2fe5318a4ee64638cfcdeb83ea6e57fde161ec722557b02"},
-    {file = "aim-3.10.3-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:97f76a6d4f4d97120d46e1f8c5937cb6bd17fa2980673d0bb3e92edff2179e2f"},
-    {file = "aim-3.10.3-cp38-cp38-manylinux_2_24_x86_64.whl", hash = "sha256:ac9b21f73054bdcead5b2b497aa5b35b885643ff18b378151665138a641d953d"},
-    {file = "aim-3.10.3-cp39-cp39-macosx_10_14_x86_64.whl", hash = "sha256:01bd0498a072ed353ceb23cc9e3c912c7f9d5583a915686e3ddfd047020097c4"},
-    {file = "aim-3.10.3-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:9eb319c5f2a732730450f3b8235b1c6bc24902cba422fe4e1bb8e3ec4028240e"},
-    {file = "aim-3.10.3-cp39-cp39-manylinux_2_24_x86_64.whl", hash = "sha256:0dd088c119e25599c445d22a77be51694b27b0d09844cc73e33141140997a831"},
-    {file = "aim-3.10.3.tar.gz", hash = "sha256:390dba0ad000f49c707010c655ab6095b07e3cb9d7ddef488d1ee5de82b3aa0a"},
+    {file = "aim-3.11.0-cp310-cp310-macosx_10_14_x86_64.whl", hash = "sha256:6cb0c694c0489f9e8d280d9fa7a887aa1ed5032827a8d8fef8f5a246f34a1740"},
+    {file = "aim-3.11.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:aa6e55ef6d042384761c9e45a122945a2d0c37b126b03acc14be5ac2c2f45833"},
+    {file = "aim-3.11.0-cp310-cp310-manylinux_2_24_x86_64.whl", hash = "sha256:67d5e58c90ee691fe93c10d3ce5301b4faffa48864a40b9cb5b673354aa6e0af"},
+    {file = "aim-3.11.0-cp36-cp36m-macosx_10_14_x86_64.whl", hash = "sha256:89d45898c2f1bc8bd4423f405f007c7b17c3edfc2055410d247d5b4dc48ba71f"},
+    {file = "aim-3.11.0-cp36-cp36m-manylinux_2_24_x86_64.whl", hash = "sha256:504089168fb4dd0b0c95fbdb5549bcaadd0ef125e9585f9b754248292c8849fb"},
+    {file = "aim-3.11.0-cp37-cp37m-macosx_10_14_x86_64.whl", hash = "sha256:b5b9c51d325ea52b1a44dc70ecab91197ace199a91b133aa48308b4144d3f3ea"},
+    {file = "aim-3.11.0-cp37-cp37m-manylinux_2_24_x86_64.whl", hash = "sha256:48ed326b0a038d950a8940fe3dd1709fae2d61880ed93e813126771d57f29cbc"},
+    {file = "aim-3.11.0-cp38-cp38-macosx_10_14_x86_64.whl", hash = "sha256:9cd6a34e799f26b79404e9ed05524eda6490e2475f476e87ac59e98c2bcc0e43"},
+    {file = "aim-3.11.0-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:2a90494e1530d7e7301744e35962415112a2804217b863e8ede8332ad4eab99b"},
+    {file = "aim-3.11.0-cp38-cp38-manylinux_2_24_x86_64.whl", hash = "sha256:49c8a2856e1a7b0c6dae997a82d1dc26d7dd729f25362fca22e1f6c16e1ced40"},
+    {file = "aim-3.11.0-cp39-cp39-macosx_10_14_x86_64.whl", hash = "sha256:95ca21ed17c4ef6d9f76d630b4558301a5d8c2123fdc1ca102b5a682c8e017a0"},
+    {file = "aim-3.11.0-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:4309742caead5ae8f9aba49b310040482136544071ba869533fdd6c9860d19f4"},
+    {file = "aim-3.11.0-cp39-cp39-manylinux_2_24_x86_64.whl", hash = "sha256:8a24dfd458a38560a45ef029517585434df73bb97296ab2b6440666f19d11839"},
+    {file = "aim-3.11.0.tar.gz", hash = "sha256:dd51166749e0b0830609fc5fb856881038289300c512d69d11beaee676179cdc"},
 ]
 aim-ui = [
-    {file = "aim-ui-3.10.3.tar.gz", hash = "sha256:b8e4dd83f3c6f09bd05156c61b5c43b572adc51b6ef4eb6059106a1f317e4130"},
+    {file = "aim-ui-3.11.0.tar.gz", hash = "sha256:689644265e0e24ac52624da2c2fbe5d478b51f098e0f047994d4238fadc8895b"},
 ]
 aimrecords = [
     {file = "aimrecords-0.0.7-py2.py3-none-any.whl", hash = "sha256:b9276890891c5fd68f817e20fc5d466a80c01e22fa468eaa979331448a75d601"},
@@ -2864,28 +2865,28 @@ crcmod = [
     {file = "crcmod-1.7.win32-py3.1.msi", hash = "sha256:50586ab48981f11e5b117523d97bb70864a2a1af246cf6e4f5c4a21ef4611cd1"},
 ]
 cryptography = [
-    {file = "cryptography-37.0.2-cp36-abi3-macosx_10_10_universal2.whl", hash = "sha256:ef15c2df7656763b4ff20a9bc4381d8352e6640cfeb95c2972c38ef508e75181"},
-    {file = "cryptography-37.0.2-cp36-abi3-macosx_10_10_x86_64.whl", hash = "sha256:3c81599befb4d4f3d7648ed3217e00d21a9341a9a688ecdd615ff72ffbed7336"},
-    {file = "cryptography-37.0.2-cp36-abi3-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:2bd1096476aaac820426239ab534b636c77d71af66c547b9ddcd76eb9c79e004"},
-    {file = "cryptography-37.0.2-cp36-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.manylinux_2_24_aarch64.whl", hash = "sha256:31fe38d14d2e5f787e0aecef831457da6cec68e0bb09a35835b0b44ae8b988fe"},
-    {file = "cryptography-37.0.2-cp36-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:093cb351031656d3ee2f4fa1be579a8c69c754cf874206be1d4cf3b542042804"},
-    {file = "cryptography-37.0.2-cp36-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:59b281eab51e1b6b6afa525af2bd93c16d49358404f814fe2c2410058623928c"},
-    {file = "cryptography-37.0.2-cp36-abi3-manylinux_2_24_x86_64.whl", hash = "sha256:0cc20f655157d4cfc7bada909dc5cc228211b075ba8407c46467f63597c78178"},
-    {file = "cryptography-37.0.2-cp36-abi3-musllinux_1_1_aarch64.whl", hash = "sha256:f8ec91983e638a9bcd75b39f1396e5c0dc2330cbd9ce4accefe68717e6779e0a"},
-    {file = "cryptography-37.0.2-cp36-abi3-musllinux_1_1_x86_64.whl", hash = "sha256:46f4c544f6557a2fefa7ac8ac7d1b17bf9b647bd20b16decc8fbcab7117fbc15"},
-    {file = "cryptography-37.0.2-cp36-abi3-win32.whl", hash = "sha256:731c8abd27693323b348518ed0e0705713a36d79fdbd969ad968fbef0979a7e0"},
-    {file = "cryptography-37.0.2-cp36-abi3-win_amd64.whl", hash = "sha256:471e0d70201c069f74c837983189949aa0d24bb2d751b57e26e3761f2f782b8d"},
-    {file = "cryptography-37.0.2-pp37-pypy37_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a68254dd88021f24a68b613d8c51d5c5e74d735878b9e32cc0adf19d1f10aaf9"},
-    {file = "cryptography-37.0.2-pp37-pypy37_pp73-manylinux_2_24_x86_64.whl", hash = "sha256:a7d5137e556cc0ea418dca6186deabe9129cee318618eb1ffecbd35bee55ddc1"},
-    {file = "cryptography-37.0.2-pp38-pypy38_pp73-macosx_10_10_x86_64.whl", hash = "sha256:aeaba7b5e756ea52c8861c133c596afe93dd716cbcacae23b80bc238202dc023"},
-    {file = "cryptography-37.0.2-pp38-pypy38_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:95e590dd70642eb2079d280420a888190aa040ad20f19ec8c6e097e38aa29e06"},
-    {file = "cryptography-37.0.2-pp38-pypy38_pp73-manylinux_2_24_x86_64.whl", hash = "sha256:1b9362d34363f2c71b7853f6251219298124aa4cc2075ae2932e64c91a3e2717"},
-    {file = "cryptography-37.0.2-pp38-pypy38_pp73-win_amd64.whl", hash = "sha256:e53258e69874a306fcecb88b7534d61820db8a98655662a3dd2ec7f1afd9132f"},
-    {file = "cryptography-37.0.2-pp39-pypy39_pp73-macosx_10_10_x86_64.whl", hash = "sha256:1f3bfbd611db5cb58ca82f3deb35e83af34bb8cf06043fa61500157d50a70982"},
-    {file = "cryptography-37.0.2-pp39-pypy39_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:419c57d7b63f5ec38b1199a9521d77d7d1754eb97827bbb773162073ccd8c8d4"},
-    {file = "cryptography-37.0.2-pp39-pypy39_pp73-manylinux_2_24_x86_64.whl", hash = "sha256:dc26bb134452081859aa21d4990474ddb7e863aa39e60d1592800a8865a702de"},
-    {file = "cryptography-37.0.2-pp39-pypy39_pp73-win_amd64.whl", hash = "sha256:3b8398b3d0efc420e777c40c16764d6870bcef2eb383df9c6dbb9ffe12c64452"},
-    {file = "cryptography-37.0.2.tar.gz", hash = "sha256:f224ad253cc9cea7568f49077007d2263efa57396a2f2f78114066fd54b5c68e"},
+    {file = "cryptography-37.0.3-cp36-abi3-macosx_10_10_universal2.whl", hash = "sha256:d10413d493e98075060d3e62e5826de372912ea653ccc948f3c41b21ddca087f"},
+    {file = "cryptography-37.0.3-cp36-abi3-macosx_10_10_x86_64.whl", hash = "sha256:cd64147ff16506632893ceb2569624b48c84daa3ba4d89695f7c7bc24188eee9"},
+    {file = "cryptography-37.0.3-cp36-abi3-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:17c74f7d9e9e9bb7e84521243695c1b4bdc3a0e44ca764e6bcf8f05f3de3d0df"},
+    {file = "cryptography-37.0.3-cp36-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.manylinux_2_24_aarch64.whl", hash = "sha256:0713bee6c8077786c56bdec9c5d3f099d40d2c862ff3200416f6862e9dd63156"},
+    {file = "cryptography-37.0.3-cp36-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:b9c2008417741cdfbe945ef2d16b7b7ba0790886a0b49e1de533acf93eb66ed6"},
+    {file = "cryptography-37.0.3-cp36-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:646905ff7a712e415bf0d0f214e0eb669dd2257c4d7a27db1e8baec5d2a1d55f"},
+    {file = "cryptography-37.0.3-cp36-abi3-manylinux_2_24_x86_64.whl", hash = "sha256:dcafadb5a06cb7a6bb49fb4c1de7414ee2f8c8e12b047606d97c3175d690f582"},
+    {file = "cryptography-37.0.3-cp36-abi3-musllinux_1_1_aarch64.whl", hash = "sha256:0b4bfc5ccfe4e5c7de535670680398fed4a0bbc5dfd52b3a295baad42230abdf"},
+    {file = "cryptography-37.0.3-cp36-abi3-musllinux_1_1_x86_64.whl", hash = "sha256:a03dbc0d8ce8c1146c177cd0e3a66ea106f36733fb1b997ea4d051f8a68539ff"},
+    {file = "cryptography-37.0.3-cp36-abi3-win32.whl", hash = "sha256:190a24c14e91c1fa3101069aac7e77d11c5a73911c3904128367f52946bbb6fd"},
+    {file = "cryptography-37.0.3-cp36-abi3-win_amd64.whl", hash = "sha256:b05c5478524deb7a019e240f2a970040c4b0f01f58f0425e6262c96b126c6a3e"},
+    {file = "cryptography-37.0.3-pp37-pypy37_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:891ed8312840fd43e0696468a6520a582a033c0109f7b14b96067bfe1123226b"},
+    {file = "cryptography-37.0.3-pp37-pypy37_pp73-manylinux_2_24_x86_64.whl", hash = "sha256:30d6aabf623a01affc7c0824936c3dde6590076b61f5dd299df3cc2c75fc5915"},
+    {file = "cryptography-37.0.3-pp38-pypy38_pp73-macosx_10_10_x86_64.whl", hash = "sha256:31a7c1f1c2551f013d4294d06e22848e2ccd77825f0987cba3239df6ebf7b020"},
+    {file = "cryptography-37.0.3-pp38-pypy38_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a94fd1ff80001cb97add71d07f596d8b865b716f25ef501183e0e199390e50d3"},
+    {file = "cryptography-37.0.3-pp38-pypy38_pp73-manylinux_2_24_x86_64.whl", hash = "sha256:8a85dbcc770256918b40c2f40bd3ffd3b2ae45b0cf19068b561db8f8d61bf492"},
+    {file = "cryptography-37.0.3-pp38-pypy38_pp73-win_amd64.whl", hash = "sha256:773d5b5f2e2bd2c7cbb1bd24902ad41283c88b9dd463a0f82adc9a2870d9d066"},
+    {file = "cryptography-37.0.3-pp39-pypy39_pp73-macosx_10_10_x86_64.whl", hash = "sha256:0f9193428a55a4347af2d4fd8141a2002dedbcc26487e67fd2ae19f977ee8afc"},
+    {file = "cryptography-37.0.3-pp39-pypy39_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:7bf652c73e8f7c32a3f92f7184bf7f9106dacdf5ef59c3c3683d7dae2c4972fb"},
+    {file = "cryptography-37.0.3-pp39-pypy39_pp73-manylinux_2_24_x86_64.whl", hash = "sha256:c3c8b1ad2c266fdf7adc041cc4156d6a3d14db93de2f81b26a5af97ef3f209e5"},
+    {file = "cryptography-37.0.3-pp39-pypy39_pp73-win_amd64.whl", hash = "sha256:2383d6c3088e863304c37c65cd2ea404b7fbb4886823eab1d74137cc27f3d2ee"},
+    {file = "cryptography-37.0.3.tar.gz", hash = "sha256:ae430d51c67ac638dfbb42edf56c669ca9c74744f4d225ad11c6f3d355858187"},
 ]
 cycler = [
     {file = "cycler-0.11.0-py3-none-any.whl", hash = "sha256:3a27e95f763a428a739d2add979fa7494c912a32c17c4c38c4d5f082cad165a3"},
@@ -2976,8 +2977,8 @@ flatbuffers = [
     {file = "flatbuffers-2.0.tar.gz", hash = "sha256:12158ab0272375eab8db2d663ae97370c33f152b27801fa6024e1d6105fd4dd2"},
 ]
 flax = [
-    {file = "flax-0.5.1-py3-none-any.whl", hash = "sha256:0ba5ea6bd1e20956e1da627d36413b43393d10613dd3e1715ad32411ee61dbd5"},
-    {file = "flax-0.5.1.tar.gz", hash = "sha256:a145f0487405d8ac37dc97479350f09cfcf1bbc78ed369b6d6c8cae812676172"},
+    {file = "flax-0.5.2-py3-none-any.whl", hash = "sha256:579bea7d6c8454782a2e0cfd210b26dbaff8afe5d4dd8e6e46c4ea4534cf2831"},
+    {file = "flax-0.5.2.tar.gz", hash = "sha256:5f07775fd4ba1926192ab6eb48c9adbd5658ddaf8585fb0c561741400d5599ff"},
 ]
 fonttools = [
     {file = "fonttools-4.33.3-py3-none-any.whl", hash = "sha256:f829c579a8678fa939a1d9e9894d01941db869de44390adb49ce67055a06cc2a"},
@@ -4225,8 +4226,8 @@ retry-decorator = [
     {file = "retry_decorator-1.1.1.tar.gz", hash = "sha256:e1e8ad02e518fe11073f2ea7d80b6b8be19daa27a60a1838aff7c731ddcf2ebe"},
 ]
 rich = [
-    {file = "rich-11.1.0-py3-none-any.whl", hash = "sha256:365ebcdbfb3aa8d4b0ed2490e0fbf7b886a39d14eb7ea5fb7aece950835e1eed"},
-    {file = "rich-11.1.0.tar.gz", hash = "sha256:43e03d8eec12e21beaecc22c828a41c4247356414a12d5879834863d4ad53816"},
+    {file = "rich-11.2.0-py3-none-any.whl", hash = "sha256:d5f49ad91fb343efcae45a2b2df04a9755e863e50413623ab8c9e74f05aee52b"},
+    {file = "rich-11.2.0.tar.gz", hash = "sha256:1a6266a5738115017bb64a66c59c717e7aa047b3ae49a011ede4abdeffc6536e"},
 ]
 rsa = [
     {file = "rsa-4.7.2-py3-none-any.whl", hash = "sha256:78f9a9bf4e7be0c5ded4583326e7461e3a3c5aae24073648b4bdfa797d78c9d2"},
@@ -4266,8 +4267,8 @@ send2trash = [
     {file = "Send2Trash-1.8.0.tar.gz", hash = "sha256:d2c24762fd3759860a0aff155e45871447ea58d2be6bdd39b5c8f966a0c99c2d"},
 ]
 setuptools-scm = [
-    {file = "setuptools_scm-7.0.0-py3-none-any.whl", hash = "sha256:187cd31d78998d8226b68d4066dbfbf9c1fa8b61c10ff65cebe950379d3b9175"},
-    {file = "setuptools_scm-7.0.0.tar.gz", hash = "sha256:136fe07547645fee2dcc7d21b192dad95932e70aa4b603f45b8907ed78f44a11"},
+    {file = "setuptools_scm-7.0.1-py3-none-any.whl", hash = "sha256:23b2e561fd3db49d168f282384af4730092a8c8c6db6d3451ce93a5813c14509"},
+    {file = "setuptools_scm-7.0.1.tar.gz", hash = "sha256:d1c631fc3a4281754274155ef4a40de24b1d1c718df00ead147b08ab690615b2"},
 ]
 six = [
     {file = "six-1.16.0-py2.py3-none-any.whl", hash = "sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254"},
