@@ -12,7 +12,7 @@ exp_name_fn = (
 
 agents_and_models = [(agent.DQNEnsemble, configs.dqn_ensemble_model_maker)]
 envs = ["CartPole-v1"]
-heads = [2]
+heads = [10]
 redundancy = range(1)
 redundancy_and_seeds = zip(
     redundancy, map(lambda r: r + experiments.DEFAULT_SEED, redundancy)
@@ -29,16 +29,16 @@ def do_confs(params: list):
             "redundancy": repeat,
             "agent_class": ag,
             "env_name": env,
-            "experiment_name": exp_name_fn(ag, env, prefix="fake_"),
-            # "experiment_name": exp_name_fn(ag, env),
+            # "experiment_name": exp_name_fn(ag, env, prefix="fake_"),
+            "experiment_name": exp_name_fn(ag, env),
             "model_maker_fn": model_fn,
-            "logs_base_dir": constants.scratch_data_dir,
-            # "logs_base_dir": constants.data_dir,
+            # "logs_base_dir": constants.scratch_data_dir,
+            "logs_base_dir": constants.data_dir,
             "experiment": {
-                "iterations": 10,
-                "steps": 500,
-                "eval_steps": 500,
-                "eval_period": 2,
+                "iterations": 500,
+                "steps": 1000,
+                "eval_steps": 1000,
+                "eval_period": 5,
             },
             "memory": {"batch_size": 32},
             "agent": {

@@ -80,6 +80,7 @@ class Runner(ABC):
             "Steps": 0,
             **({} if mode == "eval" else self.agent.initial_train_dict),
         }
+        self.agent.on_episode_start(mode)
         obs, done = self.env.reset(), False
         while not done:
             action, more_info = self.agent.select_action(obs, mode)

@@ -1,3 +1,4 @@
+import logging
 from typing import Dict, Tuple
 
 import gin
@@ -10,6 +11,8 @@ from jax import random as jrand
 from thesis import custom_pytrees, types
 from thesis.agent import base
 from thesis.agent import utils as agent_utils
+
+logger = logging.getLogger(__name__)
 
 
 @jax.jit
@@ -79,9 +82,7 @@ def sync_weights(model: custom_pytrees.ValueBasedTS) -> custom_pytrees.ValueBase
 def sync_weights_ensemble(
     model: custom_pytrees.ValueBasedTSEnsemble,
 ) -> custom_pytrees.ValueBasedTSEnsemble:
-    return custom_pytrees.ValueBasedTSEnsemble(
-        tuple(sync_weights(head) for head in model)
-    )
+    return custom_pytrees.ValueBasedTSEnsemble([sync_weights(head) for head in model])
 
 
 # `kw_only=True` is required when mandatory attributes follow ones with
@@ -138,6 +139,8 @@ class DQN(base.Agent):
 @gin.configurable
 @define
 class DQNEnsemble(DQN):
+    bootstrap_head_idx: int = field(init=None, default=None)
+
     def _make_Q_train_state(self) -> custom_pytrees.ValueBasedTSEnsemble:
         return agent_utils.build_TS_ensemble(
             self.Q_model_def,
@@ -157,15 +160,29 @@ class DQNEnsemble(DQN):
             params, x
         ).mean(axis=0)
 
+    def on_episode_start(self, mode: str):
+        self.bootstrap_head_idx = jrand.randint(
+            next(self.rng), (), 0, len(self.models["Q"])
+        )
+        logger.debug(f"Next {mode} episode head index: {self.bootstrap_head_idx}")
+
     @property
     def act_selection_params(self) -> frozen_dict.FrozenDict:
-        return self.models["Q"][0].params
+        return self.models["Q"][self.bootstrap_head_idx].params
 
     def sync_weights(self):
         self.models["Q"] = sync_weights_ensemble(self.models["Q"])
 
+    # TODO train fn becomes a parameter to be able to switch them at
+    # runtime!
     def train(self, experience_batch: Dict[str, np.ndarray]) -> types.MetricsDict:
-        train_info, self.models["Q"] = train_ensembled(
-            experience_batch, self.models["Q"], self.gamma, self.rng
+        train_info, self.models["Q"][self.bootstrap_head_idx] = train(
+            experience_batch, self.models["Q"][self.bootstrap_head_idx], self.gamma
         )
         return train_info
+
+    # def train(self, experience_batch: Dict[str, np.ndarray]) -> types.MetricsDict:
+    #     train_info, self.models["Q"] = train_ensembled(
+    #         experience_batch, self.models["Q"], self.gamma, self.rng
+    #     )
+    #     return train_info

@@ -85,6 +85,10 @@ class Agent(ABC):
         """
         ...
 
+    def on_episode_start(self, mode: str):
+        """Simple event that can be overridden for each agent."""
+        ...
+
     # NOTE default implementation to be overridden to match the
     # structure of the dictionaries at self.initial_train_dict and
     # self.train

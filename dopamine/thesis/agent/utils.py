@@ -150,7 +150,7 @@ def build_TS_ensemble(
     params = learner_def.net.init(next(rng), jnp.zeros(input_shape))
     partial_loss_fn = ft.partial(learner_def.loss_fn, **learner_def.loss_fn_params)
     return custom_pytrees.ValueBasedTSEnsemble(
-        tuple(
+        [
             custom_pytrees.ValueBasedTS.create(
                 apply_fn=ft.partial(s_t_fn_def, i),
                 s_tp1_fn=s_tp1_fn_def,
@@ -166,7 +166,7 @@ def build_TS_ensemble(
                 loss_metric=partial_loss_fn,
             )
             for i in range(learner_def.net.n_heads)
-        )
+        ]
     )
 
 

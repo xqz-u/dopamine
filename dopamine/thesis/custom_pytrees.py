@@ -1,6 +1,6 @@
 import logging
 from dataclasses import dataclass
-from typing import Callable, Dict, Tuple, Union
+from typing import Callable, Dict, List, Tuple, Union
 
 import gin
 import optax
@@ -36,10 +36,14 @@ class ValueBasedTS(train_state.TrainState):
 # NOTE could be made a PyTreeNode if passed to jax transformed fns
 @dataclass
 class ValueBasedTSEnsemble:
-    TSS: Tuple[ValueBasedTS, ...]
+    TSS: List[ValueBasedTS]
 
     def __getitem__(self, idx: int) -> ValueBasedTS:
         return self.TSS[idx]
+
+    def __setitem__(self, idx: int, val: ValueBasedTS):
+        assert isinstance(val, ValueBasedTS)
+        self.TSS[idx] = val
 
     def __len__(self) -> int:
         return len(self.TSS)
