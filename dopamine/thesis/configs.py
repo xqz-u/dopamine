@@ -34,6 +34,11 @@ make_mlp_def = lambda features, env_name, **kwargs: (
     },
 )
 
+make_convnet_def = lambda out_dim, **kwargs: {
+    networks.NatureDQNNetwork,
+    {"num_actions": out_dim, **kwargs},
+}
+
 
 make_ensemble_def = lambda n_heads, heads_model: (
     networks.EnsembledNet,
@@ -56,6 +61,9 @@ adam_mse_mlp = lambda features, env_name, **mlp_kwargs: agent_utils.ModelDefStor
     **{"net_def": make_mlp_def(features, env_name, **mlp_kwargs), **make_adam_mse_def()}
 )
 
+adam_mse_convnet = lambda out_dim, **conv_kwargs: agent_utils.ModelDefStore(
+    **{"net_def": make_convnet_def(out_dim, **conv_kwargs), **make_adam_mse_def()}
+)
 
 adam_mse_ensemble_mlp = (
     lambda n_heads, features, env_name, **mlp_kwargs: agent_utils.ModelDefStore(
@@ -94,6 +102,17 @@ def dqvmax_model_maker(
     return {
         **dqn_model_maker(env_name, q_out_dim, **kwargs),
         "V_model_def": adam_mse_mlp(1, env_name, **kwargs),
+    }
+
+
+# TODO functions which accepts model arg, not different functions for
+# different models!
+def dqvmax_conv_model_maker(
+    q_out_dim: int, **kwargs
+) -> Dict[str, agent_utils.ModelDefStore]:
+    return {
+        "Q_model_def": adam_mse_convnet(q_out_dim, **kwargs),
+        "V_model_def": adam_mse_mlp(1, **kwargs),
     }
 
 
