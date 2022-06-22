@@ -117,7 +117,7 @@ def dqvmax_ensemble_model_maker(
     env_name: str, q_out_dim: int, heads: int, **kwargs
 ) -> Dict[str, agent_utils.ModelDefStore]:
     return {
-        **dqn_ensemble_model_maker(env_name, q_out_dim, env_name, **kwargs),
+        **dqn_ensemble_model_maker(env_name, q_out_dim, heads, **kwargs),
         "V_model_def": adam_mse_ensemble_mlp(heads, 1, env_name, **kwargs),
     }
 
