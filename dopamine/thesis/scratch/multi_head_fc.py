@@ -158,3 +158,90 @@ preds = [
 # )
 # dqn = jax_networks.NatureDQNNetwork(num_actions=env.action_space.n)
 # dqn_params = dqn.init(next(rng), jnp.zeros(dqn_input_shape))
+
+
+class Pippo(nn.Module):
+    og_model: nn.Module
+    n_heads: int
+
+    def setup(self):
+        self.model = ...
+
+
+import numpy as np
+from flax import linen as nn
+from jax import random
+from jax.config import config
+
+
+class Child(nn.Module):
+    @nn.compact
+    def __call__(self, x):
+        x = nn.Dense(10)(x)
+        x = nn.Dense(4)(x)
+        return x
+
+
+class Parent(nn.Module):
+    @nn.compact
+    def __call__(self, backbone_module, backbone_params, x):
+        x = backbone_module.apply(backbone_params, x)
+        x = nn.Dense(1)(x)
+        return x
+
+
+def load_pretrained(x):
+    key = random.PRNGKey(42)
+    child_module = Child()
+    child_params = child_module.init(key, x)
+
+    return child_module, child_params
+
+
+x = np.random.uniform(size=(4, 1))
+child_module, child_params = load_pretrained(x)
+
+key = random.PRNGKey(42)
+model = Parent()
+params = model.init(key, child_module, child_params, x)
+
+# y = model.apply(params, x, child_module, child_params)
+
+import jax
+import optax
+from jax import numpy as jnp
+
+
+def loss_(params, x, ytrue):
+    p_parent, p_child = params
+    y = model.apply(child_module, x, p_parent, p_child)
+    ymax = y.max()
+    err = jnp.power((ytrue - ymax), 2)
+    return err
+
+
+import functools as ft
+
+partial_model_apply = ft.partial(model.apply, child_module)
+
+
+def loss_1(params, x, ytrue):
+    p_parent, p_child = params
+    y = model.apply(p_parent, x, child_module, p_child)
+    ymax = y.max()
+    err = jnp.power((ytrue - ymax), 2)
+    return err
+
+
+opt = optax.adam(**{"learning_rate": 0.001, "eps": 3.125e-4})
+opt_state = opt.init((params, child_params))
+
+loss_fn = jax.value_and_grad(loss_)
+
+input_ = np.random.uniform(size=(4, 1))
+true_answer = np.random.uniform(size=())
+
+loss, grads = loss_fn((params, child_params), input_, true_answer)
+
+updates, opt_state = opt.update(grads, opt_state, (params, child_params))
+new_params, new_child_params = optax.apply_updates((params, child_params), updates)
