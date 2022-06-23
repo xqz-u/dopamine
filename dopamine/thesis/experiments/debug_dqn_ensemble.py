@@ -41,29 +41,27 @@ def do_confs(params: list):
             # "logs_base_dir": constants.scratch_data_dir,
             "logs_base_dir": constants.data_dir,
             "experiment": {
-                "iterations": 500,
-                "steps": 2000,
-                "eval_steps": 2000,
+                "iterations": 1000,
+                "steps": 500,
+                "eval_steps": 500,
                 "eval_period": 5,
-                # "iterations": 10,
-                # "steps": 500,
-                # "eval_steps": 500,
-                # "eval_period": 5,
             },
             "memory": {"batch_size": 32},
             "agent": {
-                # "sync_weights_every": 100,
-                # "min_replay_history": 500,
-                # "training_period": 1
-                "sync_weights_every": 1000,
-                "min_replay_history": 5000,
-                "training_period": 4,
+                "sync_weights_every": 100,
+                "min_replay_history": 500,
+                "training_period": 1,
+                # "ensemble_td_target": True,
             },
-            "model_args": {"heads": n_heads},
+            # "model_args": {"heads": n_heads, "hiddens": (512, 512)},
+            "model_args": {"heads": 2, "hiddens": (10, 10)},
         }
         for (ag, model_fn), env, (repeat, seed), n_heads in params
     ]
 
 
 conf, *_ = do_confs(configurables)
-runner.run_experiment(conf)
+runner_class = conf.pop("runner")
+run = runner_class(**experiments.make_conf(**conf))
+# run.run()
+# runner.run_experiment(conf)

@@ -137,16 +137,22 @@ class DQN(base.Agent):
         return super().reportable + ("Q_model_def",)
 
 
-class DQNEnsemble(DQN):
-    ...
-
-
 @gin.configurable
 @define
 class BootstrappedDQN(DQN):
+    ensemble_td_target: bool = False
     bootstrap_head_idx: int = field(init=None, default=None)
 
     def _make_Q_train_state(self) -> custom_pytrees.ValueBasedTSEnsemble:
+        td_target_fn = lambda head: lambda params, xs: (
+            agent_utils.batch_net_eval(self.Q_model_def.net.apply, params, xs).mean(
+                axis=1
+            )
+            if self.ensemble_td_target
+            else agent_utils.batch_net_eval(
+                ft.partial(self.Q_model_def.net.apply, head=head), params, xs
+            )
+        ).max(axis=1)
         return agent_utils.build_TS_ensemble(
             self.Q_model_def,
             self.rng,
@@ -154,9 +160,7 @@ class BootstrappedDQN(DQN):
             lambda head: lambda params, xs: self.Q_model_def.net.apply(
                 params, xs, head=head
             ),
-            lambda head: lambda params, xs: agent_utils.batch_net_eval(
-                ft.partial(self.Q_model_def.net.apply, head=head), params, xs
-            ).max(axis=1),
+            td_target_fn,
             True,
         )
 
@@ -185,6 +189,14 @@ class BootstrappedDQN(DQN):
             experience_batch, self.models["Q"][self.bootstrap_head_idx], self.gamma
         )
         return train_info
+
+    @property
+    def reportable(self) -> Tuple[str]:
+        return super().reportable + ("ensemble_td_target",)
+
+
+class DQNEnsemble(DQN):
+    ...
 
 
 # self.policy_evaluator.model_call = lambda params, x: self.Q_model_def.net.apply(
