@@ -142,9 +142,10 @@ class DQVEnsemble(DQV):
             self.rng,
             self.observation_shape,
             lambda head, params, xs: self.V_model_def.net.apply(params, xs, head=head),
-            lambda params, xs: agent_utils.batch_net_eval(
-                self.V_model_def.net.apply, params, xs
-            ).mean(axis=1),
+            # lambda params, xs: agent_utils.batch_net_eval(
+            #     self.V_model_def.net.apply, params, xs
+            # ).mean(axis=1),
+            lambda x: x,
             target_model,
         )
 

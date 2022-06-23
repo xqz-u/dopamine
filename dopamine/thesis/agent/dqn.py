@@ -1,3 +1,4 @@
+import functools as ft
 import logging
 from typing import Dict, Tuple
 
@@ -136,9 +137,13 @@ class DQN(base.Agent):
         return super().reportable + ("Q_model_def",)
 
 
+class DQNEnsemble(DQN):
+    ...
+
+
 @gin.configurable
 @define
-class DQNEnsemble(DQN):
+class BootstrappedDQN(DQN):
     bootstrap_head_idx: int = field(init=None, default=None)
 
     def _make_Q_train_state(self) -> custom_pytrees.ValueBasedTSEnsemble:
@@ -146,43 +151,48 @@ class DQNEnsemble(DQN):
             self.Q_model_def,
             self.rng,
             self.observation_shape,
-            lambda head, params, xs: self.Q_model_def.net.apply(params, xs, head=head),
-            lambda params, xs: agent_utils.batch_net_eval(
-                self.Q_model_def.net.apply, params, xs
-            )
-            .mean(axis=1)  # average across heads (columns)
-            .max(axis=1),
+            lambda head: lambda params, xs: self.Q_model_def.net.apply(
+                params, xs, head=head
+            ),
+            lambda head: lambda params, xs: agent_utils.batch_net_eval(
+                ft.partial(self.Q_model_def.net.apply, head=head), params, xs
+            ).max(axis=1),
             True,
         )
 
     def _set_exploration_fn(self):
-        self.policy_evaluator.model_call = lambda params, x: self.Q_model_def.net.apply(
-            params, x
-        ).mean(axis=0)
+        pass
 
     def on_episode_start(self, mode: str):
-        self.bootstrap_head_idx = jrand.randint(
-            next(self.rng), (), 0, len(self.models["Q"])
+        idx = jrand.randint(next(self.rng), (), 0, len(self.models["Q"]))
+        self.bootstrap_head_idx = idx
+        self.policy_evaluator.model_call = self.models["Q"][idx].apply_fn
+        logger.debug(
+            f"Next {mode} episode head index: {idx} explore id: {id(self.policy_evaluator.model_call)}"
         )
-        logger.debug(f"Next {mode} episode head index: {self.bootstrap_head_idx}")
 
     @property
     def act_selection_params(self) -> frozen_dict.FrozenDict:
         return self.models["Q"][self.bootstrap_head_idx].params
 
     def sync_weights(self):
-        self.models["Q"] = sync_weights_ensemble(self.models["Q"])
+        self.models["Q"][self.bootstrap_head_idx] = sync_weights(
+            self.models["Q"][self.bootstrap_head_idx]
+        )
 
-    # TODO train fn becomes a parameter to be able to switch them at
-    # runtime!
     def train(self, experience_batch: Dict[str, np.ndarray]) -> types.MetricsDict:
         train_info, self.models["Q"][self.bootstrap_head_idx] = train(
             experience_batch, self.models["Q"][self.bootstrap_head_idx], self.gamma
         )
         return train_info
 
-    # def train(self, experience_batch: Dict[str, np.ndarray]) -> types.MetricsDict:
-    #     train_info, self.models["Q"] = train_ensembled(
-    #         experience_batch, self.models["Q"], self.gamma, self.rng
-    #     )
-    #     return train_info
+
+# self.policy_evaluator.model_call = lambda params, x: self.Q_model_def.net.apply(
+#     params, x
+# ).mean(axis=0)
+# self.models["Q"] = sync_weights_ensemble(self.models["Q"])
+# def train(self, experience_batch: Dict[str, np.ndarray]) -> types.MetricsDict:
+#     train_info, self.models["Q"] = train_ensembled(
+#         experience_batch, self.models["Q"], self.gamma, self.rng
+#     )
+#     return train_info

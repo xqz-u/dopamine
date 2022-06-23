@@ -142,8 +142,8 @@ def build_TS_ensemble(
     learner_def: ModelDefStore,
     rng: custom_pytrees.PRNGKeyWrap,
     input_shape: Tuple[int, ...],
-    s_t_fn_def: Callable[..., types.ModuleCall],
-    s_tp1_fn_def: types.ModuleCall,
+    s_t_fn_creator: Callable[int, types.ModuleCall],
+    s_tp1_fn_creator: Callable[int, types.ModuleCall],
     has_target_model: bool,
 ) -> custom_pytrees.ValueBasedTSEnsemble:
     assert isinstance(learner_def.net, networks.EnsembledNet)
@@ -152,8 +152,8 @@ def build_TS_ensemble(
     return custom_pytrees.ValueBasedTSEnsemble(
         [
             custom_pytrees.ValueBasedTS.create(
-                apply_fn=ft.partial(s_t_fn_def, i),
-                s_tp1_fn=s_tp1_fn_def,
+                apply_fn=s_t_fn_creator(i),
+                s_tp1_fn=s_tp1_fn_creator(i),
                 params=params,
                 target_params=params if has_target_model else None,
                 tx=optax.multi_transform(

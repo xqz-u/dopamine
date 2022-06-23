@@ -2,6 +2,10 @@ import itertools as it
 
 from thesis import agent, utils
 
+# import logging
+
+
+# utils.setup_root_logging(logging.DEBUG)
 utils.setup_root_logging()
 
 from thesis import agent, configs, constants, experiments, exploration, runner
@@ -10,9 +14,11 @@ exp_name_fn = (
     lambda *args, **kwargs: f"{experiments.base_exp_name_fn(*args, **kwargs)}_debug_online"
 )
 
-agents_and_models = [(agent.DQNEnsemble, configs.dqn_ensemble_model_maker)]
+# agents_and_models = [(agent.DQNEnsemble, configs.dqn_ensemble_model_maker)]
+agents_and_models = [(agent.BootstrappedDQN, configs.dqn_ensemble_model_maker)]
 envs = ["CartPole-v1"]
 heads = [10]
+# heads = [2]
 redundancy = range(1)
 redundancy_and_seeds = zip(
     redundancy, map(lambda r: r + experiments.DEFAULT_SEED, redundancy)
@@ -39,9 +45,16 @@ def do_confs(params: list):
                 "steps": 2000,
                 "eval_steps": 2000,
                 "eval_period": 5,
+                # "iterations": 10,
+                # "steps": 500,
+                # "eval_steps": 500,
+                # "eval_period": 5,
             },
             "memory": {"batch_size": 32},
             "agent": {
+                # "sync_weights_every": 100,
+                # "min_replay_history": 500,
+                # "training_period": 1
                 "sync_weights_every": 1000,
                 "min_replay_history": 5000,
                 "training_period": 4,
