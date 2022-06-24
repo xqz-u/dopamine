@@ -76,13 +76,13 @@ def make_conf(
         "env": env,
         "checkpoint_base_dir": logs_dir,
         "reporters": configs.make_reporters(
-            (
-                "mongo",
-                {
-                    "experiment_name": experiment_name,
-                    **kwargs.get("reporters", {}).get("mongo", {}),
-                },
-            ),
+            # (
+            #     "mongo",
+            #     {
+            #         "experiment_name": experiment_name,
+            #         **kwargs.get("reporters", {}).get("mongo", {}),
+            #     },
+            # ),
             (
                 "aim",
                 {
