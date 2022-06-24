@@ -1,11 +1,13 @@
 import functools as ft
-from typing import Tuple
+from typing import Callable, List, NamedTuple, Tuple
 
 import jax
 import optax
 from dopamine.jax import losses
 from flax import linen as nn
+from flax import struct
 from flax.core.frozen_dict import FrozenDict
+from flax.training import train_state
 from jax import numpy as jnp
 from jax import random as jrand
 from thesis import custom_pytrees, networks
@@ -35,8 +37,8 @@ class FinalHead(nn.Module):
     @nn.compact
     def __call__(
         self,
-        x: jnp.ndarray,
         backbone_params: FrozenDict,
+        x: jnp.ndarray,
         backbone_module: nn.Module = None,
     ) -> jnp.ndarray:
         x = backbone_module.apply(backbone_params, x)
@@ -52,30 +54,30 @@ rng = custom_pytrees.PRNGKeyWrap(42)
 
 # NOTE features is whatever for the body? like an additional hidden
 # layer?
-shared_mlp = networks.MLP(features=4, hiddens=(10, 10))
+shared_mlp = networks.MLP(features=3, hiddens=(4,))
 shared_mlp_params = shared_mlp.init(next(rng), jnp.zeros(obs_shape))
 
 head_model = FinalHead(features=2)
 heads_params = [
     head_model.init(
-        next(rng), jnp.zeros(obs_shape), shared_mlp_params, backbone_module=shared_mlp
+        next(rng), shared_mlp_params, jnp.zeros(obs_shape), backbone_module=shared_mlp
     )
     for _ in range(n_heads)
 ]
 
-heads_full_params = list(zip([shared_mlp_params] * n_heads, heads_params))
+heads_full_params = list(zip(heads_params, [shared_mlp_params] * n_heads))
 
-opt = optax.adam(**{"learning_rate": 0.001, "eps": 3.125e-4})
-
-apply_fn_partial = ft.partial(head_model.apply, shared_mlp)
+apply_fn = lambda head_and_body_params, x: ft.partial(
+    head_model.apply, backbone_module=shared_mlp
+)(*head_and_body_params, x)
 # apply_fn_partial = jax.tree_util.Partial(head_model.apply, shared_mlp)
 tss = [
     custom_pytrees.ValueBasedTS.create(
         params=head_ps,
-        apply_fn=apply_fn_partial,
+        apply_fn=apply_fn,
         # s_tp1_fn=apply_fn_partial,
         s_tp1_fn=None,  # is this really needed at all??
-        tx=opt,
+        tx=optax.adam(**{"learning_rate": 0.001, "eps": 3.125e-4}),
         target_params=head_ps,
         loss_metric=losses.mse_loss,
     )
@@ -97,9 +99,30 @@ batch = {
 head_i = 0
 episode_head_ts = tss[head_i]
 # TODO named tuple to have shared and head params easily recognizable!
+# td_targets = agent_utils.apply_td_loss(
+#     episode_head_ts.apply_fn, episode_head_ts.target_params[0], batch, gamma
+# )
 td_targets = agent_utils.apply_td_loss(
-    episode_head_ts.apply_fn, episode_head_ts.target_params[0], batch, gamma
+    lambda params, xs: jax.vmap(lambda x: episode_head_ts.apply_fn(params, x))(xs)
+    .squeeze()
+    .max(1),
+    episode_head_ts.target_params,
+    batch,
+    gamma,
 )
 loss, tss[head_i] = train_Q(
     episode_head_ts, batch["state"], batch["action"], td_targets
 )
+
+
+class QParams(NamedTuple):
+    online: FrozenDict
+    target: FrozenDict
+
+
+class ValueBasedTS(train_state.TrainState):
+    loss_metric: Callable[[jnp.ndarray, jnp.ndarray], jnp.ndarray] = struct.field(
+        pytree_node=False
+    )
+    backbone_params: FrozenDict
+    heads_params = List[QParams]

@@ -104,6 +104,7 @@ class ModelDefStore:
     opt_params: dict
     loss_fn: types.LossMetric
     loss_fn_params: dict = field(factory=dict)
+    info: dict = field(factory=dict)
     net: nn.Module = field(init=False, default=None)
 
     def __attrs_post_init__(self):

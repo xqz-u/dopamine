@@ -24,8 +24,14 @@ def jax_container_shapes(cont) -> dict[str, Tuple[int]]:
     return jax.tree_map(lambda el: el.shape, cont)
 
 
+# NOTE works on its own, but not when called from reportable_config:
+# jax.tree_map does not descend in Partial
 def callable_name_getter(call_: callable) -> str:
-    return getattr(call_, "__name__", type(call_).__name__)
+    return (
+        [callable_name_getter(call_.func), call_.args, call_.keywords]
+        if isinstance(call_, jax.tree_util.Partial)
+        else getattr(call_, "__name__", type(call_).__name__)
+    )
 
 
 # make a simple configuration reportable easily e.g. in Aim
