@@ -1,3 +1,5 @@
+import functools as ft
+import logging
 from typing import Dict, Tuple, Union
 
 import gin
@@ -14,6 +16,9 @@ from thesis.agent import utils as agent_utils
 DQVModelTypes = Dict[
     str, Union[custom_pytrees.ValueBasedTS, custom_pytrees.ValueBasedTSEnsemble]
 ]
+
+
+logger = logging.getLogger(__name__)
 
 
 @jax.jit
@@ -133,30 +138,56 @@ class DQV(base.Agent):
 
 @gin.configurable
 @define
-class DQVEnsemble(DQV):
+class BootstrappedDQV(DQV):
+    ensemble_td_target: bool = False
+    bootstrap_head_idx: int = field(init=None, default=None)
+
     def _make_V_train_state(
         self, target_model: bool
     ) -> custom_pytrees.ValueBasedTSEnsemble:
+        td_target_fn = lambda head: lambda params, xs: (
+            agent_utils.batch_net_eval(self.V_model_def.net.apply, params, xs).mean(
+                axis=1
+            )
+            if self.ensemble_td_target
+            else agent_utils.batch_net_eval(
+                ft.partial(self.V_model_def.net.apply, head=head), params, xs
+            )
+        )
         return agent_utils.build_TS_ensemble(
             self.V_model_def,
             self.rng,
             self.observation_shape,
-            lambda head, params, xs: self.V_model_def.net.apply(params, xs, head=head),
-            # lambda params, xs: agent_utils.batch_net_eval(
-            #     self.V_model_def.net.apply, params, xs
-            # ).mean(axis=1),
-            lambda x: x,
+            lambda head: lambda params, xs: self.V_model_def.net.apply(
+                params, xs, head=head
+            ),
+            td_target_fn,
             target_model,
         )
 
-    def _set_exploration_fn(self):
-        dqn.DQNEnsemble._set_exploration_fn(self)
+    def on_episode_start(self, mode: str):
+        idx = jrand.randint(next(self.rng), (), 0, len(self.models["V"]))
+        self.bootstrap_head_idx = idx
+        logger.debug(
+            f"Next {mode} episode head index: {idx} explore id: {id(self.policy_evaluator.model_call)}"
+        )
 
     def sync_weights(self):
-        self.models["V"] = dqn.sync_weights_ensemble(self.models["V"])
+        self.models["V"][self.bootstrap_head_idx] = dqn.sync_weights(
+            self.models["V"][self.bootstrap_head_idx]
+        )
 
     def train(self, experience_batch: Dict[str, np.ndarray]) -> types.MetricsDict:
-        train_info, self.models = train_ensembled(
-            experience_batch, self.models, self.gamma, self.rng
-        )
+        models = {"Q": self.models["Q"], "V": self.models["V"][self.bootstrap_head_idx]}
+        train_info, models = train(experience_batch, models, self.gamma)
+        self.models["Q"] = models["Q"]
+        self.models["V"][self.bootstrap_head_idx] = models["V"]
         return train_info
+
+    @property
+    def reportable(self) -> Tuple[str]:
+        return super().reportable + ("ensemble_td_target",)
+
+
+class DQVEnsemble(DQV):
+    ...

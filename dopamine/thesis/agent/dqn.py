@@ -197,14 +197,3 @@ class BootstrappedDQN(DQN):
 
 class DQNEnsemble(DQN):
     ...
-
-
-# self.policy_evaluator.model_call = lambda params, x: self.Q_model_def.net.apply(
-#     params, x
-# ).mean(axis=0)
-# self.models["Q"] = sync_weights_ensemble(self.models["Q"])
-# def train(self, experience_batch: Dict[str, np.ndarray]) -> types.MetricsDict:
-#     train_info, self.models["Q"] = train_ensembled(
-#         experience_batch, self.models["Q"], self.gamma, self.rng
-#     )
-#     return train_info
