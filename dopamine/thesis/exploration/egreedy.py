@@ -1,4 +1,5 @@
 import functools as ft
+import logging
 from typing import Union
 
 import gin
@@ -9,6 +10,8 @@ from jax import numpy as jnp
 from jax import random as jrand
 from thesis import custom_pytrees, types
 from thesis.exploration import base
+
+logger = logging.getLogger(__name__)
 
 
 # always perform a state evaluation to return the maximum state Q-value
@@ -45,6 +48,7 @@ class Egreedy(base.PolicyEvaluator):
         state: jnp.ndarray,
         **_,
     ) -> types.PolicyEvalInfo:
+        logger.debug(f"***explore fn id: {id(self.model_call)}")
         return egreedy(
             self.model_call,
             self.num_actions,

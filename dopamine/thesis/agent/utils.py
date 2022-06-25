@@ -37,7 +37,7 @@ def batch_net_eval(
 # https://jax.readthedocs.io/en/latest/jax-101/04-advanced-autodiff.html?highlight=TD(02#stopping-gradients
 # as to why we use this construct here; the reson resides in the TD(0)
 # update rule
-def td_loss(
+def TD_target(
     discount: float,
     target_estimates: jnp.ndarray,
     rewards: np.ndarray,
@@ -46,6 +46,9 @@ def td_loss(
     return jax.lax.stop_gradient(
         rewards + discount * target_estimates * (1.0 - terminals)
     )
+
+
+td_loss = TD_target
 
 
 @ft.partial(jax.jit, static_argnums=(0,))
