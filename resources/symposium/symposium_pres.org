@@ -76,8 +76,9 @@ Q^* &= \mathcal{T}^* Q^* & \\
 [[./bootstrap_error_offline_rl.png]]
 
 ** Bootstrapping Error in the DQV\cite{sabatelli2020deep} algorithmic family
-here plots of DQN, DQV and DQVMax on CartPole and
-Acrobot, offline.
+#+ATTR_LaTeX: :width \textwidth
+[[./dshift_plots_normal.png]]
+
 * Possible solution: Ensembles
 * Experiments
 * Conclusions and future work
