@@ -28,3 +28,4 @@ resources/**/*.bbl
 resources/symposium/beamer-test
 resources/symposium/offline_rl_gif
 resources/symposium/symposium_pres.tex
+resources/symposium/symposium_pres.pdf
