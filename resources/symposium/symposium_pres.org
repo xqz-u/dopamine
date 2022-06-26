@@ -1,0 +1,68 @@
+#+TITLE:     Using Ensembles to address Bootstrapping Error in Offline Reinforcement Learning
+#+AUTHOR:    Marco A. Gallo
+#+EMAIL:     m.a.gallo@student.rug.nl
+#+DATE:      29-06-2022
+#+OPTIONS:   H:2 num:t toc:t \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+#+OPTIONS:   TeX:t LaTeX:t skip:nil d:nil todo:t pri:nil tags:not-in-toc
+#+startup: beamer
+#+LaTeX_CLASS: beamer
+# #+LaTeX_CLASS_OPTIONS: [bigger]
+#+latex_header: \mode<beamer>{\usetheme{Madrid}}
+#+beamer_frame_level: 2
+
+# TODO dots menu that shows slides progression
+
+* Background
+
+** Reinforcement Learning (RL)
++ An agent seeking an optimal policy $\pi(s, a)$ - a mapping from states to action probabilities ($s \in S$, $a \in A$)
++ Used in sequential decision making problems modeled as Markov decision process (/MDP/), enriched with a reward function $R(s, a)$
+
+# NOTE is this a good title?
+*** RL Elements                                              :B_definition:
+# NOTE I don't like that this form of Q(s,a) hides the Bellman recurrence relation
+:PROPERTIES:
+:BEAMER_env: definition
+# :BEAMER_act: <2->
+:END:
+1) $R_t=\sum_{k=0}^{\infty} \gamma^{k} r_{t+k+1}$ \quad \quad \quad \quad \quad \quad (\textbf{Expected discounted reward})
+2) $Q^{\pi}(s, a)=\mathbb{E}\left[R_{t} \vert s_{t}=s, a_{t}=a\right]$ \quad \quad (\textbf{State-action value function})
+3) $Q^{*}(s, a)=\max_{\pi}Q^{\pi}(s, a)$ \quad \quad \quad \quad \quad \quad (\textbf{Optimal value function})
+   # TODO add Bellman optimality equation found in BEAR QL paper, and make this an align environment to cite equations later on
+
+
+** Reinforcement Learning (RL) - Online
+#+ATTR_LaTeX: :width \textwidth
+[[./online_rl_loop.jpg]]
+
+** Reinforcement Learning (RL) - Offline
+#+ATTR_LaTeX: :width \textwidth
+[[./offline_rl_sketch_2.png]]
+
++ Also called Batch Reinforcement Learning
++ /Pure Batch/ RL methods
++ /Growing Batch/ RL methods
+
+* Offline RL is hard
+
+** Detrimental factors in Offline RL
+# *** Common
+# NOTE these hinder generalization
++ Function approximation errors in Deep RL (Neural Networks)
+# NOTE this cannot be corrected by further interaction with the environment in the pure offline setting
++ Different state visitation frequencies under training and testing distributions
+# *** Specific
++ *Bootstrapping error* (\citeauthor{kumar2019stabilizing}, \citeyear{kumar2019stabilizing})
+
+** Bootstrapping Error
+# #+ATTR_LaTeX: :width \textwidth
+[[./bootstrap_error_offline_rl.png]]
+
++ Bellman optimality operator forms both the targets and the estimates for the Q-function regression
++ Out-of-distribution (OOD) actions have arbitrarily wrong estimates
++ Naive max over next state action pair in Bellman targets selects them, and error is propagated backwards! happens off-policy generally - but offline it cannot be corrected with ground truth values
+
+* References
+** References
+\bibliographystyle{apalike}
+\bibliography{bibliography}

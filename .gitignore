@@ -24,3 +24,7 @@ resources/papers/journal.tex
 resources/papers/journal.pdf
 resources/**/.pdf-view-restore
 resources/**/*.bbl
+
+resources/symposium/beamer-test
+resources/symposium/offline_rl_gif
+resources/symposium/symposium_pres.tex
