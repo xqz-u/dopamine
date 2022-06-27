@@ -57,8 +57,12 @@ make_adam_mse_def = lambda: {
 }
 
 
-adam_mse_mlp = lambda features, env_name, **mlp_kwargs: agent_utils.ModelDefStore(
-    **{"net_def": make_mlp_def(features, env_name, **mlp_kwargs), **make_adam_mse_def()}
+adam_mse_mlp = lambda features, env_name, **kwargs: agent_utils.ModelDefStore(
+    **{
+        "net_def": make_mlp_def(features, env_name, **kwargs.pop("mlp", {})),
+        **make_adam_mse_def(),
+        **kwargs,  # NOTE for multihead q net, fix!!
+    },
 )
 
 adam_mse_convnet = lambda out_dim, **conv_kwargs: agent_utils.ModelDefStore(

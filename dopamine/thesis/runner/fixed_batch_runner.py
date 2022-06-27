@@ -11,6 +11,19 @@ logger = logging.getLogger(__name__)
 @gin.configurable
 @define
 class FixedBatchRunner(base.Runner):
+    def __attrs_post_init__(self):
+        super().__attrs_post_init__()
+        if self.agent.min_replay_history:
+            logger.warning(
+                f"min_replay_history: {self.agent.min_replay_history}, train immediately offline! Set to 0"
+            )
+            self.agent.min_replay_history = 0
+        if self.agent.training_period != 1:
+            logger.warning(
+                f"traning_period: {self.agent.training_period}, always train offline! Set to 1"
+            )
+            self.agent.training_period = 1
+
     def train_iteration(self) -> types.MetricsDict:
         logger.info("START offline training...")
         episodes_dict = {"Steps": self.steps, **self.agent.initial_train_dict}
