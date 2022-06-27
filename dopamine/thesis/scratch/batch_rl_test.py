@@ -97,13 +97,15 @@ def q_bellman_target(
 
 
 # NOTE all operations batched
-@ft.partial(jax.jit, static_argnums=(0,))
+# @ft.partial(jax.jit, static_argnums=(0,))
 def multihead_train_q(
     gamma: float, ts: custom_pytrees.ValueBasedTS, replay_batch: Dict[str, np.ndarray]
 ):
-    def loss_fn(params: FrozenDict) -> jnp.ndarray:
-        qs = ts.apply_fn(ts.params, replay_batch["state"])
-        played_qs = jax.vmap(lambda heads_qs, i: heads_qs[i])(qs, replay_els["action"])
+    def loss_fn(params: FrozenDict, targets: jnp.ndarray) -> jnp.ndarray:
+        qs = ts.apply_fn(params, replay_batch["state"])
+        played_qs = jax.vmap(lambda heads_qs, i: heads_qs[i])(
+            qs, replay_batch["action"]
+        )
         heads_losses = ts.loss_metric(td_targets, played_qs)
         return jnp.mean(heads_losses)
 
@@ -115,7 +117,8 @@ def multihead_train_q(
         jnp.expand_dims(replay_batch["terminal"], 1),
         gamma,
     )
-    loss, grads = jax.value_and_grad(loss_fn)(ts.params)
+    loss, grads = jax.value_and_grad(loss_fn)(ts.params, td_targets)
+    print(f"GRADDDDDSS {grads}")
     return loss, ts.apply_gradients(grads=grads)
 
 
@@ -123,9 +126,9 @@ multihead_mlp = networks.MLP(features=n_actions * n_heads, hiddens=())
 multihead_mlp_params = multihead_mlp.init(next(rng), jnp.ones(obs_shape))
 # NOTE batched ts
 multihead_ts = custom_pytrees.ValueBasedTS.create(
-    apply_fn=lambda params, xs: jax.vmap(
-        lambda x: multihead_mlp.apply(multihead_mlp_params, x)
-    )(xs).reshape((-1, n_actions, n_heads)),
+    apply_fn=lambda params, xs: jax.vmap(lambda x: multihead_mlp.apply(params, x))(
+        xs
+    ).reshape((-1, n_actions, n_heads)),
     s_tp1_fn=None,
     params=multihead_mlp_params,
     target_params=multihead_mlp_params,
@@ -134,18 +137,20 @@ multihead_ts = custom_pytrees.ValueBasedTS.create(
 )
 
 # let's try with batched data now
-terminals = jrand.randint(next(rng), (5,), 0, 2)
-actions = jrand.randint(next(rng), (5,), 0, 2)
-rewards = jrand.uniform(next(rng), (5,))
-next_states = jrand.uniform(next(rng), (5,) + obs_shape)
+make_batch = lambda: dict(
+    zip(
+        ["state", "next_state", "action", "terminal", "reward"],
+        [
+            jrand.uniform(next(rng), (5,) + obs_shape),
+            jrand.uniform(next(rng), (5,) + obs_shape),
+            jrand.randint(next(rng), (5,), 0, 2),
+            jrand.randint(next(rng), (5,), 0, 2),
+            jrand.uniform(next(rng), (5,)),
+        ],
+    )
+)
 
-replay_els = {
-    "state": batch_in,
-    "next_state": next_states,
-    "action": actions,
-    "terminal": terminals,
-    "reward": rewards,
-}
+replay_els = make_batch()
 
 loss, ts = multihead_train_q(0.99, multihead_ts, replay_els)
 
