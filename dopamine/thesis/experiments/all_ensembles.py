@@ -11,8 +11,8 @@ exp_name_fn = (
 )
 agents_and_models = [
     (agent.BootstrappedDQN, configs.dqn_ensemble_model_maker),
-    (agent.BootstrappedDQV, configs.dqv_ensemble_model_maker),
-    (agent.BootstrappedDQVMax, configs.dqvmax_ensemble_model_maker),
+    # (agent.BootstrappedDQV, configs.dqv_ensemble_model_maker),
+    # (agent.BootstrappedDQVMax, configs.dqvmax_ensemble_model_maker),
 ]
 heads = [5]
 td_target_ensembling = [False, True]
@@ -43,21 +43,27 @@ def online_confs(params: list, logs_dir):
             "agent_class": ag,
             "env_name": env,
             "experiment_name": f"{exp_name_fn(ag, env)}_online",
+            # "experiment_name": f"fake_{exp_name_fn(ag, env)}_online",
             "model_maker_fn": model_fn,
             "logs_base_dir": logs_dir,
             "experiment": {
                 "iterations": 500,
                 "steps": 1000,
                 "eval_steps": 1000,
-                "eval_period": 5,
+                "eval_period": 3,
+                # "iterations": 6,
+                # "steps": 100,
+                # "eval_steps": 100,
             },
             "agent": {
                 "sync_weights_every": 100,
                 "min_replay_history": 500,
+                # "min_replay_history": 100,
                 "training_period": 4,
                 "ensemble_td_target": ensemble_tp1,
             },
             "model_args": {"heads": n_heads, "hiddens": (512, 512)},
+            # "model_args": {"heads": 2},
         }
         for (ag, model_fn), env, (repeat, seed), n_heads, ensemble_tp1 in params
     ]
@@ -74,8 +80,19 @@ def offline_confs(online_params: list, logs_dir):
 
 if __name__ == "__main__":
     # exit(0)
-    on_confs = online_confs(configurables_online, constants.scratch_data_dir)
-    off_confs = offline_confs(configurables_online, constants.scratch_data_dir)
-    all_confs = off_confs
+    # logs_dir = constants.data_dir
+    import os
+
+    logs_dir = os.path.join(constants.data_dir, "symposium")
+    # logs_dir = constants.scratch_data_dir
+    on_confs = online_confs(configurables_online, logs_dir)
+    off_confs = offline_confs(configurables_online, logs_dir)
     # all_confs = off_confs + on_confs
-    runner.run_parallel(all_confs)
+    runner.run_parallel(off_confs)
+
+# DQN cartpole both bootstrap strategies
+# DQN cartpole acrobot offline both strategies
+
+# DQV cartpole + acrobot no ensemble td target
+
+# DQVMax cartpole + acrobot no ensemble td target
