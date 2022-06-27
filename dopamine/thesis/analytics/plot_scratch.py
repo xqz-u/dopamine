@@ -79,7 +79,7 @@ exp_suffix = "_pres_"
 client = pymongo.MongoClient(mongo_uri)
 
 exp_names = all_cartpole_acrobot_offline.EXPERIMENT_NAMES()
-# exp_names += [name for name in client.list_database_names() if exp_suffix in name]
+# exp_names += [name for name in client.list_database_names() if exp_suffix in name and "fake" not in name]
 
 data = get_data(exp_names, client)
 
