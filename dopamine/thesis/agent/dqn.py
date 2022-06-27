@@ -35,7 +35,7 @@ def multihead_train_q(
     gamma: float, ts: custom_pytrees.ValueBasedTS, replay_batch: Dict[str, np.ndarray]
 ) -> Tuple[jnp.ndarray, custom_pytrees.ValueBasedTS]:
     def loss_fn(params: FrozenDict) -> jnp.ndarray:
-        qs = ts.apply_fn(ts.params, replay_batch["state"])
+        qs = ts.apply_fn(params, replay_batch["state"])
         played_qs = jax.vmap(lambda heads_qs, i: heads_qs[i])(
             qs, replay_batch["action"]
         )
