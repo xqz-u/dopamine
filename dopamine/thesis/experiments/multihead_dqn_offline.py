@@ -1,4 +1,5 @@
 import itertools as it
+import os
 
 from thesis import agent, utils
 
@@ -9,15 +10,20 @@ from thesis import agent, configs, constants, experiments, exploration, runner
 exp_name_fn = (
     lambda *args, **kwargs: f"{experiments.base_exp_name_fn(*args, **kwargs)}_pres"
 )
-n_heads = 4
-model_maker_fn = lambda env_name, n_actions, **_: {
-    "Q_model_def": configs.adam_mse_mlp(
-        n_actions * n_heads,
-        env_name,
-        mlp={"hiddens": (512, 512)},
-        info={"n_heads": n_heads},
-    )
-}
+N_HEADS = 4
+
+
+def model_maker_fn(env_name, n_actions, **_):
+    return {
+        "Q_model_def": configs.adam_mse_mlp(
+            n_actions * N_HEADS,
+            env_name,
+            mlp={"hiddens": (512, 512)},
+            info={"n_heads": N_HEADS},
+        )
+    }
+
+
 agents_and_models = [(agent.MultiHeadEnsembleDQN, model_maker_fn)]
 redundancy = range(experiments.DEFAULT_REDUNDANCY)
 redundancy_and_seeds = zip(
@@ -43,7 +49,7 @@ def do_confs(params: list, logs_dir):
             "agent_class": ag,
             "env_name": env,
             # "experiment_name": f"fake_{exp_name_fn(ag, env)}",
-            "experiment_name": f"{exp_name_fn(ag, env)}",
+            "experiment_name": exp_name_fn(ag, env),
             "model_maker_fn": model_fn,
             "logs_base_dir": logs_dir,
             "offline_root_data_dir": buffers_dir,
@@ -73,5 +79,6 @@ if __name__ == "__main__":
     # runner.run_experiment(confs[0], 0)
     # run = runner.FixedBatchRunner(**experiments.make_conf(**confs[0]))
     # run.run()
-    confs = do_confs(configurables, constants.data_dir)
+    symp_dir = os.path.join(constants.data_dir, "symposium")
+    confs = do_confs(configurables, symp_dir)
     runner.run_parallel(confs)

@@ -122,6 +122,6 @@ plt.tight_layout()
 plt.subplots_adjust(top=0.94)
 
 plt.savefig(
-    os.path.join(constants.resources_dir, "symposium", "dshift_plots_normal.png"),
+    os.path.join(constants.resources_dir, "symposium," "dshift_plots_normal.png"),
     transparent=True,
 )
