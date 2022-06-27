@@ -47,6 +47,7 @@ make_ensemble_def = lambda n_heads, heads_model: (
 
 
 # like Dopamine's
+# TODO change to huber loss for final experiments!
 make_adam_mse_def = lambda: {
     "opt": optax.adam,
     "opt_params": {
