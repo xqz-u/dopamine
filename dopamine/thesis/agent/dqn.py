@@ -40,7 +40,7 @@ def multihead_train_q(
             qs, replay_batch["action"]
         )
         heads_losses = ts.loss_metric(td_targets, played_qs)
-        return jnp.mean(heads_losses)
+        return heads_losses.mean()
 
     td_targets = q_bellman_target(
         ts.apply_fn,

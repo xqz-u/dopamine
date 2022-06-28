@@ -21,6 +21,44 @@ DQVModelTypes = Dict[
 logger = logging.getLogger(__name__)
 
 
+# NOTE V is multihead so operations are batched, Q is a normal network
+@ft.partial(jax.jit, static_argnums=(0,))
+def train_DQV_multihead_tiny(
+    gamma: float,
+    v_ts: custom_pytrees.ValueBasedTS,
+    q_ts: custom_pytrees.ValueBasedTS,
+    replay_batch: Dict[str, np.ndarray],
+) -> Tuple[Tuple[jnp.ndarray], Tuple[custom_pytrees.ValueBasedTS]]:
+    def v_loss_fn(params: FrozenDict) -> jnp.ndarray:
+        vs = v_ts.apply_fn(params, replay_batch["state"])
+        # loss on each dimension - only 1 - for each head
+        v_heads_loss = v_ts.loss_metric(td_targets, vs)
+        # mean loss on sample among heads, then mean across samples
+        return v_heads_loss.mean()
+
+    def q_loss_fn(params: FrozenDict) -> jnp.ndarray:
+        qs = jax.vmap(lambda s: q_ts.apply_fn(params, s))(replay_batch["state"])
+        played_qs = jax.vmap(lambda heads_qs, i: heads_qs[i])(
+            qs, replay_batch["action"]
+        )
+        return jax.vmap(q_ts.loss_metric)(td_targets, played_qs).mean()
+
+    td_targets = jax.lax.stop_gradient(
+        agent_utils.bellman_target(
+            gamma,
+            v_ts.apply_fn(v_ts.target_params, replay_batch["next_state"]),
+            jnp.expand_dims(replay_batch["reward"], 1),
+            jnp.expand_dims(replay_batch["terminal"], 1),
+        )
+    )
+    v_loss, v_grads = jax.value_and_grad(v_loss_fn)(v_ts.params)
+    q_loss, q_grads = jax.value_and_grad(q_loss_fn)(q_ts.params)
+    return (v_loss, q_loss), (
+        v_ts.apply_gradients(grads=v_grads),
+        q_ts.apply_gradients(grads=q_grads),
+    )
+
+
 @jax.jit
 def train_V(
     tr_state: custom_pytrees.ValueBasedTS,
@@ -109,6 +147,28 @@ class DQV(base.Agent):
         return super().reportable + ("Q_model_def", "V_model_def")
 
 
+class MultiHeadEnsembleDQVTiny(DQV):
+    def _make_V_train_state(self, target_model: bool) -> custom_pytrees.ValueBasedTS:
+        return agent_utils.build_TS(
+            self.V_model_def,
+            self.rng,
+            self.observation_shape,
+            lambda params, xs: jax.vmap(
+                lambda x: self.V_model_def.net.apply(params, x)
+            )(xs),
+            None,
+            target_model,
+        )
+
+    def train(self, experience_batch: Dict[str, np.ndarray]) -> types.MetricsDict:
+        (v_loss, q_loss), (v_ts, q_ts) = train_DQV_multihead_tiny(
+            self.gamma, self.models["V"], self.models["Q"], experience_batch
+        )
+        self.models["V"] = v_ts
+        self.models["Q"] = q_ts
+        return {"loss": {"V": v_loss, "Q": q_loss}}
+
+
 @gin.configurable
 @define
 class BootstrappedDQV(DQV):
@@ -161,10 +221,6 @@ class BootstrappedDQV(DQV):
     @property
     def reportable(self) -> Tuple[str]:
         return super().reportable + ("ensemble_td_target",)
-
-
-class DQVEnsemble(DQV):
-    ...
 
 
 # def train_ensembled(
