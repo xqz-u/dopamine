@@ -62,9 +62,9 @@ def plot_learners_per_env(
         linewidth=linewidth,
         label="Baseline",
     )
-    # indicate * 1000 suffix - not on datapoint 0
+    # indicate * 10e3 suffix - not on datapoint 0
     labs = [
-        f"{(int(float(t / 1000)))}{'k' if t else ''}" for t in ax.get_xticks().tolist()
+        f"{(int(float(t / 1000)))}{'e3' if t else ''}" for t in ax.get_xticks().tolist()
     ]
     ax.set_xticklabels(labs)
     ax.set(xlabel=xlabel, ylabel=ylabel)
@@ -73,7 +73,8 @@ def plot_learners_per_env(
     return ax
 
 
-mongo_uri = "mongodb://localhost:27017/"
+# mongo_uri = "mongodb://localhost:27017/"
+mongo_uri = constants.xxx_mongo_uri
 exp_suffix = "_pres_"
 
 client = pymongo.MongoClient(mongo_uri)
@@ -93,8 +94,13 @@ plt.rcParams["axes.spines.top"] = False
 
 fig, axes = plt.subplots(2, 2, figsize=(60, 40))
 
-cp_df = eval_data[eval_data["Env"] == "CartPole-v1"]
-ab_df = eval_data[eval_data["Env"] == "Acrobot-v1"]
+cp_df = eval_data[eval_data["Env"] == "CartPole-v1"].copy()
+ab_df = eval_data[eval_data["Env"] == "Acrobot-v1"].copy()
+
+# cp_df.loc[:, "Reward_ewm"] = cp_df["Reward"].ewm(com=0.7).mean()
+# ab_df.loc[:, "Reward_ewm"] = ab_df["Reward"].ewm(com=0.7).mean()
+# cp_df.loc[:, "Max_Q_S0_ewm"] = cp_df["Max_Q_S0"].ewm(com=0.7).mean()
+# ab_df.loc[:, "Max_Q_S0_ewm"] = ab_df["Max_Q_S0"].ewm(com=0.7).mean()
 
 plots = [
     plot_learners_per_env(
@@ -102,12 +108,12 @@ plots = [
         axes[j][i],
         df,
         ymetric,
-        xlabel="Steps",
+        xlabel="Evaluation steps",
         ylabel=ylabel,
     )
     for i, df in enumerate([cp_df, ab_df])
     for j, (ymetric, ylabel) in enumerate(
-        [("Max_Q_S0", "$\max_{a\in A}Q(s_0, a)$"), ("Reward",) * 2]
+        [("Max_Q_S0", "Value Estimates"), ("Reward", "Reward")]
     )
 ]
 
@@ -122,6 +128,6 @@ plt.tight_layout()
 plt.subplots_adjust(top=0.94)
 
 plt.savefig(
-    os.path.join(constants.resources_dir, "symposium," "dshift_plots_normal.png"),
+    os.path.join(constants.resources_dir, "symposium", "dshift_plots_normal.png"),
     transparent=True,
 )
