@@ -11,11 +11,31 @@
 #+beamer_frame_level: 2
 
 #+laTeX_header: \usepackage[super]{natbib}
+#+laTeX_header: \setbeamertemplate{itemize items}[default]
+#+laTeX_header: \setbeamertemplate{enumerate items}[default]
+
+# TODO better footline, more space for title - tangle this in latex
+# source block
+# \setbeamertemplate{footline}
+# {
+#   \leavevmode%
+#   \hbox{%
+#   \begin{beamercolorbox}[wd=.333333\paperwidth,ht=2.25ex,dp=1ex,center]{author in head/foot}%
+#     \usebeamerfont{author in head/foot}\insertshortauthor\expandafter\beamer@ifempty\expandafter{\beamer@shortinstitute}{}{~~(\insertshortinstitute)}
+#   \end{beamercolorbox}%
+#   \begin{beamercolorbox}[wd=.4\paperwidth,ht=2.25ex,dp=1ex,center]{title in head/foot}%
+#     \usebeamerfont{title in head/foot}\insertshorttitle
+#   \end{beamercolorbox}%
+#   \begin{beamercolorbox}[wd=.266666\paperwidth,ht=2.25ex,dp=1ex,right]{date in head/foot}%
+#     \usebeamerfont{date in head/foot}\insertshortdate{}\hspace*{2em}
+#     \insertframenumber{} / \inserttotalframenumber\hspace*{2ex}
+#   \end{beamercolorbox}}%
+#   \vskip0pt%
+# }
 
 # TODO dots menu that shows slides progression
 
 * Background
-
 ** Reinforcement Learning (RL)
 + An agent seeking an optimal policy $\pi(s, a)$ - a mapping from
   states to action probabilities ($s \in S$, $a \in A$)
@@ -31,9 +51,11 @@
 \begin{align*}
 R_t &= \sum_{k=0}^{\infty} \gamma^{k} r_{t+k+1} & \tag{Expected discounted reward} \\
 Q^{\pi}(s, a) &= \mathbb{E}\left[R_{t} \vert s_{t}=s, a_{t}=a\right] & \tag{State-action value function} \\
-Q^* &= \mathcal{T}^* Q^* & \\
-(\mathcal{T}^* \hat{Q})(s, a) &= R(s, a) + \gamma \mathbb{E}_{T(s'|s,a)}[\max_{a'}\hat{Q}(s', a')] \tag{Bellaman optimality equations}
+Q^* &= Q^{\pi^*} & \\
+Q^{*}(s, a) &= \mathbb{E} \ R(s, a) + \gamma \mathbb{E}_{s^{\prime} \sim P} \max_{a^{\prime} \in A}Q^{*}(s^{\prime}, a^{\prime}) \tag{Bellaman optimality equations}
 \end{align*}
+# Q^* &= \mathcal{T}^* Q^* & \\
+# (\mathcal{T}^* \hat{Q})(s, a) &= R(s, a) + \gamma \mathbb{E}_{T(s'|s,a)}[\max_{a'}\hat{Q}(s', a')] \tag{Bellaman optimality equations}
 
 ** Reinforcement Learning (RL) - Online
 #+ATTR_LaTeX: :width \textwidth
@@ -44,11 +66,10 @@ Q^* &= \mathcal{T}^* Q^* & \\
 [[./offline_rl_sketch_2.png]]
 
 + Also called Batch Reinforcement Learning
-+ Behavior policy $\beta(s|a)$ generates data
++ Behavior policy $\beta(s|a)$ generates dataset $\mathcal{D}$
 + /Pure Batch/ vs /Growing Batch/ RL methods
 
 * Offline RL is hard
-
 ** Detrimental factors in Offline RL
 # *** Common
 # NOTE these hinder generalization
@@ -60,29 +81,120 @@ Q^* &= \mathcal{T}^* Q^* & \\
 + *Bootstrapping error* (\citeauthor{kumar2019stabilizing},
   \citeyear{kumar2019stabilizing})
 
-** Bootstrapping Error
-+ Both the targets $(\mathcal{T}^* \hat{Q})(s, a)$ and the estimates
-  $\hat{Q}(s, a)$ for the Q-function regression come from the current
-  estimate $\hat{Q}$
+** Bootstrapping Error (BE)
++ Both the targets $Q^{*}(s^{\prime}, a^{\prime})$ and the estimates
+  $Q(s, a)$ for the Q-function regression come from the current
+  estimate $Q$
 + Q-estimates for out-of-distribution (OOD) actions - those outside of
   \beta - arbitrarily wrong
-+ Naively selecting $\max_{a'}\hat{Q}(s', a')$ as part of the
-  regression target propagates these overestimates
-+ Happens off-policy generally, but offline the lack of further
-  exploration can't correct errors
++ Naively selecting $\max_{a^{\prime} \in A}Q(s^{\prime},
+  a^{\prime})$ as part of the regression target propagates these
+  overestimates \rightarrow /overestimation bias/
++ Happens off-policy generally, especially harmful offline: the lack
+  of further exploration cannot correct it
 
 # TODO caption?
+# NOTE
+# first pic: selecting actions on the blue line, although different
+# from the behavior policy, does not incur in accumulation and
+# propagation of errors
+# second pic: there can be actions with very high Q-values which will be
+# selected by the max and cause the whole estimation to diverge from the
+# ground truth
 # #+ATTR_LaTeX: :width \textwidth
 [[./bootstrap_error_offline_rl.png]]
 
 ** Bootstrapping Error in the DQV\cite{sabatelli2020deep} algorithmic family
++ We want to check if the DQV and DQV-Max deep RL algorithms suffer
+  from the BE in the /offline/ setting
++ Classic control OpenAI Gym environments: =CartPole-v1= and
+  =Acrobot-v1=
++ Data collection: log every trajectory $\langle
+  s,a,r,s^{\prime}\rangle$ of a DQN\cite{mnih2013playing} agent
+  trained online for 500e3 steps
++ Hyper-parameters and training scheme follow those of the
+  Dopamine\cite{castro18dopamine} framework
++ Record estimates of $\max_{a \in A}Q(s_{t_{0}}, a)$ at each
+  evaluation round to track evolution of value estimates, then compare
+  against ground truth
+
+** Bootstrapping Error in the DQV algorithmic family - Results
 #+ATTR_LaTeX: :width \textwidth
 [[./dshift_plots_normal.png]]
 
+** Preventing the BE - Online
+Two ways of addressing the BE:
+\vspace{1mm}
+1. Obtain unbiased Q-values by decoupling /updates/ and /estimates/, e.g.
+   + \textbf{Double Q-Learning target}\cite{van2016deep} \\
+     \vspace{1mm}
+     $Q^{*}\left(s, a\right) \approx r +\gamma Q\left(s^{\prime}, \operatorname{argmax}_{a^{\prime}} Q^{\prime}\left(s, a^{\prime}\right)\right)$
+     \vspace{1mm}
+   + \textbf{DQV-Max targets} \\
+     \vspace{1mm}
+     $V^{*}(s) \approx r +\gamma \max_{a^{\prime}} Q(s^{\prime}, a^{\prime})$ \\
+     \vspace{1mm}
+     $Q^{*}(s, a) \approx r +\gamma V(s^{\prime})$
+     \vspace{1mm}
+2. Reducing the variance of the Target Approximation Error (TAE)\cite{anschel2017averaged}
+     \vspace{1mm}
+   + TAE: $Z_{s, a} = Q(s, a) - \mathbb{E}[r + \gamma \max_{a'} Q(s', a') \vert s, a]$
+     \vspace{1mm}
+   + \citeauthor{anschel2017averaged} show that the magnitude of the
+     bootstrapping bias in Q-learning is related to the /variance/ of
+     the TAE
+
+** Preventing the BE - Offline
++ In the offline setting, algorithms such as BCQ\cite{fujimoto2019off}
+  and BEAR\cite{kumar2019stabilizing} mitigate the BE by
+  /regularizing/ the learned policy to be /close/ to the
+  /training trajectories/.
++ One exception: Random Ensemble Mixture
+  (REM)\cite{agarwal2020optimistic}
+  - Dataset /size/ and /diversity/ are crucial for offline
+    performance: [[https://research.google/tools/datasets/dqn-replay/][DQN Replay Dataset]] on the Atari 2600 benchmark
+  - REM idea: combining multiple noisy Q-functions creates a more
+    robust Q-function
+
 * Possible solution: Ensembles
+** Focus: Offline DQV and DQV-Max
+DQV and DQV-Max still incur in the BE, but...
++ Being an /on-policy/ algorithm, DQV is less prone to it
++ DQV-Max is /off-policy/, yet it uses multiple estimators to compute
+  the expected Q-values \rightarrow also more robust to the BE
++ *Idea*: can we use techniques for TAE reduction to improve resilience
+  to the BE in the DQV algorithmic family?
++ Ensemble DQN: training K Q-functions in parallel to obtain a
+  $\frac{1}{K}$ variance reduction in Q-values
++ Also motivated by REM's strong offline performance
 * Experiments
-* Conclusions and future work
+# TODO formulas
+** Learning problem
++ The new learning goals for DQV become
+  \begin{align}
+  \end{align}
++ The learning goals for DQV-Max become
+  \begin{align}
+  \end{align}
+** Ensemble Architectures
+  #+ATTR_LaTeX: :width .4\textwidth
+  [[./hydra_nn_arch.png]]
++ For computational reasons, the ensembles are implemented with a
+  multi-head architecture, where each head shares all the neural
+  network layers except for the final fully connected layer as in REM
+
+** Results
+Here there will be the same plots as before but with Ensemble
+DQN/DQV/DQV-Max
+* Analysis
+** Conclusions
++ Remarks: why do we think it works/it does not? *TODO*
+** Ongoing work
++ Use completely different networks for the ensemble
++ Experiments on Atari 2600 benchmark using the [[https://research.google/tools/datasets/dqn-replay/][DQN Replay Dataset]]
++ Experiments with datasets of different qualities
 * References
-** References
+\begin{frame}[allowframebreaks]{References}
 \bibliographystyle{apalike}
 \bibliography{bibliography}
+\end{frame}
