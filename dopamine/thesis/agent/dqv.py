@@ -43,14 +43,13 @@ def train_DQV_multihead_tiny(
         )
         return jax.vmap(q_ts.loss_metric)(td_targets, played_qs).mean()
 
-    td_targets = jax.lax.stop_gradient(
-        agent_utils.bellman_target(
-            gamma,
-            v_ts.apply_fn(v_ts.target_params, replay_batch["next_state"]),
-            jnp.expand_dims(replay_batch["reward"], 1),
-            jnp.expand_dims(replay_batch["terminal"], 1),
-        )
+    td_targets = agent_utils.bellman_target(
+        gamma,
+        v_ts.apply_fn(v_ts.target_params, replay_batch["next_state"]),
+        jnp.expand_dims(replay_batch["reward"], 1),
+        jnp.expand_dims(replay_batch["terminal"], 1),
     )
+
     v_loss, v_grads = jax.value_and_grad(v_loss_fn)(v_ts.params)
     q_loss, q_grads = jax.value_and_grad(q_loss_fn)(q_ts.params)
     return (v_loss, q_loss), (

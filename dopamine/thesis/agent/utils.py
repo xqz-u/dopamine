@@ -8,7 +8,6 @@ import optax
 from attrs import define, field
 from flax import linen as nn
 from flax.core import frozen_dict
-from flax.core.frozen_dict import FrozenDict
 from jax import numpy as jnp
 from thesis import custom_pytrees, memory, networks, types
 
@@ -34,6 +33,12 @@ def batch_net_eval(
     return jax.vmap(lambda x: model_call(params, x))(inputs).squeeze()
 
 
+def bellman_target(
+    gamma: float, td_targets: jnp.ndarray, reward: jnp.ndarray, terminal: jnp.ndarray
+) -> jnp.ndarray:
+    return jax.lax.stop_gradient(reward + gamma * td_targets * (1.0 - terminal))
+
+
 # NOTE see
 # https://jax.readthedocs.io/en/latest/jax-101/04-advanced-autodiff.html?highlight=TD(02#stopping-gradients
 # as to why we use this construct here; the reson resides in the TD(0)
@@ -50,27 +55,6 @@ def TD_target(
 
 
 td_loss = TD_target
-
-
-# TODO get rid of above function and substitute with this one in other
-# files
-def bellman_target(
-    gamma: float, td_targets: jnp.ndarray, reward: jnp.ndarray, terminal: jnp.ndarray
-) -> jnp.ndarray:
-    return reward + gamma * td_targets * (1.0 - terminal)
-
-
-def q_bellman_target(
-    model_call: Callable[[jnp.ndarray], jnp.ndarray],
-    params: FrozenDict,
-    next_state: jnp.ndarray,
-    reward: jnp.ndarray,
-    terminal: jnp.ndarray,
-    gamma: float,
-) -> jnp.ndarray:
-    return bellman_target(
-        gamma, model_call(params, next_state).max(1), reward, terminal
-    )
 
 
 @ft.partial(jax.jit, static_argnums=(0,))

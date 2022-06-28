@@ -1,6 +1,6 @@
 import functools as ft
 import logging
-from typing import Callable, Dict, Tuple
+from typing import Dict, Tuple
 
 import gin
 import jax
@@ -16,19 +16,6 @@ from thesis.agent import utils as agent_utils
 logger = logging.getLogger(__name__)
 
 
-def q_bellman_target(
-    model_call: Callable[[jnp.ndarray], jnp.ndarray],
-    params: FrozenDict,
-    next_state: jnp.ndarray,
-    reward: jnp.ndarray,
-    terminal: jnp.ndarray,
-    gamma: float,
-) -> jnp.ndarray:
-    return jax.lax.stop_gradient(
-        reward + gamma * model_call(params, next_state).max(1) * (1.0 - terminal)
-    )
-
-
 # NOTE all operations batched
 @ft.partial(jax.jit, static_argnums=(0,))
 def multihead_train_q(
@@ -42,13 +29,11 @@ def multihead_train_q(
         heads_losses = ts.loss_metric(td_targets, played_qs)
         return heads_losses.mean()
 
-    td_targets = q_bellman_target(
-        ts.apply_fn,
-        ts.target_params,
-        replay_batch["next_state"],
+    td_targets = agent_utils.bellman_target(
+        gamma,
+        ts.apply_fn(ts.target_params, replay_batch["next_state"]).max(1),
         jnp.expand_dims(replay_batch["reward"], 1),
         jnp.expand_dims(replay_batch["terminal"], 1),
-        gamma,
     )
     loss, grads = jax.value_and_grad(loss_fn)(ts.params)
     return loss, ts.apply_gradients(grads=grads)
