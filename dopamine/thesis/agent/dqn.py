@@ -8,7 +8,6 @@ import numpy as np
 from attrs import define, field
 from flax.core.frozen_dict import FrozenDict
 from jax import numpy as jnp
-from jax import random as jrand
 from thesis import custom_pytrees, types
 from thesis.agent import base
 from thesis.agent import utils as agent_utils
@@ -134,65 +133,7 @@ class DQN(base.Agent):
         return super().reportable + ("Q_model_def",)
 
 
-@gin.configurable
 @define
-class BootstrappedDQN(DQN):
-    ensemble_td_target: bool = False
-    bootstrap_head_idx: int = field(init=None, default=None)
-
-    def _make_Q_train_state(self) -> custom_pytrees.ValueBasedTSEnsemble:
-        if self.ensemble_td_target:
-            td_target_fn = lambda _: lambda params, xs: (
-                agent_utils.batch_net_eval(self.Q_model_def.net.apply, params, xs).mean(
-                    1
-                )
-            ).max(1)
-        else:
-            td_target_fn = lambda head: lambda params, xs: agent_utils.batch_net_eval(
-                ft.partial(self.Q_model_def.net.apply, head=head), params, xs
-            ).max(1)
-        return agent_utils.build_TS_ensemble(
-            self.Q_model_def,
-            self.rng,
-            self.observation_shape,
-            lambda head: lambda params, xs: self.Q_model_def.net.apply(
-                params, xs, head=head
-            ),
-            td_target_fn,
-            True,
-        )
-
-    def _set_exploration_fn(self):
-        pass
-
-    # following the bootstrapped-dqn scheme
-    # (https://arxiv.org/abs/1602.04621), one head is picked and used for
-    # control for a whole episode
-    # TODO should this be the same for evaluation?
-    def on_episode_start(self, mode: str):
-        idx = jrand.randint(next(self.rng), (), 0, len(self.models["Q"]))
-        self.bootstrap_head_idx = idx
-        self.policy_evaluator.model_call = self.models["Q"][idx].apply_fn
-        logger.debug(f"***Next {mode} episode head index: {idx}")
-
-    @property
-    def act_selection_params(self) -> FrozenDict:
-        return self.models["Q"][self.bootstrap_head_idx].params
-
-    def sync_weights(self):
-        self.models["Q"] = sync_weights_ensemble(self.models["Q"])
-
-    def train(self, experience_batch: Dict[str, np.ndarray]) -> types.MetricsDict:
-        train_info, self.models["Q"][self.bootstrap_head_idx] = train(
-            experience_batch, self.models["Q"][self.bootstrap_head_idx], self.gamma
-        )
-        return train_info
-
-    @property
-    def reportable(self) -> Tuple[str]:
-        return super().reportable + ("ensemble_td_target",)
-
-
 class MultiHeadEnsembleDQN(DQN):
     Q_model_def: agent_utils.ModelDefStore = field(kw_only=True)
 
@@ -219,7 +160,7 @@ class MultiHeadEnsembleDQN(DQN):
             True,
         )
 
-    # NOTE expand_dims hack to keep vmap in ts.apply_fn...
+    # NOTE expand_dims hack to keep vmap in ts.apply_fn... TODO fix
     def _set_exploration_fn(self):
         self.policy_evaluator.model_call = (
             lambda params, state: self.models["Q"]
@@ -233,29 +174,3 @@ class MultiHeadEnsembleDQN(DQN):
             self.gamma, self.models["Q"], experience_batch
         )
         return {"loss": {"Q": train_info}}
-
-
-# def train_ensembled(
-#     experience_batch: Dict[str, np.ndarray],
-#     q_model: custom_pytrees.ValueBasedTSEnsemble,
-#     gamma: float,
-#     rng: custom_pytrees.PRNGKeyWrap,
-# ) -> Tuple[types.MetricsDict, custom_pytrees.ValueBasedTSEnsemble]:
-#     # pick random prediction head
-#     a_head = q_model[jrand.randint(next(rng), (), 0, len(q_model))]
-#     td_targets = agent_utils.apply_td_loss(
-#         a_head.s_tp1_fn, a_head.target_params, experience_batch, gamma
-#     )
-#     q_losses_and_models = [
-#         train_Q(
-#             q_head,
-#             experience_batch["state"],
-#             experience_batch["action"],
-#             td_targets,
-#         )
-#         for q_head in q_model
-#     ]
-#     q_losses, q_model = list(zip(*q_losses_and_models))
-#     return {
-#         "loss": {"Q": jnp.array(q_losses).mean()}
-#     }, custom_pytrees.ValueBasedTSEnsemble(q_model)

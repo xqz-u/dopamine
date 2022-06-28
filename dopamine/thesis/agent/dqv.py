@@ -8,7 +8,6 @@ import numpy as np
 from attrs import define, field
 from flax.core.frozen_dict import FrozenDict
 from jax import numpy as jnp
-from jax import random as jrand
 from thesis import custom_pytrees, types
 from thesis.agent import base, dqn
 from thesis.agent import utils as agent_utils
@@ -28,7 +27,7 @@ def train_DQV_multihead_tiny(
     v_ts: custom_pytrees.ValueBasedTS,
     q_ts: custom_pytrees.ValueBasedTS,
     replay_batch: Dict[str, np.ndarray],
-) -> Tuple[Tuple[jnp.ndarray], Tuple[custom_pytrees.ValueBasedTS]]:
+) -> Tuple[jnp.ndarray, custom_pytrees.ValueBasedTS]:
     def v_loss_fn(params: FrozenDict) -> jnp.ndarray:
         vs = v_ts.apply_fn(params, replay_batch["state"])
         # loss on each dimension - only 1 - for each head
@@ -49,11 +48,12 @@ def train_DQV_multihead_tiny(
         jnp.expand_dims(replay_batch["reward"], 1),
         jnp.expand_dims(replay_batch["terminal"], 1),
     )
-
     v_loss, v_grads = jax.value_and_grad(v_loss_fn)(v_ts.params)
     q_loss, q_grads = jax.value_and_grad(q_loss_fn)(q_ts.params)
-    return (v_loss, q_loss), (
+    return (
+        v_loss,
         v_ts.apply_gradients(grads=v_grads),
+        q_loss,
         q_ts.apply_gradients(grads=q_grads),
     )
 
@@ -146,6 +146,7 @@ class DQV(base.Agent):
         return super().reportable + ("Q_model_def", "V_model_def")
 
 
+@define
 class MultiHeadEnsembleDQVTiny(DQV):
     def _make_V_train_state(self, target_model: bool) -> custom_pytrees.ValueBasedTS:
         return agent_utils.build_TS(
@@ -160,90 +161,7 @@ class MultiHeadEnsembleDQVTiny(DQV):
         )
 
     def train(self, experience_batch: Dict[str, np.ndarray]) -> types.MetricsDict:
-        (v_loss, q_loss), (v_ts, q_ts) = train_DQV_multihead_tiny(
-            self.gamma, self.models["V"], self.models["Q"], experience_batch
+        v_loss, self.models["V"], q_loss, self.models["Q"] = train_DQV_multihead_tiny(
+            self.gamma, *self.models.values(), experience_batch
         )
-        self.models["V"] = v_ts
-        self.models["Q"] = q_ts
         return {"loss": {"V": v_loss, "Q": q_loss}}
-
-
-@gin.configurable
-@define
-class BootstrappedDQV(DQV):
-    ensemble_td_target: bool = False
-    bootstrap_head_idx: int = field(init=None, default=None)
-
-    def _make_V_train_state(
-        self, target_model: bool
-    ) -> custom_pytrees.ValueBasedTSEnsemble:
-        if self.ensemble_td_target:
-            td_target_fn = lambda _: lambda params, xs: (
-                agent_utils.batch_net_eval(self.V_model_def.net.apply, params, xs).mean(
-                    1
-                )
-            )
-        else:
-            td_target_fn = lambda head: lambda params, xs: agent_utils.batch_net_eval(
-                ft.partial(self.V_model_def.net.apply, head=head), params, xs
-            )
-        return agent_utils.build_TS_ensemble(
-            self.V_model_def,
-            self.rng,
-            self.observation_shape,
-            lambda head: lambda params, xs: self.V_model_def.net.apply(
-                params, xs, head=head
-            ),
-            td_target_fn,
-            target_model,
-        )
-
-    def on_episode_start(self, mode: str):
-        idx = jrand.randint(next(self.rng), (), 0, len(self.models["V"]))
-
-        self.bootstrap_head_idx = idx
-        logger.debug(f"***Next {mode} episode head index: {idx}")
-
-    def sync_weights(self):
-        self.models["V"] = dqn.sync_weights_ensemble(self.models["V"])
-
-    def train(self, experience_batch: Dict[str, np.ndarray]) -> types.MetricsDict:
-        train_info, models = train(
-            experience_batch,
-            {"Q": self.models["Q"], "V": self.models["V"][self.bootstrap_head_idx]},
-            self.gamma,
-        )
-        self.models["Q"] = models["Q"]
-        self.models["V"][self.bootstrap_head_idx] = models["V"]
-        return train_info
-
-    @property
-    def reportable(self) -> Tuple[str]:
-        return super().reportable + ("ensemble_td_target",)
-
-
-# def train_ensembled(
-#     experience_batch: Dict[str, np.ndarray],
-#     models: DQVModelTypes,
-#     gamma: float,
-#     rng: custom_pytrees.PRNGKeyWrap,
-# ) -> Tuple[types.MetricsDict, DQVModelTypes]:
-#     a_head = models["V"][jrand.randint(next(rng), (), 0, len(models["V"]))]
-#     td_targets = agent_utils.apply_td_loss(
-#         a_head.s_tp1_fn, a_head.target_params, experience_batch, gamma
-#     )
-#     v_losses_and_models = [
-#         train_V(
-#             head_state,
-#             experience_batch["state"],
-#             experience_batch["action"],
-#             td_targets,
-#         )
-#         for head_state in models["V"]
-#     ]
-#     v_losses, v_models = list(zip(*v_losses_and_models))
-#     models["V"] = custom_pytrees.ValueBasedTSEnsemble(v_models)
-#     q_loss, models["Q"] = dqn.train_Q(
-#         models["Q"], experience_batch["state"], experience_batch["action"], td_targets
-#     )
-#     return {"loss": {"V": jnp.array(v_losses).mean(), "Q": q_loss}}, models
