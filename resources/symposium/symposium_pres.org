@@ -1,46 +1,54 @@
-#+TITLE:     Using Ensembles to address Bootstrapping Error in Offline Reinforcement Learning
-#+AUTHOR:    Marco A. Gallo
 #+EMAIL:     m.a.gallo@student.rug.nl
 #+DATE:      29-06-2022
+#+TITLE:     Using Ensembles to address Bootstrapping Error in Offline RL
 #+OPTIONS:   H:2 num:t toc:t \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
 #+OPTIONS:   TeX:t LaTeX:t skip:nil d:nil todo:t pri:nil tags:not-in-toc
 #+startup: beamer
 #+LaTeX_CLASS: beamer
-# #+LaTeX_CLASS_OPTIONS: [bigger]
 #+laTeX_header: \mode<beamer>{\usetheme{Madrid}}
 #+beamer_frame_level: 2
+#+LaTeX_header: \usepackage[super]{natbib}
+#+LaTeX_header: \usepackage{url}
 
-#+laTeX_header: \usepackage[super]{natbib}
-#+laTeX_header: \setbeamertemplate{itemize items}[default]
-#+laTeX_header: \setbeamertemplate{enumerate items}[default]
+#+latex_header: \makeatletter
+#+latex_header: \setbeamertemplate{footline}{
+  #+latex_header: \leavevmode%
+  #+latex_header: \hbox{%
+  #+latex_header: \begin{beamercolorbox}[wd=.2\paperwidth,ht=2.25ex,dp=1ex,center]{author in head/foot}%
+    #+latex_header: \usebeamerfont{author in head/foot}\insertshortauthor\expandafter\ifblank\expandafter{\beamer@shortinstitute}{}{~~(\insertshortinstitute)}
+  #+latex_header: \end{beamercolorbox}%
+  #+latex_header: \begin{beamercolorbox}[wd=.57\paperwidth,ht=2.25ex,dp=1ex,center]{title in head/foot}%
+    #+latex_header: \usebeamerfont{title in head/foot}\insertshorttitle
+  #+latex_header: \end{beamercolorbox}%
+  #+latex_header: \begin{beamercolorbox}[wd=.23\paperwidth,ht=2.25ex,dp=1ex,right]{date in head/foot}%
+    #+latex_header: \usebeamerfont{date in head/foot}\insertshortdate{}\hspace*{2em}
+    #+latex_header: \insertframenumber{} / \inserttotalframenumber\hspace*{2ex}
+  #+latex_header: \end{beamercolorbox}}%
+  #+latex_header: \vskip0pt%
+#+latex_header: }
+#+latex_header: \makeatother
 
-# TODO better footline, more space for title - tangle this in latex
-# source block
-# \setbeamertemplate{footline}
-# {
-#   \leavevmode%
-#   \hbox{%
-#   \begin{beamercolorbox}[wd=.333333\paperwidth,ht=2.25ex,dp=1ex,center]{author in head/foot}%
-#     \usebeamerfont{author in head/foot}\insertshortauthor\expandafter\beamer@ifempty\expandafter{\beamer@shortinstitute}{}{~~(\insertshortinstitute)}
-#   \end{beamercolorbox}%
-#   \begin{beamercolorbox}[wd=.4\paperwidth,ht=2.25ex,dp=1ex,center]{title in head/foot}%
-#     \usebeamerfont{title in head/foot}\insertshorttitle
-#   \end{beamercolorbox}%
-#   \begin{beamercolorbox}[wd=.266666\paperwidth,ht=2.25ex,dp=1ex,right]{date in head/foot}%
-#     \usebeamerfont{date in head/foot}\insertshortdate{}\hspace*{2em}
-#     \insertframenumber{} / \inserttotalframenumber\hspace*{2ex}
-#   \end{beamercolorbox}}%
-#   \vskip0pt%
-# }
+#+LaTeX_header: \author[Marco A. Gallo]{Marco A. Gallo\\ \vspace{1mm}Supervisor: Dr. Matthia Sabatelli}
+#+LaTeX_header: \institute[]{University of Groningen}
+#+LaTeX_header: \setbeamertemplate{itemize items}[default]
+#+LaTeX_header: \setbeamertemplate{enumerate items}[default]
+#+latex_header: \setbeamertemplate{caption}[numbered]
 
-# TODO dots menu that shows slides progression
+# TODO ask Matthia how to modify Bellman optimality equation in slide 4
 
 * Background
-** Reinforcement Learning (RL)
+** Reinforcement Learning - A schematic view
+#+ATTR_LaTeX: :width \textwidth
+#+name: agent_env_loop
+#+caption: The agent-environment loop (\citeauthor{sutton2018reinforcement}, \citeyear{sutton2018reinforcement})
+[[./online_rl_loop.jpg]]
+
+** Reinforcement Learning Problem Statement
 + An agent seeking an optimal policy $\pi(s, a)$ - a mapping from
-  states to action probabilities ($s \in S$, $a \in A$)
+  states to action probabilities ($s \in \mathcal{S}$, $a \in \mathcal{A}$)
 + Used in sequential decision making problems modeled as Markov
-  decision process (/MDP/), enriched with a reward function $R(s, a)$
+  decision process (/MDP/), enriched with a reward function $R(s, a)
+  \colon \mathcal{S} \times \mathcal{A} \mapsto \mathbb{R}$
 # NOTE these do not require knowing fully the transition probabilities
 # in the MDP, which are computed in expectation by estimating the value
 # of a state as a proxy
@@ -49,24 +57,23 @@
 *** RL Definitions
 \fontsize{9pt}{10pt}\selectfont
 \begin{align*}
-R_t &= \sum_{k=0}^{\infty} \gamma^{k} r_{t+k+1} & \tag{Expected discounted reward} \\
-Q^{\pi}(s, a) &= \mathbb{E}\left[R_{t} \vert s_{t}=s, a_{t}=a\right] & \tag{State-action value function} \\
+G_t &= \sum_{k=0}^{T} \gamma^{k} r_{t+k} & \tag{Discounted cumulative reward} \\
+Q^{\pi}(s, a) &= \mathbb{E}\left[G_{t} \vert s_{t}=s, a_{t}=a, \pi\right] & \tag{State-action value function} \\
 Q^* &= Q^{\pi^*} & \\
 Q^{*}(s, a) &= \mathbb{E} \ R(s, a) + \gamma \mathbb{E}_{s^{\prime} \sim P} \max_{a^{\prime} \in A}Q^{*}(s^{\prime}, a^{\prime}) \tag{Bellaman optimality equations}
 \end{align*}
+# G_t & \doteq \sum_{k=t+1}^{T} \gamma^{k-t-1} R_{k} & \tag{Expected discounted reward} \\
 # Q^* &= \mathcal{T}^* Q^* & \\
 # (\mathcal{T}^* \hat{Q})(s, a) &= R(s, a) + \gamma \mathbb{E}_{T(s'|s,a)}[\max_{a'}\hat{Q}(s', a')] \tag{Bellaman optimality equations}
 
-** Reinforcement Learning (RL) - Online
-#+ATTR_LaTeX: :width \textwidth
-[[./online_rl_loop.jpg]]
-
 ** Reinforcement Learning (RL) - Offline
 #+ATTR_LaTeX: :width \textwidth
+#+name: offline_rl_loop
+#+caption: The learning loop in Offline RL, courtesy of \citeauthor{DBLP:journals/corr/abs-2006-09359}
 [[./offline_rl_sketch_2.png]]
 
 + Also called Batch Reinforcement Learning
-+ Behavior policy $\beta(s|a)$ generates dataset $\mathcal{D}$
++ Behavior policy $\pi_{\beta}$ generates dataset $\mathcal{D}$
 + /Pure Batch/ vs /Growing Batch/ RL methods
 
 * Offline RL is hard
@@ -81,19 +88,28 @@ Q^{*}(s, a) &= \mathbb{E} \ R(s, a) + \gamma \mathbb{E}_{s^{\prime} \sim P} \max
 + *Bootstrapping error* (\citeauthor{kumar2019stabilizing},
   \citeyear{kumar2019stabilizing})
 
-** Bootstrapping Error (BE)
-+ Both the targets $Q^{*}(s^{\prime}, a^{\prime})$ and the estimates
-  $Q(s, a)$ for the Q-function regression come from the current
-  estimate $Q$
-+ Q-estimates for out-of-distribution (OOD) actions - those outside of
-  \beta - arbitrarily wrong
-+ Naively selecting $\max_{a^{\prime} \in A}Q(s^{\prime},
-  a^{\prime})$ as part of the regression target propagates these
-  overestimates \rightarrow /overestimation bias/
-+ Happens off-policy generally, especially harmful offline: the lack
-  of further exploration cannot correct it
-
-# TODO caption?
+** Bootstrapping Error
+# + Both the targets $Q^{*}(s^{\prime}, a^{\prime})$ and the estimates
+#   $Q(s, a)$ for the Q-function regression come from the current
+#   estimate $Q$
+# + Q-estimates for out-of-distribution (OOD) actions - those outside of
+#   \beta - arbitrarily wrong
+# + Naively selecting $\max_{a^{\prime} \in A}Q(s^{\prime},
+#   a^{\prime})$ as part of the regression target propagates these
+#   overestimates \rightarrow /overestimation bias/
+# + Happens off-policy generally, especially harmful offline: the lack
+#   of further exploration cannot correct it
+# NOTE
+# Expressed in this form, we can see that the DQN learning goal is to
+# minimize the difference between the TD-target (indicate where it is)
+# and the current Q-function estimates. This regression becomes
+# problematic when some actions have very high Q-values: they will be
+# selected by the naive max operator to form the regression target. If
+# these estimates do not match the true Q-value distribution, they will
+# be accumulated in the current estimates, creating a circle of positive
+# bias that overestimates the Q-values. This cannot be corrected offline
+# due to lack of further exploration, which would provide information
+# about the true Q-value distribution.
 # NOTE
 # first pic: selecting actions on the blue line, although different
 # from the behavior policy, does not incur in accumulation and
@@ -101,12 +117,31 @@ Q^{*}(s, a) &= \mathbb{E} \ R(s, a) + \gamma \mathbb{E}_{s^{\prime} \sim P} \max
 # second pic: there can be actions with very high Q-values which will be
 # selected by the max and cause the whole estimation to diverge from the
 # ground truth
+DQN objective functions:
+\begin{equation*}
+\mathcal{L}(\theta) = \mathbb{E}_{\langle s_t, a_t, r_t, s_{t+1} \rangle \sim D}\left[(r_t + \gamma \max_{a\in\mathcal{A}}Q(s_{t+1,a;\theta^{-}}) - Q(s_t, a_t;\theta))^2\right]
+\end{equation*}
 # #+ATTR_LaTeX: :width \textwidth
+#+name: BE_offline
+#+caption: Incorrectly high Q-values for OOD actions may be used for backups, leading to accumulation of error. Figure and caption: \citeauthor{kumar}
 [[./bootstrap_error_offline_rl.png]]
 
 ** Bootstrapping Error in the DQV\cite{sabatelli2020deep} algorithmic family
 + We want to check if the DQV and DQV-Max deep RL algorithms suffer
-  from the BE in the /offline/ setting
+  from the Bootstrapping Error in the /offline/ setting
++ DQV objective functions:
+  \begin{align*}
+  \mathcal{L}(\phi) &= \mathbb{E}_{\langle s_t, a_t, r_t, s_{t+1} \rangle \sim D}\left[(r_t + \gamma V(s_{t+1},a;\phi^{-}) - V(s_t,a;\phi))^2\right] \\
+  \mathcal{L}(\theta) &= \mathbb{E}_{\langle s_t, a_t, r_t, s_{t+1} \rangle \sim D}\left[(r_t + \gamma V(s_{t+1},a;\phi^{-}) - Q(s_t, a_t;\theta))^2\right]
+  \end{align*}
++ DQV-Max objective functions:
+  #+name: dqvmax_learn_target
+  \begin{align}
+  \mathcal{L}(\phi) &= \mathbb{E}_{\langle s_t, a_t, r_t, s_{t+1} \rangle \sim D}\left[(r_t + \gamma \max_{a\in\mathcal{A}}Q(s_{t+1},a;\theta^{-}) - V(s_t,a;\phi))^2\right] \\
+  \mathcal{L}(\theta) &= \mathbb{E}_{\langle s_t, a_t, r_t, s_{t+1} \rangle \sim D}\left[(r_t + \gamma V(s_{t+1},a;\phi) - Q(s_t, a_t;\theta))^2\right]
+  \end{align}
+
+** Experimental setup
 + Classic control OpenAI Gym environments: =CartPole-v1= and
   =Acrobot-v1=
 + Data collection: log every trajectory $\langle
@@ -114,41 +149,46 @@ Q^{*}(s, a) &= \mathbb{E} \ R(s, a) + \gamma \mathbb{E}_{s^{\prime} \sim P} \max
   trained online for 500e3 steps
 + Hyper-parameters and training scheme follow those of the
   Dopamine\cite{castro18dopamine} framework
-+ Record estimates of $\max_{a \in A}Q(s_{t_{0}}, a)$ at each
-  evaluation round to track evolution of value estimates, then compare
++ Record estimates of $\max_{a \in \mathcal{A}}Q(s_{t_{0}}, a)$ at each
+  evaluation round to track the value estimates evolution, then compare
   against ground truth
+  $$G_{t_{0}} = \sum_{k=0}^{T}{\gamma^{k}r_{t+k}}$$
+  $T$ is the environment's finite time horizon, and $r_{t}$
+  is constant across environments
 
 ** Bootstrapping Error in the DQV algorithmic family - Results
 #+ATTR_LaTeX: :width \textwidth
 [[./dshift_plots_normal.png]]
 
-** Preventing the BE - Online
-Two ways of addressing the BE:
+** Preventing the Bootstrapping Error - Online
+Two ways of addressing the Bootstrapping Error:
 \vspace{1mm}
-1. Obtain unbiased Q-values by decoupling /updates/ and /estimates/, e.g.
+1. Obtain unbiased Q-values by decoupling /selection/ and
+   /evaluation/, e.g.
    + \textbf{Double Q-Learning target}\cite{van2016deep} \\
      \vspace{1mm}
-     $Q^{*}\left(s, a\right) \approx r +\gamma Q\left(s^{\prime}, \operatorname{argmax}_{a^{\prime}} Q^{\prime}\left(s, a^{\prime}\right)\right)$
+     $Q^{*}\left(s, a\right) = r +\gamma Q\left(s^{\prime},
+     \operatorname{argmax}_{a \in \mathcal{A}} Q^{\prime}\left(s', a \right)\right)$
      \vspace{1mm}
-   + \textbf{DQV-Max targets} \\
-     \vspace{1mm}
-     $V^{*}(s) \approx r +\gamma \max_{a^{\prime}} Q(s^{\prime}, a^{\prime})$ \\
-     \vspace{1mm}
-     $Q^{*}(s, a) \approx r +\gamma V(s^{\prime})$
+   + \textbf{DQV-Max targets} in Eq.([[dqvmax_learn_target]]) \\
+     # \vspace{1mm}
+     # $V^{*}(s) = r +\gamma \max_{a \in \mathcal{A}}Q(s^{\prime}, a)$ \\
+     # \vspace{1mm}
+     # $Q^{*}(s, a) = r +\gamma V(s^{\prime})$
      \vspace{1mm}
 2. Reducing the variance of the Target Approximation Error (TAE)\cite{anschel2017averaged}
      \vspace{1mm}
-   + TAE: $Z_{s, a} = Q(s, a) - \mathbb{E}[r + \gamma \max_{a'} Q(s', a') \vert s, a]$
+   + TAE: $Z_{s, a} = Q(s, a) - \mathbb{E}[r + \gamma \max_{a \in \mathcal{A}} Q(s', a) \vert s, a]$
      \vspace{1mm}
    + \citeauthor{anschel2017averaged} show that the magnitude of the
      bootstrapping bias in Q-learning is related to the /variance/ of
      the TAE
 
-** Preventing the BE - Offline
+** Preventing the Bootstrapping Error - Offline
 + In the offline setting, algorithms such as BCQ\cite{fujimoto2019off}
-  and BEAR\cite{kumar2019stabilizing} mitigate the BE by
-  /regularizing/ the learned policy to be /close/ to the
-  /training trajectories/.
+  and BEAR\cite{kumar2019stabilizing} mitigate the Bootstrapping Error
+  by /regularizing/ the learned policy to be /close/ to the /training
+  trajectories/
 + One exception: Random Ensemble Mixture
   (REM)\cite{agarwal2020optimistic}
   - Dataset /size/ and /diversity/ are crucial for offline
@@ -158,13 +198,14 @@ Two ways of addressing the BE:
 
 * Possible solution: Ensembles
 ** Focus: Offline DQV and DQV-Max
-DQV and DQV-Max still incur in the BE, but...
+DQV and DQV-Max still incur in the Bootstrapping Error, but...
 + Being an /on-policy/ algorithm, DQV is less prone to it
 + DQV-Max is /off-policy/, yet it uses multiple estimators to compute
-  the expected Q-values \rightarrow also more robust to the BE
+  the expected Q-values \rightarrow also more robust to the
+  Bootstrapping Error
 + *Idea*: can we use techniques for TAE reduction to improve resilience
-  to the BE in the DQV algorithmic family?
-+ Ensemble DQN: training K Q-functions in parallel to obtain a
+  to the Bootstrapping Error in the DQV algorithmic family?
++ Ensemble DQN: training $K$ Q-functions in parallel to obtain a
   $\frac{1}{K}$ variance reduction in Q-values
 + Also motivated by REM's strong offline performance
 * Experiments
@@ -176,12 +217,11 @@ DQV and DQV-Max still incur in the BE, but...
 + The learning goals for DQV-Max become
   \begin{align}
   \end{align}
-** Ensemble Architectures
-  #+ATTR_LaTeX: :width .4\textwidth
+** Ensemble Architecture
+  #+ATTR_LaTeX: :width .45\textwidth
+  #+name: hydra_arch
+  #+caption: Multi-head Neural Network from \citeauthor{agarwal2020optimistic}
   [[./hydra_nn_arch.png]]
-+ For computational reasons, the ensembles are implemented with a
-  multi-head architecture, where each head shares all the neural
-  network layers except for the final fully connected layer as in REM
 
 ** Results
 Here there will be the same plots as before but with Ensemble
