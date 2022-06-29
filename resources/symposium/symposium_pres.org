@@ -33,6 +33,7 @@
 #+LaTeX_header: \setbeamertemplate{itemize items}[default]
 #+LaTeX_header: \setbeamertemplate{enumerate items}[default]
 #+latex_header: \setbeamertemplate{caption}[numbered]
+#+latex_header: \setbeamertemplate{navigation symbols}{}
 
 # TODO ask Matthia how to modify Bellman optimality equation in slide 4
 
@@ -117,7 +118,7 @@ Q^{*}(s, a) &= \mathbb{E} \ R(s, a) + \gamma \mathbb{E}_{s^{\prime} \sim P} \max
 # second pic: there can be actions with very high Q-values which will be
 # selected by the max and cause the whole estimation to diverge from the
 # ground truth
-DQN objective functions:
+DQN objective function:
 \begin{equation*}
 \mathcal{L}(\theta) = \mathbb{E}_{\langle s_t, a_t, r_t, s_{t+1} \rangle \sim D}\left[(r_t + \gamma \max_{a\in\mathcal{A}}Q(s_{t+1,a;\theta^{-}}) - Q(s_t, a_t;\theta))^2\right]
 \end{equation*}
@@ -130,11 +131,13 @@ DQN objective functions:
 + We want to check if the DQV and DQV-Max deep RL algorithms suffer
   from the Bootstrapping Error in the /offline/ setting
 + DQV objective functions:
-  \begin{align*}
+  \fontsize{9pt}{10pt}\selectfont
+  \begin{align}
   \mathcal{L}(\phi) &= \mathbb{E}_{\langle s_t, a_t, r_t, s_{t+1} \rangle \sim D}\left[(r_t + \gamma V(s_{t+1},a;\phi^{-}) - V(s_t,a;\phi))^2\right] \\
   \mathcal{L}(\theta) &= \mathbb{E}_{\langle s_t, a_t, r_t, s_{t+1} \rangle \sim D}\left[(r_t + \gamma V(s_{t+1},a;\phi^{-}) - Q(s_t, a_t;\theta))^2\right]
-  \end{align*}
+  \end{align}
 + DQV-Max objective functions:
+  \fontsize{9pt}{10pt}\selectfont
   #+name: dqvmax_learn_target
   \begin{align}
   \mathcal{L}(\phi) &= \mathbb{E}_{\langle s_t, a_t, r_t, s_{t+1} \rangle \sim D}\left[(r_t + \gamma \max_{a\in\mathcal{A}}Q(s_{t+1},a;\theta^{-}) - V(s_t,a;\phi))^2\right] \\
@@ -146,7 +149,7 @@ DQN objective functions:
   =Acrobot-v1=
 + Data collection: log every trajectory $\langle
   s,a,r,s^{\prime}\rangle$ of a DQN\cite{mnih2013playing} agent
-  trained online for 500e3 steps
+  trained online for 500k steps
 + Hyper-parameters and training scheme follow those of the
   Dopamine\cite{castro18dopamine} framework
 + Record estimates of $\max_{a \in \mathcal{A}}Q(s_{t_{0}}, a)$ at each
@@ -191,7 +194,7 @@ Two ways of addressing the Bootstrapping Error:
   trajectories/
 + One exception: Random Ensemble Mixture
   (REM)\cite{agarwal2020optimistic}
-  - Dataset /size/ and /diversity/ are crucial for offline
+  - Dataset *size* and *diversity* are crucial for offline
     performance: [[https://research.google/tools/datasets/dqn-replay/][DQN Replay Dataset]] on the Atari 2600 benchmark
   - REM idea: combining multiple noisy Q-functions creates a more
     robust Q-function
@@ -205,17 +208,26 @@ DQV and DQV-Max still incur in the Bootstrapping Error, but...
   Bootstrapping Error
 + *Idea*: can we use techniques for TAE reduction to improve resilience
   to the Bootstrapping Error in the DQV algorithmic family?
-+ Ensemble DQN: training $K$ Q-functions in parallel to obtain a
-  $\frac{1}{K}$ variance reduction in Q-values
++ Ensemble DQN\cite{anschel2017averaged}: training $K$ Q-functions in
+  parallel to obtain a $\frac{1}{K}$ variance reduction in Q-values
 + Also motivated by REM's strong offline performance
 * Experiments
-# TODO formulas
-** Learning problem
-+ The new learning goals for DQV become
+** Ensemble learning problem
+\fontsize{9pt}{10pt}\selectfont
++ Ensemble DQN learning goal:
   \begin{align}
+  \mathcal{L}(\theta) &= \frac{1}{K}\sum_{k=0}^{k-1}\mathbb{E}_{\langle s_t, a_t, r_t, s_{t+1} \rangle \sim D}\left[(r_t + \gamma \max_{a\in\mathcal{A}}Q(s_{t+1,a;\theta_{k}^{-}}) - Q(s_t, a_t;\theta_{k}))^2\right]
   \end{align}
-+ The learning goals for DQV-Max become
++ The learning goal for DQV becomes:
   \begin{align}
+  \mathcal{L}(\phi) &= \frac{1}{K}\sum_{k=0}^{k-1}\mathbb{E}_{\langle s_t, a_t, r_t, s_{t+1} \rangle \sim D}\left[(r_t + \gamma V(s_{t+1},a;\phi_{k}^{-}) - V(s_t,a;\phi_{k}))^2\right] \\
+  \mathcal{L}(\theta) &= \frac{1}{K}\sum_{k=0}^{k-1}\mathbb{E}_{\langle s_t, a_t, r_t, s_{t+1} \rangle \sim D}\left[(r_t + \gamma V(s_{t+1},a;\phi_{k}^{-}) - Q(s_t, a_t;\theta))^2\right]
+  \end{align}
++ The learning goal for DQV-Max becomes:
+  #+name: dqvmax_learn_target
+  \begin{align}
+  \mathcal{L}(\phi) &= \frac{1}{K}\sum_{k=0}^{k-1}\mathbb{E}_{\langle s_t, a_t, r_t, s_{t+1} \rangle \sim D}\left[(r_t + \gamma \max_{a\in\mathcal{A}}Q(s_{t+1},a;\theta_{k}^{-}) - V(s_t,a;\phi_{k}))^2\right] \\
+  \mathcal{L}(\theta) &= \frac{1}{K}\sum_{k=0}^{k-1}\mathbb{E}_{\langle s_t, a_t, r_t, s_{t+1} \rangle \sim D}\left[(r_t + \gamma V(s_{t+1},a;\phi_{k}) - Q(s_t, a_t;\theta_{k}))^2\right]
   \end{align}
 ** Ensemble Architecture
   #+ATTR_LaTeX: :width .45\textwidth
@@ -223,16 +235,21 @@ DQV and DQV-Max still incur in the Bootstrapping Error, but...
   #+caption: Multi-head Neural Network from \citeauthor{agarwal2020optimistic}
   [[./hydra_nn_arch.png]]
 
-** Results
-Here there will be the same plots as before but with Ensemble
-DQN/DQV/DQV-Max
+** Bootstrapping Error with Multi-Headed DQV agents
+#+ATTR_LaTeX: :width \textwidth
+[[./dshift_plots_ensembles.png]]
+
 * Analysis
 ** Conclusions
-+ Remarks: why do we think it works/it does not? *TODO*
-** Ongoing work
-+ Use completely different networks for the ensemble
-+ Experiments on Atari 2600 benchmark using the [[https://research.google/tools/datasets/dqn-replay/][DQN Replay Dataset]]
-+ Experiments with datasets of different qualities
++ No real improvement over the traditional DQV algorithms
++ The decoupling of estimation and update in the off-policy DQV-Max
+  is stronger than the gains from multiple estimation observed with
+  base DQN
++ Rigorous analysis of the TAE for the DQV algorithms needed
+# ** Ongoing work
+# + Ensemble on different networks
+# + Experiments on Atari 2600 benchmark using the [[https://research.google/tools/datasets/dqn-replay/][DQN Replay Dataset]]
+# + Experiments with datasets of different quality
 * References
 \begin{frame}[allowframebreaks]{References}
 \bibliographystyle{apalike}
