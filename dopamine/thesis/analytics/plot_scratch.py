@@ -16,6 +16,8 @@ BASELINES = {
     env_name: {
         "Max_Q_S0": utils.deterministic_discounted_return(env),
         "Reward": opt_reward,
+        # "Max_Q_S0_ewm": utils.deterministic_discounted_return(env),
+        # "Reward_ewm": opt_reward,
     }
     for env_name, env, opt_reward in zip(envs, gym_envs, (500, -100))
 }
@@ -43,7 +45,7 @@ def plot_learners_per_env(
     ylabel: str = None,
 ) -> plt.Axes:
     env_name = data["Env"].unique()[0]
-    linewidth = 5
+    linewidth = 7
     sns.lineplot(
         **{
             "data": data.reset_index(),
@@ -79,12 +81,26 @@ exp_suffix = "_pres_"
 
 client = pymongo.MongoClient(mongo_uri)
 
-exp_names = all_cartpole_acrobot_offline.EXPERIMENT_NAMES()
-# exp_names += [name for name in client.list_database_names() if exp_suffix in name and "fake" not in name]
+# exp_names = all_cartpole_acrobot_offline.EXPERIMENT_NAMES()
+# exp_names = [
+#     name
+#     for name in client.list_database_names()
+#     if exp_suffix in name and "fake" not in name
+# ]
+exp_names = [
+    f"MultiHeadEnsemble{algo}_{env}_pres"
+    for algo in ["DQN", "DQVMax", "DQVTiny"]
+    for env in ["CartPole-v1", "Acrobot-v1"]
+]
 
 data = get_data(exp_names, client)
 
 eval_data = data[data["Schedule"] == "eval"]
+
+# rename the ensembles for better legend
+eval_data["Agent"] = eval_data["Agent"].apply(
+    lambda s: s.replace("Ensemble", "").replace("Tiny", "")
+)
 
 # global matplotilb parameters, should better be set per plot...
 plt.rcParams["font.size"] = 50
@@ -97,10 +113,10 @@ fig, axes = plt.subplots(2, 2, figsize=(60, 40))
 cp_df = eval_data[eval_data["Env"] == "CartPole-v1"].copy()
 ab_df = eval_data[eval_data["Env"] == "Acrobot-v1"].copy()
 
-# cp_df.loc[:, "Reward_ewm"] = cp_df["Reward"].ewm(com=0.7).mean()
-# ab_df.loc[:, "Reward_ewm"] = ab_df["Reward"].ewm(com=0.7).mean()
-# cp_df.loc[:, "Max_Q_S0_ewm"] = cp_df["Max_Q_S0"].ewm(com=0.7).mean()
-# ab_df.loc[:, "Max_Q_S0_ewm"] = ab_df["Max_Q_S0"].ewm(com=0.7).mean()
+cp_df.loc[:, "Reward_ewm"] = cp_df["Reward"].ewm(com=0.7).mean()
+ab_df.loc[:, "Reward_ewm"] = ab_df["Reward"].ewm(com=0.7).mean()
+cp_df.loc[:, "Max_Q_S0_ewm"] = cp_df["Max_Q_S0"].ewm(com=0.7).mean()
+ab_df.loc[:, "Max_Q_S0_ewm"] = ab_df["Max_Q_S0"].ewm(com=0.7).mean()
 
 plots = [
     plot_learners_per_env(
@@ -114,6 +130,7 @@ plots = [
     for i, df in enumerate([cp_df, ab_df])
     for j, (ymetric, ylabel) in enumerate(
         [("Max_Q_S0", "Value Estimates"), ("Reward", "Reward")]
+        # [("Max_Q_S0_ewm", "Value Estimates"), ("Reward_ewm", "Reward")]
     )
 ]
 
@@ -125,9 +142,16 @@ for line in leg.get_lines():
 
 plt.tight_layout()
 
-plt.subplots_adjust(top=0.94)
+plt.subplots_adjust(top=0.93)
 
 plt.savefig(
-    os.path.join(constants.resources_dir, "symposium", "dshift_plots_normal.png"),
+    os.path.join(
+        constants.resources_dir,
+        "symposium",
+        # "dshift_plots_normal.png"
+        # "dshift_plots_normal_ewm_07.png"
+        # "dshift_plots_ensembles_ewm_07.png"
+        "dshift_plots_ensembles.png",
+    ),
     transparent=True,
 )
