@@ -35,8 +35,6 @@
 #+latex_header: \setbeamertemplate{caption}[numbered]
 #+latex_header: \setbeamertemplate{navigation symbols}{}
 
-# TODO ask Matthia how to modify Bellman optimality equation in slide 4
-
 * Background
 ** Reinforcement Learning - A schematic view
 #+ATTR_LaTeX: :width \textwidth
@@ -60,8 +58,7 @@
 \begin{align*}
 G_t &= \sum_{k=0}^{T} \gamma^{k} r_{t+k} & \tag{Discounted cumulative reward} \\
 Q^{\pi}(s, a) &= \mathbb{E}\left[G_{t} \vert s_{t}=s, a_{t}=a, \pi\right] & \tag{State-action value function} \\
-Q^* &= Q^{\pi^*} & \\
-Q^{*}(s, a) &= \mathbb{E} \ R(s, a) + \gamma \mathbb{E}_{s^{\prime} \sim P} \max_{a^{\prime} \in A}Q^{*}(s^{\prime}, a^{\prime}) \tag{Bellaman optimality equations}
+Q^{*}(s, a) &= \mathbb{E} \ R(s, a) + \gamma \mathbb{E}_{s^{\prime} \sim P} \max_{a \in \mathcal{A}}Q^{*}(s^{\prime}, a) \tag{Bellaman optimality equation}
 \end{align*}
 # G_t & \doteq \sum_{k=t+1}^{T} \gamma^{k-t-1} R_{k} & \tag{Expected discounted reward} \\
 # Q^* &= \mathcal{T}^* Q^* & \\
