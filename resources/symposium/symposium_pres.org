@@ -208,7 +208,6 @@ DQV and DQV-Max still incur in the Bootstrapping Error, but...
 + Ensemble DQN\cite{anschel2017averaged}: training $K$ Q-functions in
   parallel to obtain a $\frac{1}{K}$ variance reduction in Q-values
 + Also motivated by REM's strong offline performance
-* Experiments
 ** Ensemble learning problem
 \fontsize{9pt}{10pt}\selectfont
 + Ensemble DQN learning goal:
@@ -226,6 +225,7 @@ DQV and DQV-Max still incur in the Bootstrapping Error, but...
   \mathcal{L}(\phi) &= \frac{1}{K}\sum_{k=0}^{k-1}\mathbb{E}_{\langle s_t, a_t, r_t, s_{t+1} \rangle \sim D}\left[(r_t + \gamma \max_{a\in\mathcal{A}}Q(s_{t+1},a;\theta_{k}^{-}) - V(s_t,a;\phi_{k}))^2\right] \\
   \mathcal{L}(\theta) &= \frac{1}{K}\sum_{k=0}^{k-1}\mathbb{E}_{\langle s_t, a_t, r_t, s_{t+1} \rangle \sim D}\left[(r_t + \gamma V(s_{t+1},a;\phi_{k}) - Q(s_t, a_t;\theta_{k}))^2\right]
   \end{align}
+* Results
 ** Ensemble Architecture
   #+ATTR_LaTeX: :width .45\textwidth
   #+name: hydra_arch
