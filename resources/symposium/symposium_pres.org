@@ -53,13 +53,14 @@
 # of a state as a proxy
 + Focus: /value-based/, /model-free/ methods
 
-*** RL Definitions
-\fontsize{9pt}{10pt}\selectfont
-\begin{align*}
-G_t &= \sum_{k=0}^{T} \gamma^{k} r_{t+k} & \tag{Discounted cumulative reward} \\
-Q^{\pi}(s, a) &= \mathbb{E}\left[G_{t} \vert s_{t}=s, a_{t}=a, \pi\right] & \tag{State-action value function} \\
-Q^{*}(s, a) &= \mathbb{E} \ R(s, a) + \gamma \mathbb{E}_{s^{\prime} \sim P} \max_{a \in \mathcal{A}}Q^{*}(s^{\prime}, a) \tag{Bellaman optimality equation}
-\end{align*}
+# TODO maybe comment out? no time to deal with this
+# *** RL Definitions
+# \fontsize{9pt}{10pt}\selectfont
+# \begin{align*}
+# G_t &= \sum_{k=0}^{T} \gamma^{k} r_{t+k} & \tag{Discounted cumulative reward} \\
+# Q^{\pi}(s, a) &= \mathbb{E}\left[G_{t} \vert s_{t}=s, a_{t}=a, \pi\right] & \tag{State-action value function} \\
+# Q^{*}(s, a) &= \mathbb{E} \ R(s, a) + \gamma \mathbb{E}_{s^{\prime} \sim P} \max_{a \in \mathcal{A}}Q^{*}(s^{\prime}, a) \tag{Bellaman optimality equation}
+# \end{align*}
 # G_t & \doteq \sum_{k=t+1}^{T} \gamma^{k-t-1} R_{k} & \tag{Expected discounted reward} \\
 # Q^* &= \mathcal{T}^* Q^* & \\
 # (\mathcal{T}^* \hat{Q})(s, a) &= R(s, a) + \gamma \mathbb{E}_{T(s'|s,a)}[\max_{a'}\hat{Q}(s', a')] \tag{Bellaman optimality equations}
@@ -72,7 +73,7 @@ Q^{*}(s, a) &= \mathbb{E} \ R(s, a) + \gamma \mathbb{E}_{s^{\prime} \sim P} \max
 
 + Also called Batch Reinforcement Learning
 + Behavior policy $\pi_{\beta}$ generates dataset $\mathcal{D}$
-+ /Pure Batch/ vs /Growing Batch/ RL methods
++ /Pure Batch/ vs /Growing Batch/ methods
 
 * Offline RL is hard
 ** Detrimental factors in Offline RL
@@ -130,15 +131,15 @@ DQN objective function:
 + DQV objective functions:
   \fontsize{9pt}{10pt}\selectfont
   \begin{align}
-  \mathcal{L}(\phi) &= \mathbb{E}_{\langle s_t, a_t, r_t, s_{t+1} \rangle \sim D}\left[(r_t + \gamma V(s_{t+1},a;\phi^{-}) - V(s_t,a;\phi))^2\right] \\
-  \mathcal{L}(\theta) &= \mathbb{E}_{\langle s_t, a_t, r_t, s_{t+1} \rangle \sim D}\left[(r_t + \gamma V(s_{t+1},a;\phi^{-}) - Q(s_t, a_t;\theta))^2\right]
+  \mathcal{L}(\phi) &= \mathbb{E}_{\langle s_t, a_t, r_t, s_{t+1} \rangle \sim D}\left[(r_t + \gamma V(s_{t+1};\phi^{-}) - V(s_t;\phi))^2\right] \\
+  \mathcal{L}(\theta) &= \mathbb{E}_{\langle s_t, a_t, r_t, s_{t+1} \rangle \sim D}\left[(r_t + \gamma V(s_{t+1};\phi^{-}) - Q(s_t;\theta))^2\right]
   \end{align}
 + DQV-Max objective functions:
   \fontsize{9pt}{10pt}\selectfont
   #+name: dqvmax_learn_target
   \begin{align}
-  \mathcal{L}(\phi) &= \mathbb{E}_{\langle s_t, a_t, r_t, s_{t+1} \rangle \sim D}\left[(r_t + \gamma \max_{a\in\mathcal{A}}Q(s_{t+1},a;\theta^{-}) - V(s_t,a;\phi))^2\right] \\
-  \mathcal{L}(\theta) &= \mathbb{E}_{\langle s_t, a_t, r_t, s_{t+1} \rangle \sim D}\left[(r_t + \gamma V(s_{t+1},a;\phi) - Q(s_t, a_t;\theta))^2\right]
+  \mathcal{L}(\phi) &= \mathbb{E}_{\langle s_t, a_t, r_t, s_{t+1} \rangle \sim D}\left[(r_t + \gamma \max_{a\in\mathcal{A}}Q(s_{t+1},a;\theta^{-}) - V(s_t;\phi))^2\right] \\
+  \mathcal{L}(\theta) &= \mathbb{E}_{\langle s_t, a_t, r_t, s_{t+1} \rangle \sim D}\left[(r_t + \gamma V(s_{t+1};\phi) - Q(s_t, a_t;\theta))^2\right]
   \end{align}
 
 ** Experimental setup
@@ -216,14 +217,14 @@ DQV and DQV-Max still incur in the Bootstrapping Error, but...
   \end{align}
 + The learning goal for DQV becomes:
   \begin{align}
-  \mathcal{L}(\phi) &= \frac{1}{K}\sum_{k=0}^{k-1}\mathbb{E}_{\langle s_t, a_t, r_t, s_{t+1} \rangle \sim D}\left[(r_t + \gamma V(s_{t+1},a;\phi_{k}^{-}) - V(s_t,a;\phi_{k}))^2\right] \\
-  \mathcal{L}(\theta) &= \frac{1}{K}\sum_{k=0}^{k-1}\mathbb{E}_{\langle s_t, a_t, r_t, s_{t+1} \rangle \sim D}\left[(r_t + \gamma V(s_{t+1},a;\phi_{k}^{-}) - Q(s_t, a_t;\theta))^2\right]
+  \mathcal{L}(\phi) &= \frac{1}{K}\sum_{k=0}^{k-1}\mathbb{E}_{\langle s_t, a_t, r_t, s_{t+1} \rangle \sim D}\left[(r_t + \gamma V(s_{t+1};\phi_{k}^{-}) - V(s_t;\phi_{k}))^2\right] \\
+  \mathcal{L}(\theta) &= \frac{1}{K}\sum_{k=0}^{k-1}\mathbb{E}_{\langle s_t, a_t, r_t, s_{t+1} \rangle \sim D}\left[(r_t + \gamma V(s_{t+1};\phi_{k}^{-}) - Q(s_t, a_t;\theta))^2\right]
   \end{align}
 + The learning goal for DQV-Max becomes:
   #+name: dqvmax_learn_target
   \begin{align}
-  \mathcal{L}(\phi) &= \frac{1}{K}\sum_{k=0}^{k-1}\mathbb{E}_{\langle s_t, a_t, r_t, s_{t+1} \rangle \sim D}\left[(r_t + \gamma \max_{a\in\mathcal{A}}Q(s_{t+1},a;\theta_{k}^{-}) - V(s_t,a;\phi_{k}))^2\right] \\
-  \mathcal{L}(\theta) &= \frac{1}{K}\sum_{k=0}^{k-1}\mathbb{E}_{\langle s_t, a_t, r_t, s_{t+1} \rangle \sim D}\left[(r_t + \gamma V(s_{t+1},a;\phi_{k}) - Q(s_t, a_t;\theta_{k}))^2\right]
+  \mathcal{L}(\phi) &= \frac{1}{K}\sum_{k=0}^{k-1}\mathbb{E}_{\langle s_t, a_t, r_t, s_{t+1} \rangle \sim D}\left[(r_t + \gamma \max_{a\in\mathcal{A}}Q(s_{t+1},a;\theta_{k}^{-}) - V(s_t;\phi_{k}))^2\right] \\
+  \mathcal{L}(\theta) &= \frac{1}{K}\sum_{k=0}^{k-1}\mathbb{E}_{\langle s_t, a_t, r_t, s_{t+1} \rangle \sim D}\left[(r_t + \gamma V(s_{t+1};\phi_{k}) - Q(s_t, a_t;\theta_{k}))^2\right]
   \end{align}
 * Results
 ** Ensemble Architecture
