@@ -16,15 +16,15 @@ resources/data/mongodb/*
 
 resources/images
 
-resources/papers/auto
-resources/papers/_minted-summary
-resources/papers/summary.tex
-resources/papers/summary.pdf
-resources/papers/journal.tex
-resources/papers/journal.pdf
+resources/literature/auto
+resources/literature/_minted-summary
+resources/literature/summary.tex
+resources/literature/summary.pdf
+resources/literature/journal.tex
+resources/literature/journal.pdf
 resources/**/.pdf-view-restore
 resources/**/*.bbl
 
 resources/symposium/beamer-test
 resources/symposium/offline_rl_gif
-resources/symposium/symposium_pres.tex
+# resources/symposium/symposium_pres.tex

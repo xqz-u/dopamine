@@ -76,28 +76,6 @@ correct... but the number of total steps required is too high!!!
     the point of having to care both of regular files and a db then?
     Portability gets more complicated, it is an incomplete design...
 
-* TODOS
-  - [X] Parallelize redundancies code
-  - [X] Ensemble DQVMax, DQN, DQV
-  - [ ] Produce distributional shift plot with DQVMax in atari games
-  - [ ] Move everything persistence-related to Mongo (?)
-  - [X] Move the offline replay buffer classes to functions
-  - [ ] Argparser to run in a unified way
-  - [ ] all numpy that goes to jitted functions (mostly in
-	replay_buffer) becomes jax.numpy
-  - [ ] Linode server that hosts Mongodb instance, which receives my
-	data from Peregrine and forwards them locally through a ssh
-	tunnel (?). Mostly for atari games, can run classic control
-	ones on my pc
-  - [ ] jax.pmap to better use cpu on peregrine for atari games! and
-	not only, e.g. k=10 on classic control environments is very expensive...
-  - [ ] shared body - different heads ensemble models!
-  - [ ] record some videos to see how training progresses!!!
-  - [ ] Gym's vectorized environment API - only useful for online
-	training/evaluation though
-  - [ ] compute TD targets inside training functions to allow jit to
-	trace everything properly in a single routine
-
 * Config collection
   + runner DONE
     run_hash (?)
@@ -184,3 +162,26 @@ correct... but the number of total steps required is too high!!!
   + there was some sort of bug in
     dopamine.discrete_domains.gym_lib.GymPreprocessing; consider
     migrating to gym's wrapper in the case of atari experiments too
+
+* TODOS
+  - [X] Parallelize redundancies code
+  - [X] Ensemble DQVMax, DQN, DQV
+  - [ ] Produce distributional shift plot with DQVMax in atari games
+  - [ ] Move everything persistence-related to Mongo (?)
+  - [X] Move the offline replay buffer classes to functions
+  - [ ] Argparser to run in a unified way
+  - [ ] all numpy that goes to jitted functions (mostly in
+	replay_buffer) becomes jax.numpy
+  - [ ] Linode server that hosts Mongodb instance, which receives my
+	data from Peregrine and forwards them locally through a ssh
+	tunnel (?). Mostly for atari games, can run classic control
+	ones on my pc
+  - [ ] jax.pmap to better use cpu on peregrine for atari games! and
+	not only, e.g. k=10 on classic control environments is very expensive...
+  - [X] shared body - different heads ensemble models!
+  - [ ] record some videos to see how training progresses!!!
+  - [ ] Gym's vectorized environment API - only useful for online
+	training/evaluation though
+  - [X] compute TD targets inside training functions to allow jit to
+	trace everything properly in a single routine
+  - [ ] Order the code, comment and add docstrings

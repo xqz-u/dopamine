@@ -1,0 +1,110 @@
+#+options: toc:nil
+
+#+bibliography: journal apacite
+
+#+author: Marco
+
+* Main issue
+  *Distributional shift* (for states during evaluation, for actions
+   during training). Training is performed on the trajectory
+   distribution (concerning states) induced by the behavior policy;
+   the one experienced during testing might systematically differ from
+   the previously seen one, such that the learned generalization does
+   not account for these OOD states. The same happens for actions more
+   subtly, whether explicitly (in e.g. actor-critic methods) or
+   implicitly (the greedy max operator in Q-learning) in off-policy
+   algorithms: errors accumulate once an OOD action is chosen for a
+   state, and it is usually impossible to recover from that; it often
+   results in over-optimistic Q-values for (s,a) combinations. This
+   happens in the online setting as well, but the wrong estimate can
+   then be corrected by further interaction with the environment;
+   however this does not occur in the pure offline setting.
+
+* Approaches to mitigate distributional shift
+  [[cite:&levine2020offline]]
+** Policy gradient methods
+   + Importance sampling, weighted importance sampling
+** Approximate dynamic programming methods (Q-learning/actor critic)
+   + /Policy constraint/ based methods (BEAR-QL, BCQ etc.): force the
+     policies being learned to be close to the behavior policy from
+     the dataset. Different measures of "closeness" can be employed,
+     and out-of-distribution actions can (and must) still be chosen in
+     order to improve over the existing policy; the catch is that
+     these deviations are somewhat of a small magnitude, to prevent
+     the accumulation of big errors.
+   + /Uncertainty estimation/ based methods: employ some metric to
+     assess the confidence in a Q-value estimate (e.g. variance,
+     estimate of the transition model etc.) in order to detect highly
+     OOD actions and account for that.
+   + /Conservative methods/: similarly to uncertainty estimation, the
+     goal is to update the Q-values in a conservative way. This is
+     usually achieved by adding a /conservative penalty term/ to the
+     fitting objective of the Q-functions.
+** Model-based (???)
+* Papers
+** An optimistic perspective on offline RL, [[cite:&agarwal2020optimistic]]
+   Standard off-policy RL algos can succeed in the pure offline
+   setting, tested on the Atari 2600 testbed. Key insights:
+   + _Large replay buffer_: they perform ablation studies subsampling
+     only some % of the entire training replay buffer, and in all
+     cases a larger buffer yields better performance.
+   + _Diverse dataset_: the DQN Replay Dataset stores all of the
+     transitions encountered during training, so produced by different
+     policies. The authors hypothesize that a rich, diverse dataset is
+     a fundamental factor for offline performance.
+* Thesis
+  + confirm that, with the DQN Replay Dataset, off-policy algos
+    (e.g. DQV-Max) outperform online DQN in the pure offline setting.
+** Possible Hypothesis
+   Straightforward hyp.: Growing batch methods for off-policy
+   algorithms perform better than pure offline methods (should confirm
+   results by [[cite:&kalashnikov2018qt]]). However, I would like to add
+   something more to this research, maybe in the direction of sampling
+   techniques on the dataset. Is it possible to apply ideas from
+   [[cite:&schaul2015prioritized]] to the pure offline part of my
+   experiments?
+   + *Hypothesis*: training an off-policy agent on the DQN Replay
+     Dataset using prioritized replay converges to (sub)optimal policy
+     faster than training it with uniform sampling. It should fail if
+     the replay experience is not diverse enough. The quality of the
+     policy found is not necessarily better than the one found by a
+     uniformly trained off-policy agent on the same dataset, in terms
+     of evaluation metrics (return only? look at Q-values?). How
+     about in imbalanced datasets, so subsampling the DQN Replay
+     Dataset? [[cite:&agarwal2020optimistic]] report that REM and QR-DQN
+     still outperform the best policy found (fully trained, online
+     DQN)...
+   + Moreover, I expect algorithms such as DQV-Max to perform better
+     than e.g. DQN, in line with improvements seen when using ensemble
+     models ([[cite:&agarwal2020optimistic]]). Having 2 models instead of
+     1 to bootstrap the estimates and correct for them introduces
+     additional noise/uncertainty, which can make the learned
+     Q-function more robust and help with generalization.
+   + How about comparing prioritized replay across model-free methods?
+     So approximate dynamic programming (e.g. DQV-Max), actor-critic
+     and policy gradients? Could be interesting, maybe first check if
+     it is at all useful with just one of these methods.
+
+
+# \bibliographystyle{apalike}
+# \bibliography{journal}
+bibliographystyle:apalike
+bibliography:journal.bib
+** Final Hypothesis
+   Use all approximate dynamic programming methods.
+
+   NOTE for all methods, produce plots of the mismatch between actual
+   returns and Q-function estimates to check whether distributional
+   shift occur.
+   + *PER*: pure offline off-policy methods using prioritized
+     experience replay [[cite:&schaul2015prioritized]].
+     - /baseline/: fully trained online DQN, TODO find appropriate
+       evaluation metric (look at normalized one from the literature)
+     - /hypothesis/: shorter convergence time to a policy better than
+       the baseline than with uniform sampling from the experience
+       buffer. Concerning _distributional shift_: not avoided; WHY???
+   + *Ensemble methods*: use a DQV ensemble (only ensemble the V
+     function, the one used in DQV to compute the TD targets) to
+     address the distributional shift, in line with
+     [[cite:&agarwal2020optimistic]]. NOTE would be cool to do the same
+     with DQV-Max.
