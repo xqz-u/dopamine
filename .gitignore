@@ -25,6 +25,9 @@ resources/literature/journal.pdf
 resources/**/.pdf-view-restore
 resources/**/*.bbl
 
+resources/paper/template
+resources/paper/thesis.pdf
+
 resources/symposium/beamer-test
 resources/symposium/offline_rl_gif
 # resources/symposium/symposium_pres.tex
