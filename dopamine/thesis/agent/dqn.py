@@ -8,78 +8,39 @@ import numpy as np
 from attrs import define, field
 from flax.core.frozen_dict import FrozenDict
 from jax import numpy as jnp
-from thesis import custom_pytrees, types
+from thesis import types
 from thesis.agent import base
 from thesis.agent import utils as agent_utils
+from thesis.custom_pytrees import ValueBasedTS
 
 logger = logging.getLogger(__name__)
 
 
-# NOTE all operations batched
 @ft.partial(jax.jit, static_argnums=(0,))
-def multihead_train_q(
-    gamma: float, ts: custom_pytrees.ValueBasedTS, replay_batch: Dict[str, np.ndarray]
-) -> Tuple[jnp.ndarray, custom_pytrees.ValueBasedTS]:
+def train_q(
+    gamma: float, ts: ValueBasedTS, replay_batch: Dict[str, np.ndarray]
+) -> Tuple[jnp.ndarray, ValueBasedTS]:
     def loss_fn(params: FrozenDict) -> jnp.ndarray:
         qs = ts.apply_fn(params, replay_batch["state"])
-        played_qs = jax.vmap(lambda heads_qs, i: heads_qs[i])(
-            qs, replay_batch["action"]
-        )
-        heads_losses = ts.loss_metric(td_targets, played_qs)
-        return heads_losses.mean()
+        played_qs = jax.vmap(lambda q, a: q[a])(qs, replay_batch["action"])
+        return ts.loss_metric(td_targets, played_qs).mean()
 
     td_targets = agent_utils.bellman_target(
         gamma,
         ts.apply_fn(ts.target_params, replay_batch["next_state"]).max(1),
-        jnp.expand_dims(replay_batch["reward"], 1),
-        jnp.expand_dims(replay_batch["terminal"], 1),
+        replay_batch["reward"],
+        replay_batch["terminal"],
     )
     loss, grads = jax.value_and_grad(loss_fn)(ts.params)
     return loss, ts.apply_gradients(grads=grads)
 
 
-@jax.jit
-def train_Q(
-    tr_state: custom_pytrees.ValueBasedTS,
-    states: jnp.ndarray,
-    actions: jnp.ndarray,
-    td_targets: jnp.ndarray,
-) -> Tuple[jnp.ndarray, custom_pytrees.ValueBasedTS]:
-    def loss_fn(params, targets):
-        s_t_estimates = agent_utils.batch_net_eval(tr_state.apply_fn, params, states)
-        s_t_estimates = jax.vmap(lambda q, a: q[a])(s_t_estimates, actions)
-
-        return jnp.mean(jax.vmap(tr_state.loss_metric)(targets, s_t_estimates))
-
-    loss, grads = jax.value_and_grad(loss_fn)(tr_state.params, td_targets)
-    return loss, tr_state.apply_gradients(grads=grads)
-
-
-def train(
-    experience_batch: Dict[str, np.ndarray],
-    q_model: custom_pytrees.ValueBasedTS,
-    gamma: float,
-) -> Tuple[types.MetricsDict, custom_pytrees.ValueBasedTS]:
-    td_targets = agent_utils.apply_td_loss(
-        q_model.s_tp1_fn, q_model.target_params, experience_batch, gamma
-    )
-    q_loss, q_model = train_Q(
-        q_model, experience_batch["state"], experience_batch["action"], td_targets
-    )
-    return {"loss": {"Q": q_loss}}, q_model
-
-
+# TODO as field like DQN.train_fn?
 # cannot simply assign since flax.train_state.TrainState is a dataclass
 # with frozen=True (necessary for automatic pure transformations as
 # implemented when passing a PyTree to a jax.jitted function)
-def sync_weights(model: custom_pytrees.ValueBasedTS) -> custom_pytrees.ValueBasedTS:
+def sync_weights(model: ValueBasedTS) -> ValueBasedTS:
     return model.replace(target_params=model.params)
-
-
-def sync_weights_ensemble(
-    model: custom_pytrees.ValueBasedTSEnsemble,
-) -> custom_pytrees.ValueBasedTSEnsemble:
-    return custom_pytrees.ValueBasedTSEnsemble([sync_weights(head) for head in model])
 
 
 # `kw_only=True` is required when mandatory attributes follow ones with
@@ -91,25 +52,30 @@ class DQN(base.Agent):
 
     def __attrs_post_init__(self):
         super().__attrs_post_init__()
-        self.models["Q"] = self._make_Q_train_state()
+        self.models["Q"] = self._make_train_state(self.Q_model_def, True)
         self._set_exploration_fn()
+        self.train_fn = train_q
 
-    def _make_Q_train_state(self) -> custom_pytrees.ValueBasedTS:
+    # DQV uses Q-network with same structure, but with only one set of
+    # parameters
+    def _make_train_state(
+        self, model_def: agent_utils.ModelDefStore, target_model: bool
+    ) -> ValueBasedTS:
         return agent_utils.build_TS(
-            self.Q_model_def,
+            model_def,
             self.rng,
             self.observation_shape,
-            self.Q_model_def.net.apply,
-            lambda params, xs: agent_utils.batch_net_eval(
-                self.Q_model_def.net.apply, params, xs
-            ).max(
-                1  # max across Q-values (col index == action)
-            ),
-            True,
+            lambda params, xs: jax.vmap(lambda s: model_def.net.apply(params, s))(xs),
+            lambda ys, xs: jax.vmap(
+                lambda y, x: model_def.loss_fn(y, x, **model_def.loss_fn_params)
+            )(ys, xs),
+            target_model,
         )
 
     def _set_exploration_fn(self):
-        self.policy_evaluator.model_call = self.models["Q"].apply_fn
+        self.policy_evaluator.model_call = lambda params, s: self.Q_model_def.net.apply(
+            params, s
+        )
 
     @property
     def act_selection_params(self) -> FrozenDict:
@@ -123,10 +89,10 @@ class DQN(base.Agent):
         self.models["Q"] = sync_weights(self.models["Q"])
 
     def train(self, experience_batch: Dict[str, np.ndarray]) -> types.MetricsDict:
-        train_info, self.models["Q"] = train(
-            experience_batch, self.models["Q"], self.gamma
+        train_info, self.models["Q"] = self.train_fn(
+            self.gamma, self.models["Q"], experience_batch
         )
-        return train_info
+        return {"loss": {"Q": train_info}}
 
     @property
     def reportable(self) -> Tuple[str]:
@@ -135,42 +101,32 @@ class DQN(base.Agent):
 
 @define
 class MultiHeadEnsembleDQN(DQN):
-    Q_model_def: agent_utils.ModelDefStore = field(kw_only=True)
-
     def __attrs_post_init__(self):
         super().__attrs_post_init__()
-        self.models["Q"] = self._make_Q_train_state()
-        self._set_exploration_fn()
+        self.models["Q"] = self.reassemble_Q()
 
-    def _make_Q_train_state(self) -> custom_pytrees.ValueBasedTS:
-        return agent_utils.build_TS(
-            self.Q_model_def,
-            self.rng,
-            self.observation_shape,
-            lambda params, xs: jax.vmap(
-                lambda x: self.Q_model_def.net.apply(params, x)
-            )(xs).reshape(
-                (
-                    -1,
-                    self.policy_evaluator.num_actions,
-                    self.Q_model_def.info["n_heads"],
-                )
-            ),
-            None,  # use apply_fn, this field is kinda useless honestly
-            True,
+    def reassemble_Q(self) -> ValueBasedTS:
+        reshape_spec = (
+            self.policy_evaluator.num_actions,
+            self.Q_model_def.info["n_heads"],
         )
-
-    # NOTE expand_dims hack to keep vmap in ts.apply_fn... TODO fix
-    def _set_exploration_fn(self):
+        base_model_explore = self.policy_evaluator.model_call
         self.policy_evaluator.model_call = (
-            lambda params, state: self.models["Q"]
-            .apply_fn(params, jnp.expand_dims(state, 0))
-            .squeeze()
-            .mean(-1)
+            lambda params, s: base_model_explore(params, s)
+            .reshape(reshape_spec)
+            .mean(1)
+        )
+        ts = self.models["Q"]
+        return ts.replace(
+            apply_fn=lambda params, xs: ts.apply_fn(params, xs).reshape(
+                (-1, *reshape_spec)
+            ),
+            loss_metric=lambda ys, xs: self.Q_model_def.loss_fn(
+                ys, xs, **self.Q_model_def.loss_fn_params
+            ),
         )
 
     def train(self, experience_batch: Dict[str, np.ndarray]) -> types.MetricsDict:
-        train_info, self.models["Q"] = multihead_train_q(
-            self.gamma, self.models["Q"], experience_batch
-        )
-        return {"loss": {"Q": train_info}}
+        for k in ["reward", "terminal"]:
+            experience_batch[k] = jnp.expand_dims(experience_batch[k], 1)
+        return super(type(self), self).train(experience_batch)

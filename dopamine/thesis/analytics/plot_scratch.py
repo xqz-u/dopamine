@@ -89,7 +89,7 @@ client = pymongo.MongoClient(mongo_uri)
 # ]
 exp_names = [
     f"MultiHeadEnsemble{algo}_{env}_pres"
-    for algo in ["DQN", "DQVMax", "DQVTiny"]
+    for algo in ["DQN", "DQVMax", "DQV"]
     for env in ["CartPole-v1", "Acrobot-v1"]
 ]
 

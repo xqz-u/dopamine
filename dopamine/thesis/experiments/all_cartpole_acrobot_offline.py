@@ -9,9 +9,9 @@ exp_name_fn = (
     lambda *args, **kwargs: f"{experiments.base_exp_name_fn(*args, **kwargs)}_offline_v1"
 )
 agents_and_models = [
-    (agent.DQN, configs.dqn_model_maker),
+    # (agent.DQN, configs.dqn_model_maker),
     (agent.DQVMax, configs.dqvmax_model_maker),
-    (agent.DQV, configs.dqvmax_model_maker),
+    # (agent.DQV, configs.dqvmax_model_maker)
 ]
 envs_and_trajectories = [
     ("CartPole-v1", experiments.dqn_cartpole_replay_buffers_root),
@@ -26,6 +26,7 @@ def do_confs():
         for env_name, offline_buff_dir in envs_and_trajectories
         for c in [
             {
+                "runner": runner.FixedBatchRunner,
                 "seed": experiments.DEFAULT_SEED + i,
                 "redundancy": i,
                 "agent_class": agent_class,
@@ -34,26 +35,27 @@ def do_confs():
                 # "experiment_name": exp_name_fn(agent_class, env_name, prefix="fake_"),
                 "experiment_name": exp_name_fn(agent_class, env_name),
                 "model_maker_fn": model_maker,
-                "logs_base_dir": constants.scratch_data_dir,
-                # "logs_base_dir": constants.data_dir,
+                # "logs_base_dir": constants.scratch_data_dir,
+                "logs_base_dir": constants.data_dir,
                 "experiment": {
                     "iterations": 500,
                     "steps": 1000,
                     "eval_steps": 1000,
                     "eval_period": 5,
                 },
-                "memory": {"batch_size": 128},
+                "memory": {"batch_size": 32},
                 "agent": {"sync_weights_every": 100},
-                "model_args": {"hiddens": (512, 512)},
+                "model_args": {"mlp": {"hiddens": (512, 512)}},
             }
             for i in range(experiments.DEFAULT_REDUNDANCY)
         ]
     ]
 
 
-EXPERIMENT_NAMES = lambda: [c["experiment_name"] for c in do_confs()]
-
-
 if __name__ == "__main__":
     confs = do_confs()
-    runner.run_parallel(confs, runner.FixedBatchRunner)
+    runner.run_parallel(confs)
+
+    # conf = confs[0]
+    # runner.run_experiment(conf, 0)
+    # run = runner.FixedBatchRunner(**experiments.make_conf(**conf))

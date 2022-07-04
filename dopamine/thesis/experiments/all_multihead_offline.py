@@ -24,7 +24,7 @@ def dqn_model_maker_fn(env_name, n_actions, **_):
     }
 
 
-def dqv_hydra_tiny_maker_fn(env_name, n_actions, **_):
+def dqv_hydra_maker_fn(env_name, n_actions, **_):
     return {
         "V_model_def": configs.adam_mse_mlp(
             N_HEADS, env_name, mlp={"hiddens": (512, 512)}
@@ -51,7 +51,7 @@ def dqvmax_hydra_maker_fn(env_name, n_actions, **_):
 
 agents_and_models = [
     # (agent.MultiHeadEnsembleDQN, dqn_model_maker_fn),
-    # (agent.MultiHeadEnsembleDQVTiny, dqv_hydra_tiny_maker_fn),
+    # (agent.MultiHeadEnsembleDQV, dqv_hydra_maker_fn),
     (agent.MultiHeadEnsembleDQVMax, dqvmax_hydra_maker_fn)
 ]
 redundancy = range(experiments.DEFAULT_REDUNDANCY)

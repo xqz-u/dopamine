@@ -129,17 +129,16 @@ def build_TS(
     rng: custom_pytrees.PRNGKeyWrap,
     input_shape: Tuple[int, ...],
     s_t_fn_def: types.ModuleCall,
-    s_tp1_fn_def: types.ModuleCall,
+    loss_fn_def: types.LossMetric,
     has_target_model: bool,
 ) -> custom_pytrees.ValueBasedTS:
-    params = learner_def.net.init(next(rng), jnp.zeros(input_shape))
+    params = learner_def.net.init(next(rng), jnp.ones(input_shape))
     return custom_pytrees.ValueBasedTS.create(
         apply_fn=s_t_fn_def,
-        s_tp1_fn=s_tp1_fn_def,
         params=params,
         target_params=params if has_target_model else None,
         tx=learner_def.opt(**learner_def.opt_params),
-        loss_metric=ft.partial(learner_def.loss_fn, **learner_def.loss_fn_params),
+        loss_metric=loss_fn_def,
     )
 
 

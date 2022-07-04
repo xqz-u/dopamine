@@ -1,6 +1,6 @@
 import operator
 from abc import ABC, abstractmethod
-from typing import Dict, Iterable, Tuple, Union
+from typing import Callable, Dict, Iterable, Tuple, Union
 
 import jax
 import numpy as np
@@ -11,10 +11,6 @@ from thesis import custom_pytrees, exploration, memory, types
 from thesis.agent import utils as agent_utils
 
 
-# TODO make it so that initial_train_dict and train always return the
-# loss dict as first argument, not under a fixed string: if this key
-# changes e.g. in train_accumulate or elsewhere, all references need
-# updates
 # NOTE some attrs.field are given a default in order to exist in an
 # instance, or they wouldn't until explicitly set. Conversely, those
 # fields with only init=False are created in __attrs_post_init__
@@ -36,6 +32,10 @@ class Agent(ABC):
     models: Dict[
         str, Union[custom_pytrees.ValueBasedTS, Iterable[custom_pytrees.ValueBasedTS]]
     ] = field(init=False, factory=dict)
+    train_fn: Callable[
+        [float, custom_pytrees.ValueBasedTS, Dict[str, np.ndarray]],
+        Tuple[jnp.ndarray, custom_pytrees.ValueBasedTS],
+    ] = field(init=False)
     training_steps: int = field(init=False, default=0)
     state: np.ndarray = field(init=False)
     name: str = field(init=False)

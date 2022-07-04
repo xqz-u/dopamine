@@ -81,7 +81,6 @@ q_params = q_net.init(next(rng), jnp.ones(obs_shape))
 
 v_ts = custom_pytrees.ValueBasedTS.create(
     apply_fn=lambda params, xs: jax.vmap(lambda x: v_net.apply(params, x))(xs),
-    s_tp1_fn=None,
     params=v_params,
     target_params=None,
     tx=optax.adam(**{"learning_rate": 0.001, "eps": 3.125e-4}),
@@ -92,7 +91,6 @@ q_ts = custom_pytrees.ValueBasedTS.create(
     apply_fn=lambda params, xs: jax.vmap(lambda x: q_net.apply(params, x))(xs).reshape(
         (-1, n_actions, n_heads)
     ),
-    s_tp1_fn=None,
     params=q_params,
     target_params=q_params,
     tx=optax.adam(**{"learning_rate": 0.001, "eps": 3.125e-4}),

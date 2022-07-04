@@ -15,16 +15,12 @@ logger = logging.getLogger(__name__)
 
 
 # NOTE circular import; but:
-# s_tp1_fn: thesis.types.ModuleCall
 # loss_metric: thesis.types.LossMetric
 class ValueBasedTS(train_state.TrainState):
-    s_tp1_fn: Callable[
-        [frozen_dict.FrozenDict, jnp.ndarray], jnp.ndarray
-    ] = struct.field(pytree_node=False)
+    target_params: frozen_dict.FrozenDict
     loss_metric: Callable[[jnp.ndarray, jnp.ndarray], jnp.ndarray] = struct.field(
         pytree_node=False
     )
-    target_params: frozen_dict.FrozenDict
 
     @property
     def serializable(self) -> Dict[str, Union[frozen_dict.FrozenDict, optax.OptState]]:

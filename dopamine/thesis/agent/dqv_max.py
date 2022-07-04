@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 @ft.partial(jax.jit, static_argnums=(0,))
-def train_DQVMax_multihead(
+def train_dqv_max(
     gamma: float,
     q_ts: custom_pytrees.ValueBasedTS,
     v_ts: custom_pytrees.ValueBasedTS,
@@ -32,18 +32,16 @@ def train_DQVMax_multihead(
             q_targets, v_ts.apply_fn(params, replay_batch["state"])
         ).mean()
 
-    expanded_rewards = jnp.expand_dims(replay_batch["reward"], 1)
-    expanded_terminals = jnp.expand_dims(replay_batch["terminal"], 1)
-
     vs_st1 = v_ts.apply_fn(v_ts.params, replay_batch["next_state"])
     v_targets = agent_utils.bellman_target(
-        gamma, vs_st1, expanded_rewards, expanded_terminals
+        gamma, vs_st1, replay_batch["reward"], replay_batch["terminal"]
     )
 
     max_qs_st1 = q_ts.apply_fn(q_ts.target_params, replay_batch["next_state"]).max(1)
     q_targets = agent_utils.bellman_target(
-        gamma, max_qs_st1, expanded_rewards, expanded_terminals
+        gamma, max_qs_st1, replay_batch["reward"], replay_batch["terminal"]
     )
+
     v_loss, v_grads = jax.value_and_grad(v_loss_fn)(v_ts.params)
     q_loss, q_grads = jax.value_and_grad(q_loss_fn)(q_ts.params)
     return (
@@ -54,27 +52,6 @@ def train_DQVMax_multihead(
     )
 
 
-# TODO rewrite, also for dqv and dqn
-def train(
-    experience_batch: Dict[str, np.ndarray],
-    models: dqv.DQVModelTypes,
-    gamma: float,
-) -> Tuple[types.MetricsDict, dqv.DQVModelTypes]:
-    v_td_targets = agent_utils.apply_td_loss(
-        models["Q"].s_tp1_fn, models["Q"].target_params, experience_batch, gamma
-    )
-    q_td_targets = agent_utils.apply_td_loss(
-        models["V"].s_tp1_fn, models["V"].params, experience_batch, gamma
-    )
-    v_loss, models["V"] = dqv.train_V(
-        models["V"], experience_batch["state"], experience_batch["action"], v_td_targets
-    )
-    q_loss, models["Q"] = dqn.train_Q(
-        models["Q"], experience_batch["state"], experience_batch["action"], q_td_targets
-    )
-    return {"loss": {"V": v_loss, "Q": q_loss}}, models
-
-
 @gin.configurable
 @define
 class DQVMax(dqn.DQN):
@@ -82,15 +59,15 @@ class DQVMax(dqn.DQN):
 
     def __attrs_post_init__(self):
         super().__attrs_post_init__()
-        self.models["V"] = dqv.DQV._make_V_train_state(self, False)
+        self.models["V"] = dqn.DQN._make_train_state(self, self.V_model_def, False)
+        self.train_fn = train_dqv_max
 
     @property
     def initial_train_dict(self) -> Dict[str, Dict[str, jnp.ndarray]]:
         return {"loss": {"V": jnp.zeros(()), "Q": jnp.zeros(())}}
 
     def train(self, experience_batch: Dict[str, np.ndarray]) -> types.MetricsDict:
-        train_info, self.models = train(experience_batch, self.models, self.gamma)
-        return train_info
+        return dqv.DQV.train(self, experience_batch)
 
     @property
     def reportable(self):
@@ -98,23 +75,11 @@ class DQVMax(dqn.DQN):
 
 
 @define
-class MultiHeadEnsembleDQVMax(dqn.MultiHeadEnsembleDQN):
-    V_model_def: agent_utils.ModelDefStore = field(kw_only=True)
-
+class MultiHeadEnsembleDQVMax(DQVMax):
     def __attrs_post_init__(self):
         super().__attrs_post_init__()
-        self.models["V"] = dqv.MultiHeadEnsembleDQVTiny._make_V_train_state(self, False)
-
-    @property
-    def initial_train_dict(self) -> Dict[str, Dict[str, jnp.ndarray]]:
-        return {"loss": {"V": jnp.zeros(()), "Q": jnp.zeros(())}}
+        self.models["Q"] = dqn.MultiHeadEnsembleDQN.reassemble_Q(self)
+        self.models["V"] = dqv.MultiHeadEnsembleDQV.reassemble_V(self)
 
     def train(self, experience_batch: Dict[str, np.ndarray]) -> types.MetricsDict:
-        v_loss, self.models["V"], q_loss, self.models["Q"] = train_DQVMax_multihead(
-            self.gamma, *self.models.values(), experience_batch
-        )
-        return {"loss": {"V": v_loss, "Q": q_loss}}
-
-    @property
-    def reportable(self):
-        return super().reportable + ("V_model_def",)
+        return dqn.MultiHeadEnsembleDQN.train(self, experience_batch)
