@@ -1,0 +1,101 @@
+% NOTE expressed the set of actions w/out a time subscript on the
+% actions assuming that all actions are available at all states
+% NOTE using R(s,a) as reward signal instead of R_t in order to avoid
+% explaining it is a random variable, the explanation seems more
+% straightforward in this way to me
+% TODO should I write some of the presented equations in a an \equation
+% environment? Check that later, keep it tightly spaced for now
+\subsubsection{Reinforcement Learning}\label{sec:RL_BG}
+% TS: RL general elements
+Reinforcement Learning seeks to solve a Markov Decision Process
+(MDP) ($\mathcal{S},\mathcal{A},p,R$). In
+RL, an agent interacts with an environment at
+discrete time steps $t=0,1,2,3,\ldots$. At each time step $t$, the
+agent receives a representation of the environment $s_t \in
+\mathcal{S}$, on which it can perform some action $a_t \in
+\mathcal{A}(s)$ that determines its transition to a new state
+$s_{t+1}$ according to the dynamics model
+$p\colon\mathcal{S}\times\mathcal{S}\times\mathcal{A}\rightarrow
+\left[0,1\right],p\left(s^\prime\mid
+  s,a\right)\doteq\Pr\left\{s^\prime=s_{t+1}\mid
+  s=s_t,a=a_t\right\}$. Following this transition, the agent receives
+reward $r_{t+1}$ from a reward function
+$R\colon\mathcal{S}\times\mathcal{A}\rightarrow\mathbb{R},
+r_{t+1}=R\left(s_t,a_t\right)$. The goal of a RL agent is then to find
+a mapping from states to action probabilities, called a \textit{policy}
+$\pi\colon\mathcal{S}\times\mathcal{A}\rightarrow\left[0,1\right],
+\pi\left(a\mid s\right)=\Pr\left\{a_t=a,s_t=s\right\}$, which
+maximizes the \textit{expected return} $G_t\doteq
+\sum_{t=0}^{\infty}\gamma^{t}R\left(s_t,a_t\right)$ where
+$\gamma\in\left[0,1\right]$ is a discount factor used to scale the
+importance of future rewards. Each policy $\pi$ has a matching
+\textit{state value function}
+$V^{\pi}\left(s\right)=\mathbb{E}\left[G_t\mid s=s_t\right]$, which
+indicates the expected return obtained starting from state $s$ therefore
+following $\pi$. This function can also be expressed in terms of
+state-action pairs as a \textit{state-action value function}
+$Q^{\pi}\left(s,a\right)=\mathbb{E}\left[G_t|s=s_t,a=a_t\right]$,
+indicating the expected return taking action $a$ in state $s$ and
+consequently following $\pi$. Altogether, the RL optimization problem aims
+to achieve a policy $\pi^*$ characterized by the \textit{optimal Q
+  value function}
+$Q^*\left(s,a\right)\doteq\max_{\pi}Q^{\pi}\left(s,a\right)$ for all
+$s\in\mathcal{S}$ and $a\in\mathcal{A}\left(s\right)$, whose solution
+is provided by the Bellman optimality equation
+\begin{equation}
+Q^*\left(s_t,a_t\right)=\mathbb{E}\left[R(s_t,a_t)+\gamma
+  \max_{a\in\mathcal{A}\left(s\right)}Q^*\left(s_{t+1},a\right)\middle|
+  s_t=s,a_t=a\right]
+\end{equation} \citep{bellman1957dynamic}. Note that the latter can
+also be expressed as the \textit{optimal state value function}
+$V^*\left(s\right)$ replacing the optimal $Q$ value estimate at
+the next state
+$\max_{a\in\mathcal{A}\left(s\right)}Q^*\left(s_{t+1},a\right)$ by
+$V^*\left(s_{t+1}\right)$.
+
+% TS: Deep RL and Q-learning
+$Q^*\left(s,a\right)$ and $V^*\left(s\right)$ can both be learned by
+Temporal Difference (TD) learning
+\citep{sutton1988learning}. Q-learning is probably the most popular TD
+method; it learns the state-action value function using the update
+rule
+\begin{equation}
+Q\left(s_t,a_t\right)\leftarrow
+Q\left(s_t,a_t\right)+\alpha\left[R(s_t,a_t)+\gamma\max_{a\in\mathcal{A}\left(s\right)}Q\left(s_{t+1},a\right)\right]
+\end{equation}
+\citep{watkins1992q}. When the state space $\mathcal{S}$ is large and
+high dimensional, the $Q$ function is approximated by expressive
+neural networks and we talk of Deep Reinforcement Learning
+(DRL). DRL agents such as Deep Q-Learning (DQN)
+\citep{mnih2013playing} have attained super-human performance on a
+range of complex tasks such as the ALE benchmark
+\citep{bellemare2013arcade}. DRL algorithms generally adapt the $Q$
+function to include a neural network parameterized by $\theta$, and
+reformulate the standard DQN update rule to be a differentiable loss
+function
+\begin{equation}
+\mathcal{L}(\theta) = \mathbb{E}_{\langle s_t, a_t, r_t, s_{t+1} \rangle \sim D}\left[(r_t + \gamma
+\max_{a\in\mathcal{A}}Q(s_{t+1,a;\theta^{-}}) - Q(s_t, a_t;\theta))^2\right]
+\end{equation} where $\mathcal{D}$ is the Experience Replay buffer
+\citep{lin1992self} and $\theta^-$ are the parameters of a frozen
+target network used to stabilize value estimates. The use of this
+different set of parameters is related to the bootstrapping error,
+further explained in Section \ref{sec:BE}.
+
+% TS: Offline RL and difference with online RL
+% NOTE (maybe) place this after bootstrapping error or any other
+% section that introduces off-policy RL, so that the link is very
+% clear between off-policy and offline
+Finally, in \textit{offline} RL - also known as \textit{batch} RL -
+the proposed MDP remain valid, but the agent loses the ability to transition
+from state $s_t$ to state $s_{t+1}$ by \textit{actively} choosing and
+performing action $a_t$. Instead, an offline RL agent is given a
+logged datasets $\mathcal{B}$ of experience tuples
+$\langle s_t,a_t,s_{t+1},r_{t+1}\rangle$ generated by a \textit{behavior
+policy} $\pi_{\beta}$, and its task is to learn a (possibly better)
+policy than the latter from these trajectories.
+Since learning occurs under a state-action distribution induced by a
+policy different from the current policy $\pi$, offline RL is also
+known as \textit{fully off-policy} RL, and an offline agent needs to
+maximize data exploitation because it lacks the possibility to
+explore.
