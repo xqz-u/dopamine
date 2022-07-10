@@ -3,7 +3,7 @@
 % NOTE using R(s,a) as reward signal instead of R_t in order to avoid
 % explaining it is a random variable, the explanation seems more
 % straightforward in this way to me
-% TODO should I write some of the presented equations in a an \equation
+% TODO should I write more of the presented equations in a an \equation
 % environment? Check that later, keep it tightly spaced for now
 \subsubsection{Reinforcement Learning}\label{sec:RL_BG}
 % TS: RL general elements
@@ -43,10 +43,13 @@ $Q^*\left(s,a\right)\doteq\max_{\pi}Q^{\pi}\left(s,a\right)$ for all
 $s\in\mathcal{S}$ and $a\in\mathcal{A}\left(s\right)$, whose solution
 is provided by the Bellman optimality equation
 \begin{equation}
-Q^*\left(s_t,a_t\right)=\mathbb{E}\left[R(s_t,a_t)+\gamma
-  \max_{a\in\mathcal{A}\left(s\right)}Q^*\left(s_{t+1},a\right)\middle|
-  s_t=s,a_t=a\right]
-\end{equation} \citep{bellman1957dynamic}. Note that the latter can
+\begin{aligned}
+Q^*\left(s_t,a_t\right)=\mathbb{E}\bigg[&R\left(s_t,a_t\right)+\\ &\gamma
+  \max_{a\in\mathcal{A}\left(s\right)}Q^*\left(s_{t+1},a\right)\bigg\vert
+  s_t=s,a_t=a \bigg]
+\end{aligned}
+\end{equation}
+\citep{bellman1957dynamic}. Note that the latter can
 also be expressed as the \textit{optimal state value function}
 $V^*\left(s\right)$ replacing the optimal $Q$ value estimate at
 the next state
@@ -61,8 +64,14 @@ method; it learns the state-action value function using the update
 rule
 \begin{equation}
 Q\left(s_t,a_t\right)\leftarrow
-Q\left(s_t,a_t\right)+\alpha\left[R(s_t,a_t)+\gamma\max_{a\in\mathcal{A}\left(s\right)}Q\left(s_{t+1},a\right)\right]
+Q\left(s_t,a_t\right)+\alpha\left[R\left(s_t,a_t\right)+y^{\scriptscriptstyle
+TD}_{\scriptscriptstyle QL}\right],
 \end{equation}
+where
+\[
+y^{\scriptscriptstyle TD}_{\scriptscriptstyle
+QL}=\gamma\max_{a\in\mathcal{A}\left(s\right)}Q\left(s_{t+1},a\right)-Q\left(s_t,a_t\right)
+\]
 \citep{watkins1992q}. When the state space $\mathcal{S}$ is large and
 high dimensional, the $Q$ function is approximated by expressive
 neural networks and we talk of Deep Reinforcement Learning
@@ -74,13 +83,20 @@ function to include a neural network parameterized by $\theta$, and
 reformulate the standard DQN update rule to be a differentiable loss
 function
 \begin{equation}
-\mathcal{L}(\theta) = \mathbb{E}_{\langle s_t, a_t, r_t, s_{t+1} \rangle \sim D}\left[(r_t + \gamma
-\max_{a\in\mathcal{A}}Q(s_{t+1,a;\theta^{-}}) - Q(s_t, a_t;\theta))^2\right]
-\end{equation} where $\mathcal{D}$ is the Experience Replay buffer
+\mathcal{L}(\theta)=\mathbb{E}_{\langle s_t,a_t,r_t,s_{t+1}\rangle\sim
+D}\left[{\left(r_t+y^{\scriptscriptstyle TD}_{\scriptscriptstyle
+DQN}\right)}^2\right]
+\end{equation}
+where
+\[
+y^{\scriptscriptstyle TD}_{\scriptscriptstyle DQN}=\gamma
+\max_{a\in\mathcal{A}}Q(s_{t+1,a};\theta^{-})-Q(s_t, a_t;\theta),
+\]
+$\mathcal{D}$ is the Experience Replay buffer
 \citep{lin1992self} and $\theta^-$ are the parameters of a frozen
 target network used to stabilize value estimates. The use of this
 different set of parameters is related to the bootstrapping error,
-further explained in Section \ref{sec:BE}.
+further explained in Section~\ref{sec:BE}.
 
 % TS: Offline RL and difference with online RL
 % NOTE (maybe) place this after bootstrapping error or any other
