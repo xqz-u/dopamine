@@ -1,2 +1,44 @@
-\subsubsection{Bootstrapping Error and Ensemble-based methods}\label{sec:intro_related_work}
-pippo
+\subsubsection{Bootstrapping Error
+Correction}\label{sec:intro_related_work}
+Techniques to correct bootstrapping errors or, more generally, to
+minimize distributional shift in offline reinforcement learning
+involve either \textit{policy constraint} or
+\textit{uncertainty-based} methods \citep{levine2020offline}.
+
+The $Q$ functions is evaluated on the same states that it is
+trained on. Therefore, only the action inputs across states can be out
+of distribution in the training process. \textit{Policy constraint}
+methods address this issue by bounding the distribution over actions
+used for the computation of the TD-targets,
+$\pi\left(a^\prime\middle|s^\prime\right)$, to stay in the proximity
+of the one induced by the behavior policy,
+$\pi_\beta\left(a^\prime\middle|s^\prime\right)$. In this way, the $Q$
+function regression is driven by target values for which enough
+reliable information is found in $\pi_\beta$.
+The difference
+between these techniques resides in the metrics they employ to define
+distributional proximity.
+For example, Batch-Constrained deep Q-Learning (BCQ)
+\citep{pmlr-v97-fujimoto19a} trains a generative model -- a variational
+auto-encoder (VAE) \citep{kingma2013auto} -- to produce actions which
+are likely given the data in $\mathcal{B}$, then it perturbs them to
+increase diversity in a constrained manner, and finally selects the
+maximum $Q$-value over these artificial actions. By substituting the
+maximum over all possible actions at the next state, involved in the
+computation of the TD-target, with the maximum over actions likely
+under $\pi_\beta$ BCQ ensures that the learned policy $\pi$ is
+centered around $\pi_\beta$, hence that the $Q$ function is not
+queried on OOD actions with resulting bootstrapping
+error. Bootstrapping Error Accumulation Reduction Q-Learning (BEAR-QL)
+\citep{kumar2019stabilizing} also follows the intuition of placing
+constraints on the learned action distribution, however it achieves so
+with fewer restrictions. This makes it more viable for $\pi$ to
+improve on $\pi_\beta$, a capability hindered by the aggressive
+constraint of BCQ.\ Instead of requiring the learned policy to be
+close in distribution to $\pi_\beta$, BEAR demands a \textit{support
+constraint} \citep{kumar}. This loose condition means that the
+learned policy must place non-zero probability on all those actions
+that have non-negligible probability according to the behavior policy.
+This precaution allows BEAR to improve over suboptimal, even random
+off-policy data, whereas BCQ would learn a policy close to uniform
+\citep{kumar2019stabilizing}.
