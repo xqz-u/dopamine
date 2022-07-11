@@ -42,3 +42,20 @@ that have non-negligible probability according to the behavior policy.
 This precaution allows BEAR to improve over suboptimal, even random
 off-policy data, whereas BCQ would learn a policy close to uniform
 \citep{kumar2019stabilizing}.
+
+On the other hand, \textit{uncertainty-based} methods do not try to
+restrict the learned policy to a safe region; rather, they rely on
+estimating epistemic uncertainty in the $Q$ function and using this
+information in the computation of target values. Precisely, this means
+learning an uncertainty distribution over $Q$ functions as induced by
+the offline dataset $\mathcal{B}$, denoted
+$\mathcal{P}_{\mathcal{B}}\left(Q^\pi\right)$. When this is known, a
+penalty term of the form
+$-\alpha\textrm{Unc}\left(\mathcal{P}_{\mathcal{B}}\left(Q^\pi\right)\right)$
+can be added to the computation of TD-targets in order to produce a
+\textit{conservative} estimate of the actual $Q$
+function. The penalty will be larger for out-of-distribution actions:
+being outside of the training data distribution, these naturally have
+large uncertainty estimates. One common way of learning
+$\mathcal{P}_{\mathcal{B}}\left(Q^\pi\right)$ is to use bootstrap
+ensembles.
