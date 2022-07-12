@@ -1,5 +1,9 @@
 \documentclass[10pt,a4paper,twocolumn]{article}
 \usepackage{bachelorproject}
+\usepackage{hyperref}
+\hypersetup{
+  colorlinks=false
+}
 
 \title{\vspace{-0.5in}{\bfseries\scshape
     Using ensembles to address Bootstrapping Error in Offline
@@ -37,5 +41,10 @@
 \bibliography{bibliography}
 
 \clearpage
+
+\begin{appendices}
+    \input{sections/appendix.tex}
+    \newpage
+\end{appendices}
 
 \end{document}

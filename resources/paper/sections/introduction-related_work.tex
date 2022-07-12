@@ -1,10 +1,18 @@
+% TODO should I refer everything we do in this thesis to distributional
+% shift instead of bootstrapping error? They are tightly related; the
+% main reason would be just to be more consistent with the literature I
+% present here, which mostly talks of distributional shift - only BEAR
+% deals with bootstrapping error
 \subsubsection{Bootstrapping Error
 Correction}\label{sec:intro_related_work}
-Techniques to correct bootstrapping errors or, more generally, to
-minimize distributional shift in offline reinforcement learning
+In offline reinforcement learning, techniques to correct bootstrapping
+errors explicitly, or implicitly by minimizing distributional shift,
 involve either \textit{policy constraint} or
 \textit{uncertainty-based} methods \citep{levine2020offline}.
 
+% NOTE it is possible that I will have to eliminate the deep explanation
+% of policy constraint methods, as it is only laterally relevant to my
+% research question and more of a general review
 The $Q$ functions is evaluated on the same states that it is
 trained on. Therefore, only the action inputs across states can be out
 of distribution in the training process. \textit{Policy constraint}
@@ -39,23 +47,45 @@ close in distribution to $\pi_\beta$, BEAR demands a \textit{support
 constraint} \citep{kumar}. This loose condition means that the
 learned policy must place non-zero probability on all those actions
 that have non-negligible probability according to the behavior policy.
-This precaution allows BEAR to improve over suboptimal, even random
-off-policy data, whereas BCQ would learn a policy close to uniform
-\citep{kumar2019stabilizing}.
+With this precaution BEAR is able to improve over suboptimal, even
+random off-policy trajectories, whereas BCQ would learn a policy close
+to uniform \citep{kumar2019stabilizing}.
 
-On the other hand, \textit{uncertainty-based} methods do not try to
+By contrast, \textit{uncertainty-based} methods do not aim to
 restrict the learned policy to a safe region; rather, they rely on
-estimating epistemic uncertainty in the $Q$ function and using this
-information in the computation of target values. Precisely, this means
-learning an uncertainty distribution over $Q$ functions as induced by
-the offline dataset $\mathcal{B}$, denoted
+estimating epistemic uncertainty in the $Q$ function and integrating
+this information in the computation of target values. Precisely, this
+means learning an uncertainty distribution over $Q$ functions as
+induced by the offline dataset $\mathcal{B}$, denoted
 $\mathcal{P}_{\mathcal{B}}\left(Q^\pi\right)$. When this is known, a
 penalty term of the form
 $-\alpha\textrm{Unc}\left(\mathcal{P}_{\mathcal{B}}\left(Q^\pi\right)\right)$
-can be added to the computation of TD-targets in order to produce a
+can be added to the TD-targets in order to produce a
 \textit{conservative} estimate of the actual $Q$
-function. The penalty will be larger for out-of-distribution actions:
-being outside of the training data distribution, these naturally have
-large uncertainty estimates. One common way of learning
-$\mathcal{P}_{\mathcal{B}}\left(Q^\pi\right)$ is to use bootstrap
-ensembles.
+function that is proportional to the model's confidence in the data.
+Since OOD actions are outside of the training data distribution, their
+uncertainty estimates are naturally large, resulting in desirably
+conservative $Q$-values \citep{levine2020offline}.
+
+% NOTE should I add a brief sentence stating that I mostly focus on this
+% since this is of interest in the present research?
+One common way of learning $\mathcal{P}_{\mathcal{B}}\left(Q^\pi\right)$ is to
+use bootstrap ensembles
+\citep{osband2016deep,kumar2019stabilizing,agarwal2020optimistic}. Ensembling
+a $Q$ function means training multiple $Q_i$ functions on samples from
+$\mathcal{B}$ drawn with replacement, then compounding the different
+$Q_i\left(s,a\right)$ predictions (typically by averaging in a
+regression problem) to obtain the final population prediction
+$Q\left(s,a\right)$. It is known that ensemble methods help
+stabilizing highly unstable prediction procedures
+\citep{breiman1996bagging}; in fact, simply using $K$ approximators to
+estimate $Q$ in DQN yields a $K$-fold variance reduction, improving
+accuracy in TD-targets estimation \citep{anschel2017averaged}. When
+estimating uncertainty using ensembles, one common choice of `Unc' is
+the variance across the ensemble $Q$-value predictions
+\citep{kumar2019stabilizing}. Lastly, Random Ensemble Mixture (REM)
+\citep{agarwal2020optimistic}, a strong off-policy algorithm based on
+DQN, obtained state-of-the-art results in discrete and continuous
+domain offline RL using $Q$ function ensembles. As a measure of
+uncertainty, REM employs a convex weighted sum of the ensemble
+$Q$-values, which is minimized globally by the ensemble.
