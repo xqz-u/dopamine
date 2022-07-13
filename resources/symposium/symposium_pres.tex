@@ -236,7 +236,7 @@ parallel to obtain a \(\frac{1}{K}\) variance reduction in Q-values
 \begin{itemize}
 \item Ensemble DQN learning goal:
 \begin{align}
-\mathcal{L}(\theta) &= \frac{1}{K}\sum_{k=0}^{k-1}\mathbb{E}_{\langle s_t, a_t, r_t, s_{t+1} \rangle \sim D}\left[(r_t + \gamma \max_{a\in\mathcal{A}}Q(s_{t+1,a;\theta_{k}^{-}}) - Q(s_t, a_t;\theta_{k}))^2\right]
+\mathcal{L}(\theta) &= \frac{1}{K}\sum_{k=0}^{k-1}\mathbb{E}_{\langle s_t, a_t, r_t, s_{t+1} \rangle \sim D}\left[(r_t + \gamma \max_{a\in\mathcal{A}}Q(s_{t+1},a;\theta_{k}^{-}) - Q(s_t, a_t;\theta_{k}))^2\right]
 \end{align}
 \item The learning goal for DQV becomes:
 \begin{align}

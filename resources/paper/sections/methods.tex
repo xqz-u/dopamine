@@ -31,13 +31,13 @@ functions used by DQV become
                               s_t,a_t,r_t,s_{t+1}\rangle\sim
                               \mathcal{D}}\left[{\left(y^{\scriptscriptstyle
                               \textrm{TD}}_{\scriptscriptstyle
-                              \textrm{DQV}}-V\left(s_t;\phi\right)\right)}^2\right]
+                              \textrm{DQV}}-V\left(s_t;\phi\right)\right)}^2\right]\label{eq:dqv_loss_0}
   \\
 \mathcal{L}\left(\theta\right)&=\mathbb{E}_{\langle
                                 s_t,a_t,r_t,s_{t+1}\rangle\sim
                                 \mathcal{D}}\left[{\left(y^{\scriptscriptstyle
                                 \textrm{TD}}_{\scriptscriptstyle
-                                \textrm{DQV}}-Q\left(s_t,a_t;\theta\right)\right)}^2\right],
+                                \textrm{DQV}}-Q\left(s_t,a_t;\theta\right)\right)}^2\right],\label{eq:dqv_loss_1}
 \end{align}
 where
 \begin{equation}
@@ -120,7 +120,7 @@ over 3 redundancies.
 % estimates because the agents act greedily most of the time then. Since
 % they still have a very small chance of exploring then, I still record
 % every Q(s,a) during action selection
-\subsection{Bootstrapping error in DQV and DQV-Max}
+\subsection{Bootstrapping error in DQV and DQV-Max}\label{sec:methods_be_dqv_dqvmax}
 In order to detect the bootstrapping error, we need to track the
 evolution of the $Q$ estimates as a function of training steps -- a
 proxy for the number of Bellman backups. If the
@@ -139,7 +139,7 @@ noted that one evaluation iteration of 1000 time-steps occurred every
 still able to analyze the $Q$ estimates evolution as a temporal
 sequence, and to assess the effects of bootstrapping error
 accumulation. Results are presented in
-Figure~\ref{fig:dshift_online_normal}, together with the actual
+Figure~\ref{fig:dshift_offline_normal}, together with the actual
 rewards obtained at test time. Offline DQN is used as a baseline; the
 full lines correspond to each agent's $Q$ estimates at evaluation
 time, while the dashed line is the environment's actual return $G_t$
@@ -147,7 +147,109 @@ at an episode's first state $s_0$.
 
 % TS: check if BE appears when using simple ensemble versions of the
 % proposed algorithms
+% NOTE talking about weight vector: should it be bold as found for
+% vectors elsewhere? Then should I change all such vectors in the
+% paper?
+% TODO ask Matthia how should I go about breaking too long equations
 \subsection{Ensemble DQV and DQV-Max}
-To address the question of the efficacy of ensembling methods for
-bootstrapping error prevention, a simple averaging ensemble technique
-was implemented. TODO finish this by tonight
+% TS: brief description of main inspiration, Ensemble-DQN
+To investigate the efficacy of ensembling methods for
+bootstrapping error prevention, we implemented an averaging ensemble
+technique inspired by Ensemble-DQN \citep{agarwal2020optimistic}.
+In Ensemble-DQN, the $Q$ function is approximated by
+an ensemble of $K$ heads parameterized by a weight vector $\theta$,
+with corresponding target weights $\theta^-$; each $Q$-value
+prediction
+% $Q\left(s_t,a_t;\theta_{k}\right)$
+is then optimized with respect to its own target,
+% $Q\left(s_t,a_t;\theta_{k}^-\right)$.
+similarly to Bootstrapped-DQN \citep{osband2016deep}. Each head is
+initialized with different parameters and trained on all data using
+identical mini-batches; although bootstrap ensembles actually require
+that each head is trained on a different sample drawn with
+replacement from the dataset $\mathcal{D}$, it is well known in the
+deep learning literature that
+initializing a model with different parameters provides enough
+diversity to the model to obtain reliable uncertainty estimates
+\citep{osband2016deep,levine2020offline}. Finally, each head optimizes
+a global loss which is the average of the ensemble total loss; the
+objective function for Ensemble-DQN thus takes the form
+\begin{align}
+\mathcal{L}\left(\theta\right)&=\frac{1}{K}\sum_{k=0}^{k-1}\mathbb{E}_{\langle
+                     s_t,a_t,r_t,s_{t+1}\rangle\sim\mathcal{D}}\left[{\left(y^{\scriptscriptstyle\textrm{TD}}_{\scriptscriptstyle\textrm{Ens-DQN}}-Q\left(s_t,a_t;\theta_{k}\right)\right)}^2\right],
+\end{align}
+where
+\begin{equation}
+  y^{\scriptscriptstyle\textrm{TD}}_{\scriptscriptstyle\textrm{Ens-DQN}}=r_t+\gamma\max_{a\in\mathcal{A}\left(s\right)}Q\left(s_{t+1},a;\theta_{k}^{-}\right).
+\end{equation}
+
+When translating the ensemble loss objective to DQV and DQV-Max, we
+decided to use ensembles for the TD-targets computation. The rationale
+for this choice is to mitigate the bootstrapping error occurring
+precisely at this step, as we expect that the compound estimate of the
+ensemble is close to the true TD-target $\hat{y}$. As a result,
+Ensemble-DQV employs only one ensemble on the $V$ function to compute
+a TD-target common across $Q$ and $V$; on the contrary, since DQV-Max
+requires two different TD-targets, Ensemble-DQV-Max uses ensembles to
+estimate both the $Q$ and $V$ function, yet the $V$ heads lack target
+networks as in the original DQV-Max algorithm. Thus, the modified
+objectives of Ensemble-DQV and Ensemble-DQV-Max respectively become
+\begin{align}
+\mathcal{L}\left(\phi\right)&=\frac{1}{K}\sum_{k=0}^{k-1}\mathbb{E}_{\langle
+                              s_t,a_t,r_t,s_{t+1}\rangle\sim
+                              \mathcal{D}}\left[{\left(y^{\scriptscriptstyle
+                              \textrm{TD}}_{\scriptscriptstyle
+                              \textrm{Ens-DQV}}-V\left(s_t;\phi_{k}\right)\right)}^2\right]
+  \\
+\mathcal{L}\left(\theta\right)&=\frac{1}{K}\sum_{k=0}^{k-1}\mathbb{E}_{\langle
+                                s_t,a_t,r_t,s_{t+1}\rangle\sim
+                                \mathcal{D}}\left[{\left(y^{\scriptscriptstyle
+                                \textrm{TD}}_{\scriptscriptstyle
+                                \textrm{Ens-DQV}}-Q\left(s_t,a_t;\theta\right)\right)}^2\right],
+\end{align}
+where
+\begin{equation}
+  y^{\scriptscriptstyle\textrm{TD}}_{\scriptscriptstyle\textrm{Ens-DQV}}=r_t+\gamma
+  V\left(s_{t+1};\phi_{k}^{-}\right)
+\end{equation}
+and
+\begin{align}
+\mathcal{L}\left(\phi\right)&=\frac{1}{K}\sum_{k=0}^{k-1}\mathbb{E}_{\langle
+                              s_t,a_t,r_t,s_{t+1}\rangle\sim
+                              \mathcal{D}}\left[{\left(v^{\scriptscriptstyle
+                              \textrm{TD}}_{\scriptscriptstyle
+                              \textrm{Ens-DQV-Max}}-V\left(s_t;\phi_k\right)\right)}^2\right]
+  \\
+\mathcal{L}\left(\theta\right)&=\frac{1}{K}\sum_{k=0}^{k-1}\mathbb{E}_{\langle
+                                s_t,a_t,r_t,s_{t+1}\rangle\sim
+                                \mathcal{D}}\left[{\left(q^{\scriptscriptstyle
+                                \textrm{TD}}_{\scriptscriptstyle
+                                \textrm{Ens-DQV-Max}}-Q\left(s_t,a_t;\theta_k\right)\right)}^2\right],
+\end{align}
+where
+\begin{align}
+  v^{\scriptscriptstyle
+  \textrm{TD}}_{\scriptscriptstyle\textrm{Ens-DQV-Max}}&=r_t+\gamma\max_{a\in\mathcal{A}\left(s\right)}Q\left(s_{t+1},a;\theta_k^{-}\right)\\
+  q^{\scriptscriptstyle\textrm{TD}}_{\scriptscriptstyle\textrm{Ens-DQV-Max}}&=r_t+\gamma V\left(s_{t+1};\phi_k\right).
+\end{align}
+The ensembles were implemented using a multi-head architecture: each
+head shares the same body of layers except for a final
+fully connected layer, initialized with different parameters across
+heads; this architecture is also employed by REM
+\citep{agarwal2020optimistic}.
+The experiments concerning the ensemble version of DQV and DQV-Max
+follow the same setup as in Section~\ref{sec:methods_be_dqv_dqvmax},
+however in this case we recorded
+$\max_{a\in\mathcal{A}\left(s\right)}\frac{1}{K}\sum_{k=0}^{k-1}Q\left(s_t,a;\theta_k\right)$
+to track the evolution of value estimates.
+For each experiment on the aforementioned environments a number of
+heads $K=4$ was used; although other examples in the literature use a
+greater number of heads (e.g. $K=10$ for Bootstrapped-DQN
+\citep{osband2016deep}), we settled on 4 due to computational
+limitations. Results are presented in
+Figure~\ref{fig:dshift_offline_ensembles}, where offline Ensemble-DQN
+is used as the baseline.
+% TODO add explanation of Ensemble-DQV-Max-Tiny (ensemble only the Q
+% function) once the data are ready
+% TODO what about failed experiments with Bootstrapped versions of my
+% agents? should I write and run them again?
