@@ -49,10 +49,35 @@ def dqvmax_hydra_maker_fn(env_name, n_actions, **_):
     }
 
 
+def dqvmax_onq_hydra_maker_fn(env_name, n_actions, **_):
+    return {
+        "V_model_def": configs.adam_mse_mlp(1, env_name, mlp={"hiddens": (512, 512)}),
+        "Q_model_def": configs.adam_mse_mlp(
+            n_actions * N_HEADS,
+            env_name,
+            mlp={"hiddens": (512, 512)},
+            info={"n_heads": N_HEADS},
+        ),
+    }
+
+
+def dqvmax_onv_hydra_maker_fn(env_name, n_actions, **_):
+    return {
+        "V_model_def": configs.adam_mse_mlp(
+            N_HEADS, env_name, mlp={"hiddens": (512, 512)}
+        ),
+        "Q_model_def": configs.adam_mse_mlp(
+            n_actions, env_name, mlp={"hiddens": (512, 512)}
+        ),
+    }
+
+
 agents_and_models = [
     # (agent.MultiHeadEnsembleDQN, dqn_model_maker_fn),
     # (agent.MultiHeadEnsembleDQV, dqv_hydra_maker_fn),
-    (agent.MultiHeadEnsembleDQVMax, dqvmax_hydra_maker_fn)
+    # (agent.MultiHeadEnsembleDQVMax, dqvmax_hydra_maker_fn)
+    (agent.MultiHeadEnsembleDQVMaxOnQ, dqvmax_onq_hydra_maker_fn),
+    # (agent.MultiHeadEnsembleDQVMaxOnV, dqvmax_onv_hydra_maker_fn),
 ]
 redundancy = range(experiments.DEFAULT_REDUNDANCY)
 redundancy_and_seeds = zip(

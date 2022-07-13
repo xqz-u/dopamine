@@ -126,6 +126,12 @@ class MultiHeadEnsembleDQN(DQN):
             ),
         )
 
+    # FIXME other ensemble classes call this training routine, but what
+    # they really want is just the execution of the for loop below, then
+    # to call their own train_fn; should replace this with a
+    # EnsembleMixin class instead of calling
+    # MultiHeadEnsembleDQN.train all over, or they should all extend
+    # an Ensemble* class. Do not use inheritance anymore...
     def train(self, experience_batch: Dict[str, np.ndarray]) -> types.MetricsDict:
         for k in ["reward", "terminal"]:
             experience_batch[k] = jnp.expand_dims(experience_batch[k], 1)
