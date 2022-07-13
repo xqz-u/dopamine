@@ -6,9 +6,9 @@
 The first set of experiments in this research aimed at determining the
 presence of bootstrapping errors in DQV and DQV-Max, the two
 algorithms in the DQV algorithmic family \citep{sabatelli2020deep}.
-Subsequently, a second experiment sought to assess the impact of
-value function ensembling on the susceptibility of these algorithms to
-the bootstrapping error.
+Subsequently, in line with the research question, a second experiment
+sought to assess the impact of value function ensembling on the
+susceptibility of these algorithms to the bootstrapping error.
 
 % NOTE should I keep all the equation numbering?
 % TODO the objective function for Q in DQV-Max does not fit inside the
@@ -91,7 +91,8 @@ discrete action spaces, suitable for approximate dynamic programming
 deep reinforcement learning algorithms involved in the experiments are
 self-implemented using Google's JAX machine learning library
 \citep{jax2018github}, then trained and evaluated under standard deep
-RL hyper-parameters settings following the Dopamine reinforcement
+RL hyper-parameters and preprocessing settings following the Dopamine
+reinforcement
 learning framework \citep{castro18dopamine}; see
 Appendix~\ref{sec:appendix} for the full hyper-parameters
 table. Finally, due to the offline nature of the proposed experiments,
@@ -120,6 +121,9 @@ over 3 redundancies.
 % estimates because the agents act greedily most of the time then. Since
 % they still have a very small chance of exploring then, I still record
 % every Q(s,a) during action selection
+% NOTE the baseline dashed line for the return plots is not explained
+% right now; the reward plots can go in the appendix, then should I
+% explain what I mean by 'solving' the environment?
 \subsection{Bootstrapping error in DQV and DQV-Max}\label{sec:methods_be_dqv_dqvmax}
 In order to detect the bootstrapping error, we need to track the
 evolution of the $Q$ estimates as a function of training steps -- a
@@ -249,7 +253,7 @@ greater number of heads (e.g. $K=10$ for Bootstrapped-DQN
 limitations. Results are presented in
 Figure~\ref{fig:dshift_offline_ensembles}, where offline Ensemble-DQN
 is used as the baseline.
-% TODO add explanation of Ensemble-DQV-Max-Tiny (ensemble only the Q
-% function) once the data are ready
+% TODO ablations study once the data are ready; think about how to
+% discuss them in the results section
 % TODO what about failed experiments with Bootstrapped versions of my
 % agents? should I write and run them again?
