@@ -76,8 +76,8 @@ agents_and_models = [
     # (agent.MultiHeadEnsembleDQN, dqn_model_maker_fn),
     # (agent.MultiHeadEnsembleDQV, dqv_hydra_maker_fn),
     # (agent.MultiHeadEnsembleDQVMax, dqvmax_hydra_maker_fn)
-    (agent.MultiHeadEnsembleDQVMaxOnQ, dqvmax_onq_hydra_maker_fn),
-    # (agent.MultiHeadEnsembleDQVMaxOnV, dqvmax_onv_hydra_maker_fn),
+    # (agent.MultiHeadEnsembleDQVMaxOnQ, dqvmax_onq_hydra_maker_fn),
+    (agent.MultiHeadEnsembleDQVMaxOnV, dqvmax_onv_hydra_maker_fn),
 ]
 redundancy = range(experiments.DEFAULT_REDUNDANCY)
 redundancy_and_seeds = zip(

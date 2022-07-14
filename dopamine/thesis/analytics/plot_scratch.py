@@ -21,6 +21,9 @@ BASELINES = {
     }
     for env_name, env, opt_reward in zip(envs, gym_envs, (500, -100))
 }
+mongo_uri = "mongodb://localhost:27017/"
+# mongo_uri = constants.xxx_mongo_uri
+exp_suffix = "_pres_"
 
 
 def get_experiment_metrics(
@@ -75,83 +78,80 @@ def plot_learners_per_env(
     return ax
 
 
-# mongo_uri = "mongodb://localhost:27017/"
-mongo_uri = constants.xxx_mongo_uri
-exp_suffix = "_pres_"
+if __name__ == "__main__":
+    client = pymongo.MongoClient(mongo_uri)
 
-client = pymongo.MongoClient(mongo_uri)
+    # exp_names = all_cartpole_acrobot_offline.EXPERIMENT_NAMES()
+    # exp_names = [
+    #     name
+    #     for name in client.list_database_names()
+    #     if exp_suffix in name and "fake" not in name
+    # ]
+    exp_names = [
+        f"MultiHeadEnsemble{algo}_{env}_pres"
+        for algo in ["DQN", "DQVMax", "DQV"]
+        for env in ["CartPole-v1", "Acrobot-v1"]
+    ]
 
-# exp_names = all_cartpole_acrobot_offline.EXPERIMENT_NAMES()
-# exp_names = [
-#     name
-#     for name in client.list_database_names()
-#     if exp_suffix in name and "fake" not in name
-# ]
-exp_names = [
-    f"MultiHeadEnsemble{algo}_{env}_pres"
-    for algo in ["DQN", "DQVMax", "DQV"]
-    for env in ["CartPole-v1", "Acrobot-v1"]
-]
+    data = get_data(exp_names, client)
 
-data = get_data(exp_names, client)
+    eval_data = data[data["Schedule"] == "eval"]
 
-eval_data = data[data["Schedule"] == "eval"]
-
-# rename the ensembles for better legend
-eval_data["Agent"] = eval_data["Agent"].apply(
-    lambda s: s.replace("Ensemble", "").replace("Tiny", "")
-)
-
-# global matplotilb parameters, should better be set per plot...
-plt.rcParams["font.size"] = 50
-plt.rcParams["axes.linewidth"] = 3
-plt.rcParams["axes.spines.right"] = False
-plt.rcParams["axes.spines.top"] = False
-
-fig, axes = plt.subplots(2, 2, figsize=(60, 40))
-
-cp_df = eval_data[eval_data["Env"] == "CartPole-v1"].copy()
-ab_df = eval_data[eval_data["Env"] == "Acrobot-v1"].copy()
-
-cp_df.loc[:, "Reward_ewm"] = cp_df["Reward"].ewm(com=0.7).mean()
-ab_df.loc[:, "Reward_ewm"] = ab_df["Reward"].ewm(com=0.7).mean()
-cp_df.loc[:, "Max_Q_S0_ewm"] = cp_df["Max_Q_S0"].ewm(com=0.7).mean()
-ab_df.loc[:, "Max_Q_S0_ewm"] = ab_df["Max_Q_S0"].ewm(com=0.7).mean()
-
-plots = [
-    plot_learners_per_env(
-        fig,
-        axes[j][i],
-        df,
-        ymetric,
-        xlabel="Evaluation steps",
-        ylabel=ylabel,
+    # rename the ensembles for better legend
+    eval_data["Agent"] = eval_data["Agent"].apply(
+        lambda s: s.replace("Ensemble", "").replace("Tiny", "")
     )
-    for i, df in enumerate([cp_df, ab_df])
-    for j, (ymetric, ylabel) in enumerate(
-        [("Max_Q_S0", "Value Estimates"), ("Reward", "Reward")]
-        # [("Max_Q_S0_ewm", "Value Estimates"), ("Reward_ewm", "Reward")]
+
+    # global matplotilb parameters, should better be set per plot...
+    plt.rcParams["font.size"] = 50
+    plt.rcParams["axes.linewidth"] = 3
+    plt.rcParams["axes.spines.right"] = False
+    plt.rcParams["axes.spines.top"] = False
+
+    fig, axes = plt.subplots(2, 2, figsize=(60, 40))
+
+    cp_df = eval_data[eval_data["Env"] == "CartPole-v1"].copy()
+    ab_df = eval_data[eval_data["Env"] == "Acrobot-v1"].copy()
+
+    cp_df.loc[:, "Reward_ewm"] = cp_df["Reward"].ewm(com=0.7).mean()
+    ab_df.loc[:, "Reward_ewm"] = ab_df["Reward"].ewm(com=0.7).mean()
+    cp_df.loc[:, "Max_Q_S0_ewm"] = cp_df["Max_Q_S0"].ewm(com=0.7).mean()
+    ab_df.loc[:, "Max_Q_S0_ewm"] = ab_df["Max_Q_S0"].ewm(com=0.7).mean()
+
+    plots = [
+        plot_learners_per_env(
+            fig,
+            axes[j][i],
+            df,
+            ymetric,
+            xlabel="Evaluation steps",
+            ylabel=ylabel,
+        )
+        for i, df in enumerate([cp_df, ab_df])
+        for j, (ymetric, ylabel) in enumerate(
+            [("Max_Q_S0", "Value Estimates"), ("Reward", "Reward")]
+            # [("Max_Q_S0_ewm", "Value Estimates"), ("Reward_ewm", "Reward")]
+        )
+    ]
+
+    # put one single legend for both plots
+    labels, handles = axes[0][0].get_legend_handles_labels()
+    leg = fig.legend(labels, handles, loc="upper center", ncol=len(labels))
+    for line in leg.get_lines():
+        line.set_linewidth(8)
+
+    plt.tight_layout()
+
+    plt.subplots_adjust(top=0.93)
+
+    plt.savefig(
+        os.path.join(
+            constants.resources_dir,
+            "symposium",
+            # "dshift_plots_normal.png"
+            # "dshift_plots_normal_ewm_07.png"
+            # "dshift_plots_ensembles_ewm_07.png"
+            "dshift_plots_ensembles.png",
+        ),
+        transparent=True,
     )
-]
-
-# put one single legend for both plots
-labels, handles = axes[0][0].get_legend_handles_labels()
-leg = fig.legend(labels, handles, loc="upper center", ncol=len(labels))
-for line in leg.get_lines():
-    line.set_linewidth(8)
-
-plt.tight_layout()
-
-plt.subplots_adjust(top=0.93)
-
-plt.savefig(
-    os.path.join(
-        constants.resources_dir,
-        "symposium",
-        # "dshift_plots_normal.png"
-        # "dshift_plots_normal_ewm_07.png"
-        # "dshift_plots_ensembles_ewm_07.png"
-        "dshift_plots_ensembles.png",
-    ),
-    transparent=True,
-)

@@ -1,0 +1,257 @@
+\documentclass{article}
+\usepackage{colortbl}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage[table,xcdraw]{xcolor}
+
+
+
+
+
+% If you use beamer only pass "xcolor=table" option,
+% i.e. \documentclass[xcolor=table]{beamer}
+
+
+\begin{document}
+
+
+
+\begin{table}[]
+\begin{tabular}{@{}lll|ll@{}}
+\toprule
+\multicolumn{1}{c}{}                         & \multicolumn{2}{l|}{\texttt{CartPole-v1}} & \multicolumn{2}{l}{\texttt{Acrobot-v1}}                      \\ \cmidrule(l){2-5}
+\multicolumn{1}{c}{\multirow{-2}{*}{Agents}} & Reward   & $Q$-Value                      & Reward                        & $Q$-Value                    \\ \midrule
+DQN/Ensemble-DQN                             & 29.81    & \cellcolor[HTML]{FFFC9E}45.00  & \cellcolor[HTML]{FFFC9E}5.53  & \cellcolor[HTML]{FFFC9E}0.56 \\
+DQV/Ensemble-DQV                             & 13.21    & 0.13                           & \cellcolor[HTML]{FFFC9E}11.57 & \cellcolor[HTML]{FFFC9E}0.15 \\
+DQV-Max/Ensemble-DQV-Max                     & 14.92    & 1.57                           & \cellcolor[HTML]{FFFC9E}7.82  & \cellcolor[HTML]{FFFC9E}0.37
+\end{tabular}
+\caption{}
+\label{tab:my-table}
+\end{table}
+
+\begin{table}[]
+\begin{tabular}{@{}lll|ll@{}}
+\toprule
+\multicolumn{1}{c}{}                         & \multicolumn{2}{l|}{\texttt{CartPole-v1}}                  & \multicolumn{2}{l}{\texttt{Acrobot-v1}}                                           \\ \cmidrule(l){2-5}
+\multicolumn{1}{c}{\multirow{-2}{*}{Agents}} & Reward                     & $Q$-Value                     & Reward                                             & $Q$-Value                    \\ \midrule
+DQN/Ensemble-DQN                             & \multicolumn{1}{l|}{29.81} & \cellcolor[HTML]{FFFC9E}45.00 & \multicolumn{1}{l|}{\cellcolor[HTML]{FFFC9E}5.53}  & \cellcolor[HTML]{FFFC9E}0.56 \\ \cmidrule(l){2-5}
+DQV/Ensemble-DQV                             & \multicolumn{1}{l|}{13.21} & 0.13                          & \multicolumn{1}{l|}{\cellcolor[HTML]{FFFC9E}11.57} & \cellcolor[HTML]{FFFC9E}0.15 \\ \cmidrule(l){2-5}
+DQV-Max/Ensemble-DQV-Max                     & \multicolumn{1}{l|}{14.92} & 1.57                          & \multicolumn{1}{l|}{\cellcolor[HTML]{FFFC9E}7.82}  & \cellcolor[HTML]{FFFC9E}0.37 \\ \cmidrule(l){2-5}
+\end{tabular}
+\caption{}
+\label{tab:my-table1}
+\end{table}
+
+\begin{table}[]
+\begin{tabular}{@{}|l|ll|ll|@{}}
+\toprule
+\multicolumn{1}{|c|}{}                         & \multicolumn{2}{l|}{\texttt{CartPole-v1}}                   & \multicolumn{2}{l|}{\texttt{Acrobot-v1}}                                          \\ \cmidrule(l){2-5}
+\multicolumn{1}{|c|}{\multirow{-2}{*}{Agents}} & \multicolumn{1}{l|}{Reward} & $Q$-Value                     & \multicolumn{1}{l|}{Reward}                        & $Q$-Value                    \\ \midrule
+DQN/Ensemble-DQN                               & \multicolumn{1}{l|}{29.81}  & \cellcolor[HTML]{FFFC9E}45.00 & \multicolumn{1}{l|}{\cellcolor[HTML]{FFFC9E}5.53}  & \cellcolor[HTML]{FFFC9E}0.56 \\ \midrule
+DQV/Ensemble-DQV                               & \multicolumn{1}{l|}{13.21}  & 0.13                          & \multicolumn{1}{l|}{\cellcolor[HTML]{FFFC9E}11.57} & \cellcolor[HTML]{FFFC9E}0.15 \\ \midrule
+DQV-Max/Ensemble-DQV-Max                       & \multicolumn{1}{l|}{14.92}  & 1.57                          & \multicolumn{1}{l|}{\cellcolor[HTML]{FFFC9E}7.82}  & \cellcolor[HTML]{FFFC9E}0.37 \\ \bottomrule
+\end{tabular}
+\caption{}
+\label{tab:my-table-2}
+\end{table}
+
+\begin{table}[]
+\begin{tabular}{@{}|l|ll|ll|@{}}
+\toprule
+\multicolumn{1}{|c|}{}                         & \multicolumn{2}{c|}{\texttt{CartPole-v1}}                   & \multicolumn{2}{c|}{\texttt{Acrobot-v1}}                                          \\ \cmidrule(l){2-5}
+\multicolumn{1}{|c|}{\multirow{-2}{*}{Agents}} & \multicolumn{1}{l|}{Reward} & $Q$-Value                     & \multicolumn{1}{l|}{Reward}                        & $Q$-Value                    \\ \midrule
+DQN vs. Ensemble-DQN                           & \multicolumn{1}{l|}{29.81}  & \cellcolor[HTML]{FFFC9E}45.00 & \multicolumn{1}{l|}{\cellcolor[HTML]{FFFC9E}5.53}  & \cellcolor[HTML]{FFFC9E}0.56 \\ \midrule
+DQV vs. Ensemble-DQV                           & \multicolumn{1}{l|}{13.21}  & 0.13                          & \multicolumn{1}{l|}{\cellcolor[HTML]{FFFC9E}11.57} & \cellcolor[HTML]{FFFC9E}0.15 \\ \midrule
+DQV-Max vs. Ensemble-DQV-Max                   & \multicolumn{1}{l|}{14.92}  & 1.57                          & \multicolumn{1}{l|}{\cellcolor[HTML]{FFFC9E}7.82}  & \cellcolor[HTML]{FFFC9E}0.37 \\ \bottomrule
+\end{tabular}
+\caption{}
+\label{tab:my-table-3}
+\end{table}
+
+\begin{table}[]
+\begin{tabular}{@{}lllll@{}}
+\toprule
+\multicolumn{1}{c}{}                               & \multicolumn{4}{c}{Environments}                                                                                                                                                         \\
+\multicolumn{1}{c}{}                               & \multicolumn{2}{c}{\texttt{CartPole-v1}}                                        & \multicolumn{2}{c}{\texttt{Acrobot-v1}}                                                                \\ \cmidrule(l){2-5}
+\multicolumn{1}{c}{\multirow{-3}{*}{Agents}}       & $\Delta$Reward
+                                                   & $\Delta Q$-Value
+                                                                                                                                     & $\Delta$Reward                                             & $\Delta Q$-Value                                         \\ \midrule
+\multicolumn{1}{|l|}{DQN vs. Ensemble-DQN}         & \multicolumn{1}{l|}{29.81} & \multicolumn{1}{l|}{\cellcolor[HTML]{FFFC9E}45.00} & \multicolumn{1}{l|}{\cellcolor[HTML]{FFFC9E}5.53}  & \multicolumn{1}{l|}{\cellcolor[HTML]{FFFC9E}0.56} \\ \midrule
+\multicolumn{1}{|l|}{DQV vs. Ensemble-DQV}         & \multicolumn{1}{l|}{13.21} & \multicolumn{1}{l|}{0.13}                          & \multicolumn{1}{l|}{\cellcolor[HTML]{FFFC9E}11.57} & \multicolumn{1}{l|}{\cellcolor[HTML]{FFFC9E}0.15} \\ \midrule
+\multicolumn{1}{|l|}{DQV-Max vs. Ensemble-DQV-Max} & \multicolumn{1}{l|}{14.92} & \multicolumn{1}{l|}{1.57}                          & \multicolumn{1}{l|}{\cellcolor[HTML]{FFFC9E}7.82}  & \multicolumn{1}{l|}{\cellcolor[HTML]{FFFC9E}0.37} \\ \bottomrule
+\end{tabular}
+\caption{}
+\label{tab:my-table-4}
+\end{table}
+
+\begin{table}[]
+\begin{tabular}{@{}c|llll@{}}
+\toprule
+                                                   & \multicolumn{4}{c}{Environments}                                                                                                                                                         \\
+                                                   & \multicolumn{2}{c}{\texttt{CartPole-v1}}                                        & \multicolumn{2}{c}{\texttt{Acrobot-v1}}                                                                \\ \cmidrule(l){2-5}
+                                                   & \multicolumn{4}{c}{Average difference}                                                                                                                                                   \\
+\multirow{-4}{*}{Agents}                           & Reward                     & $Q$-Value                                          & Reward                                             & $Q$-Value                                         \\ \midrule
+\multicolumn{1}{|l|}{DQN vs. Ensemble-DQN}         & \multicolumn{1}{l|}{29.81} & \multicolumn{1}{l|}{\cellcolor[HTML]{FFFC9E}45.00} & \multicolumn{1}{l|}{\cellcolor[HTML]{FFFC9E}5.53}  & \multicolumn{1}{l|}{\cellcolor[HTML]{FFFC9E}0.56} \\ \midrule
+\multicolumn{1}{|l|}{DQV vs. Ensemble-DQV}         & \multicolumn{1}{l|}{13.21} & \multicolumn{1}{l|}{0.13}                          & \multicolumn{1}{l|}{\cellcolor[HTML]{FFFC9E}11.57} & \multicolumn{1}{l|}{\cellcolor[HTML]{FFFC9E}0.15} \\ \midrule
+\multicolumn{1}{|l|}{DQV-Max vs. Ensemble-DQV-Max} & \multicolumn{1}{l|}{14.92} & \multicolumn{1}{l|}{1.57}                          & \multicolumn{1}{l|}{\cellcolor[HTML]{FFFC9E}7.82}  & \multicolumn{1}{l|}{\cellcolor[HTML]{FFFC9E}0.37} \\ \bottomrule
+\end{tabular}
+\caption{}
+\label{tab:my-table-5}
+\end{table}
+
+\newpage
+
+
+\begin{table}
+\centering
+\setlength{\extrarowheight}{0pt}
+\addtolength{\extrarowheight}{\aboverulesep}
+\addtolength{\extrarowheight}{\belowrulesep}
+\setlength{\aboverulesep}{0pt}
+\setlength{\belowrulesep}{0pt}
+\begin{tabular}{|l|c|c|c|c|}
+\toprule
+\multicolumn{1}{c}{\multirow{3}{*}{Agents}} & \multicolumn{4}{c}{Environments}                                                                                                                         \\
+\multicolumn{1}{c}{}                        & \multicolumn{2}{c}{\texttt{CartPole-v1}}                                  & \multicolumn{2}{c}{\texttt{Acrobot-v1}}                                      \\
+\cmidrule(l){2-5}
+\multicolumn{1}{c}{}                        & \multicolumn{1}{l}{$\Delta$Reward} & \multicolumn{1}{l}{$\Delta Q$-Value} & \multicolumn{1}{l}{$\Delta$Reward}   & \multicolumn{1}{l}{$\Delta Q$-Value}  \\
+\midrule
+DQN vs. Ensemble-DQN                        & 29.81                              & {\cellcolor[rgb]{1,0.988,0.62}}45.00 & {\cellcolor[rgb]{1,0.988,0.62}}5.53  & {\cellcolor[rgb]{1,0.988,0.62}}0.56   \\
+\midrule
+DQV vs. Ensemble-DQV                        & 13.21                              & 0.13                                 & {\cellcolor[rgb]{1,0.988,0.62}}11.57 & {\cellcolor[rgb]{1,0.988,0.62}}0.15   \\
+\midrule
+DQV-Max vs. Ensemble-DQV-Max                & 14.92                              & 1.57                                 & {\cellcolor[rgb]{1,0.988,0.62}}7.82  & {\cellcolor[rgb]{1,0.988,0.62}}0.37   \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+
+\begin{table}
+\centering
+\setlength{\extrarowheight}{0pt}
+\addtolength{\extrarowheight}{\aboverulesep}
+\addtolength{\extrarowheight}{\belowrulesep}
+\setlength{\aboverulesep}{0pt}
+\setlength{\belowrulesep}{0pt}
+\caption{Some caption bro}
+\label{table:results_diff}
+\begin{tabular}{l|c|c|c|c}
+\toprule
+\multicolumn{1}{c}{\multirow{3}{*}{Agents}} & \multicolumn{4}{c}{Environments}                                                                                                                         \\
+\multicolumn{1}{c}{}                        & \multicolumn{2}{c}{\texttt{CartPole-v1}}                                  & \multicolumn{2}{c}{\texttt{Acrobot-v1}}                                      \\
+\cmidrule(l){2-5}
+\multicolumn{1}{c}{}                        & \multicolumn{1}{l}{$\Delta$Reward} & \multicolumn{1}{l}{$\Delta Q$-Value} & \multicolumn{1}{l}{$\Delta$Reward}   & \multicolumn{1}{l}{$\Delta Q$-Value}  \\
+\midrule
+DQN vs. Ensemble-DQN                        & 29.81                              & {\cellcolor[rgb]{1,0.988,0.62}}45.00 & {\cellcolor[rgb]{1,0.988,0.62}}5.53  & {\cellcolor[rgb]{1,0.988,0.62}}0.56   \\
+\midrule
+DQV vs. Ensemble-DQV                        & 13.21                              & 0.13                                 & {\cellcolor[rgb]{1,0.988,0.62}}11.57 & {\cellcolor[rgb]{1,0.988,0.62}}0.15   \\
+\midrule
+DQV-Max vs. Ensemble-DQV-Max                & 14.92                              & 1.57                                 & {\cellcolor[rgb]{1,0.988,0.62}}7.82  & {\cellcolor[rgb]{1,0.988,0.62}}0.37   \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+\begin{table}
+\centering
+\setlength{\extrarowheight}{0pt}
+\addtolength{\extrarowheight}{\aboverulesep}
+\addtolength{\extrarowheight}{\belowrulesep}
+\setlength{\aboverulesep}{0pt}
+\setlength{\belowrulesep}{0pt}
+\caption{Some caption bro}
+\label{table:results_diff}
+\begin{tabular}{ccccc}
+\toprule
+\multirow{3}{*}{Agents}                          & \multicolumn{4}{c}{Environments}                                                                                                                         \\
+                                                 & \multicolumn{2}{c}{\texttt{CartPole-v1}}                                  & \multicolumn{2}{c}{\texttt{Acrobot-v1}}                                      \\
+\cmidrule(l){2-5}
+                                                 & \multicolumn{1}{l}{$\Delta$Reward} & \multicolumn{1}{l}{$\Delta Q$-Value} & \multicolumn{1}{l}{$\Delta$Reward}   & \multicolumn{1}{l}{$\Delta Q$-Value}  \\
+\midrule
+\multicolumn{1}{l}{DQN vs. Ensemble-DQN}         & 29.81                              & {\cellcolor[rgb]{1,0.988,0.62}}45.00 & {\cellcolor[rgb]{1,0.988,0.62}}5.53  & {\cellcolor[rgb]{1,0.988,0.62}}0.56   \\
+\midrule
+\multicolumn{1}{l}{DQV vs. Ensemble-DQV}         & 13.21                              & 0.13                                 & {\cellcolor[rgb]{1,0.988,0.62}}11.57 & {\cellcolor[rgb]{1,0.988,0.62}}0.15   \\
+\midrule
+\multicolumn{1}{l}{DQV-Max vs. Ensemble-DQV-Max} & 14.92                              & 1.57                                 & {\cellcolor[rgb]{1,0.988,0.62}}7.82  & {\cellcolor[rgb]{1,0.988,0.62}}0.37   \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+\begin{table}
+\centering
+\setlength{\extrarowheight}{0pt}
+\addtolength{\extrarowheight}{\aboverulesep}
+\addtolength{\extrarowheight}{\belowrulesep}
+\setlength{\aboverulesep}{0pt}
+\setlength{\belowrulesep}{0pt}
+\caption{Some caption bro}
+\label{table:results_diff}
+\begin{tabular}{c|cccc}
+\toprule
+\multirow{3}{*}{Agents}                           & \multicolumn{4}{c}{Environments}                                                                                                                         \\
+                                                  & \multicolumn{2}{c}{\texttt{CartPole-v1}}                                  & \multicolumn{2}{c}{\texttt{Acrobot-v1}}                                      \\
+\cmidrule(l){2-5}
+                                                  & \multicolumn{1}{l}{$\Delta$Reward} & \multicolumn{1}{l}{$\Delta Q$-Value} & \multicolumn{1}{l}{$\Delta$Reward}   & \multicolumn{1}{l}{$\Delta Q$-Value}  \\
+\midrule
+\multicolumn{1}{l|}{DQN vs. Ensemble-DQN}         & 29.81                              & {\cellcolor[rgb]{1,0.988,0.62}}45.00 & {\cellcolor[rgb]{1,0.988,0.62}}5.53  & {\cellcolor[rgb]{1,0.988,0.62}}0.56   \\
+\midrule
+\multicolumn{1}{l|}{DQV vs. Ensemble-DQV}         & 13.21                              & 0.13                                 & {\cellcolor[rgb]{1,0.988,0.62}}11.57 & {\cellcolor[rgb]{1,0.988,0.62}}0.15   \\
+\midrule
+\multicolumn{1}{l|}{DQV-Max vs. Ensemble-DQV-Max} & 14.92                              & 1.57                                 & {\cellcolor[rgb]{1,0.988,0.62}}7.82  & {\cellcolor[rgb]{1,0.988,0.62}}0.37   \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+\begin{table}
+\centering
+\setlength{\extrarowheight}{0pt}
+\addtolength{\extrarowheight}{\aboverulesep}
+\addtolength{\extrarowheight}{\belowrulesep}
+\setlength{\aboverulesep}{0pt}
+\setlength{\belowrulesep}{0pt}
+\caption{Some caption bro}
+\label{table:results_diff}
+\begin{tabular}{l|cccc}
+\toprule
+\multicolumn{1}{c|}{\multirow{2}{*}{Agents}} & \multicolumn{2}{c}{\texttt{CartPole-v1}}                                  & \multicolumn{2}{c}{\texttt{Acrobot-v1}}                                      \\
+\cmidrule(l){2-5}
+\multicolumn{1}{c|}{}                        & \multicolumn{1}{l}{$\Delta$Reward} & \multicolumn{1}{l}{$\Delta Q$-Value} & \multicolumn{1}{l}{$\Delta$Reward}   & \multicolumn{1}{l}{$\Delta Q$-Value}  \\
+\midrule
+DQN vs. Ensemble-DQN                         & 29.81                              & {\cellcolor[rgb]{1,0.988,0.62}}45.00 & {\cellcolor[rgb]{1,0.988,0.62}}5.53  & {\cellcolor[rgb]{1,0.988,0.62}}0.56   \\
+\midrule
+DQV vs. Ensemble-DQV                         & 13.21                              & 0.13                                 & {\cellcolor[rgb]{1,0.988,0.62}}11.57 & {\cellcolor[rgb]{1,0.988,0.62}}0.15   \\
+\midrule
+DQV-Max vs. Ensemble-DQV-Max                 & 14.92                              & 1.57                                 & {\cellcolor[rgb]{1,0.988,0.62}}7.82  & {\cellcolor[rgb]{1,0.988,0.62}}0.37   \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+\begin{table}
+\centering
+\setlength{\extrarowheight}{0pt}
+\addtolength{\extrarowheight}{\aboverulesep}
+\addtolength{\extrarowheight}{\belowrulesep}
+\setlength{\aboverulesep}{0pt}
+\setlength{\belowrulesep}{0pt}
+\caption{Some caption bro}
+\label{table:results_diff}
+\begin{tabular}{lcccc}
+\toprule
+\multicolumn{1}{c}{\multirow{2}{*}{}} & \multicolumn{2}{c}{\texttt{CartPole-v1}}                                  & \multicolumn{2}{c}{\texttt{Acrobot-v1}}                                      \\
+\cmidrule(l){2-5}
+\multicolumn{1}{c}{}                  & \multicolumn{1}{l}{$\Delta$Reward} & \multicolumn{1}{l}{$\Delta Q$-Value} & \multicolumn{1}{l}{$\Delta$Reward}   & \multicolumn{1}{l}{$\Delta Q$-Value}  \\
+\midrule
+DQN vs. Ensemble-DQN                  & 29.81                              & {\cellcolor[rgb]{1,0.988,0.62}}45.00 & {\cellcolor[rgb]{1,0.988,0.62}}5.53  & {\cellcolor[rgb]{1,0.988,0.62}}0.56   \\
+\midrule
+DQV vs. Ensemble-DQV                  & 13.21                              & 0.13                                 & {\cellcolor[rgb]{1,0.988,0.62}}11.57 & {\cellcolor[rgb]{1,0.988,0.62}}0.15   \\
+\midrule
+DQV-Max vs. Ensemble-DQV-Max          & 14.92                              & 1.57                                 & {\cellcolor[rgb]{1,0.988,0.62}}7.82  & {\cellcolor[rgb]{1,0.988,0.62}}0.37   \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\end{document}
