@@ -124,7 +124,8 @@ over 3 redundancies.
 % NOTE the baseline dashed line for the return plots is not explained
 % right now; the reward plots can go in the appendix, then should I
 % explain what I mean by 'solving' the environment?
-\subsection{Bootstrapping error in DQV and DQV-Max}\label{sec:methods_be_dqv_dqvmax}
+\subsection{Bootstrapping error in offline DQV and
+  DQV-Max}\label{sec:methods_be_dqv_dqvmax}
 In order to detect the bootstrapping error, we need to track the
 evolution of the $Q$ estimates as a function of training steps -- a
 proxy for the number of Bellman backups. If the
@@ -143,11 +144,12 @@ noted that one evaluation iteration of 1000 time-steps occurred every
 still able to analyze the $Q$ estimates evolution as a temporal
 sequence, and to assess the effects of bootstrapping error
 accumulation. Results are presented in
-Figure~\ref{fig:dshift_offline_normal}, together with the actual
-rewards obtained at test time. Offline DQN is used as a baseline; the
-full lines correspond to each agent's $Q$ estimates at evaluation
-time, while the dashed line is the environment's actual return $G_t$
-at an episode's first state $s_0$.
+Figure~\ref{fig:dshift_offline_normal}.
+% , together with the actual
+% rewards obtained at test time.
+Offline DQN is used as a baseline; the full lines correspond to each
+agent's $Q$ estimates at evaluation time, while the dashed line is the
+environment's actual return $G_t$ at an episode's first state $s_0$.
 
 % TS: check if BE appears when using simple ensemble versions of the
 % proposed algorithms
@@ -158,8 +160,9 @@ at an episode's first state $s_0$.
 \subsection{Ensemble DQV and DQV-Max}
 % TS: brief description of main inspiration, Ensemble-DQN
 To investigate the efficacy of ensembling methods for
-bootstrapping error prevention, we implemented an averaging ensemble
-technique inspired by Ensemble-DQN \citep{agarwal2020optimistic}.
+bootstrapping error prevention, an averaging ensemble
+technique inspired by Ensemble-DQN \citep{agarwal2020optimistic} was
+implemented.
 In Ensemble-DQN, the $Q$ function is approximated by
 an ensemble of $K$ heads parameterized by a weight vector $\theta$,
 with corresponding target weights $\theta^-$; each $Q$-value
@@ -244,16 +247,14 @@ heads; this architecture is also employed by REM
 The experiments concerning the ensemble version of DQV and DQV-Max
 follow the same setup as in Section~\ref{sec:methods_be_dqv_dqvmax},
 however in this case we recorded
-$\max_{a\in\mathcal{A}\left(s\right)}\frac{1}{K}\sum_{k=0}^{k-1}Q\left(s_t,a;\theta_k\right)$
+$\max_{a\in\mathcal{A}\left(s\right)}\frac{1}{K}\sum_{k=0}^{k-1}Q\left(s_0,a;\theta_k\right)$
 to track the evolution of value estimates.
 For each experiment on the aforementioned environments a number of
 heads $K=4$ was used; although other examples in the literature use a
 greater number of heads (e.g. $K=10$ for Bootstrapped-DQN
 \citep{osband2016deep}), we settled on 4 due to computational
 limitations. Results are presented in
-Figure~\ref{fig:dshift_offline_ensembles}, where offline Ensemble-DQN
+Figure~\ref{fig:dshift_offline_ensemble}, where offline Ensemble-DQN
 is used as the baseline.
 % TODO ablations study once the data are ready; think about how to
 % discuss them in the results section
-% TODO what about failed experiments with Bootstrapped versions of my
-% agents? should I write and run them again?
