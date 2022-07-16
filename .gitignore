@@ -28,6 +28,7 @@ resources/**/*.bbl
 resources/paper/template
 resources/paper/thesis.pdf
 resources/paper/thesis.out
+resources/paper/table.pdf
 
 resources/symposium/beamer-test
 resources/symposium/offline_rl_gif

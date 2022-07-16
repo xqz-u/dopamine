@@ -69,7 +69,7 @@ where
   \textrm{DQV-Max}}&=r_t+\gamma\max_{a\in\mathcal{A}\left(s\right)}Q\left(s_{t+1},a;\theta^{-}\right)
   \label{dqvmax:v_td_target}\\
   q^{\scriptscriptstyle \textrm{TD}}_{\scriptscriptstyle \textrm{DQV-Max}}&=r_t+\gamma
-  V\left(s_{t+1};\phi\right).
+  V\left(s_{t+1};\phi\right)\label{dqvmax:q_td_target}.
 \end{align} As seen in TD-target
 Equation~\ref{dqvmax:v_td_target} -- equal to the DQN TD-target
 Equation~\ref{eq:dqn_td} -- DQV-Max is an off-policy algorithm, so
