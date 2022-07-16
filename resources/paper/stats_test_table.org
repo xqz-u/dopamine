@@ -1,24 +1,76 @@
-|                  | CartPole-v1 |          |          |         | Acrobot-v1 |         |          |       |
-|------------------+-------------+----------+----------+---------+------------+---------+----------+-------|
-|                  |      Reward |          |  Q-Value |         | Reward     |         | Q-Value  |       |
-|                  |        Mean |      Var |     Mean |     Var | Mean       |     Var | Mean     |   Var |
-|------------------+-------------+----------+----------+---------+------------+---------+----------+-------|
-| DQN              |      440.36 | 15540.87 | 208.71 * | 8755.07 | -70.48 *   | 2533.65 | -45.22 * | 14.57 |
-| Ensemble-DQN     |      410.55 | 23157.11 |   163.70 | 2330.90 | -76.02     | 2949.21 | -45.78   | 15.70 |
-|                  |             |          |          |         |            |         |          |       |
-| DQV              |      489.09 |  2473.61 |    79.68 |   79.68 | -70.86 *   | 2032.89 | -51.45 * | 19.04 |
-| Ensemble-DQV     |      475.88 |  6657.30 |    79.56 |   81.74 | -82.43     | 5457.53 | -51.60   | 31.53 |
-|                  |             |          |          |         |            |         |          |       |
-| DQV-Max          |      445.77 | 14386.91 |    99.70 |  109.31 | -69.90 *   | 1718.89 | -48.06 * | 10.45 |
-| Ensemble-DQV-Max |      430.85 | 18011.71 |    98.12 |   98.26 | -77.73     | 3544.01 | -48.42   | 11.61 |
+|                  | CartPole-v1 |          |          |         | Acrobot-v1 |         |         |       |
+|------------------+-------------+----------+----------+---------+------------+---------+---------+-------|
+|                  | Reward      |          |  Q-Value |         |     Reward |         | Q-Value |       |
+|                  | Mean        |      Var |     Mean |     Var |       Mean |     Var |    Mean |   Var |
+|------------------+-------------+----------+----------+---------+------------+---------+---------+-------|
+| DQN              | 440.36 *    | 15540.87 | 208.71 * | 8755.07 |     -70.48 | 2533.65 |  -45.22 | 14.57 |
+| Ensemble-DQN     | 410.55      | 23157.11 |   163.70 | 2330.90 |     -76.02 | 2949.21 |  -45.78 | 15.70 |
+|                  |             |          |          |         |            |         |         |       |
+| DQV              | 489.09 *    |  2473.61 |    79.68 |   79.68 |     -70.86 | 2032.89 |  -51.45 | 19.04 |
+| Ensemble-DQV     | 475.88      |  6657.30 |    79.56 |   81.74 |     -82.43 | 5457.53 |  -51.60 | 31.53 |
+|                  |             |          |          |         |            |         |         |       |
+| DQV-Max          | 445.77      | 14386.91 |    99.70 |  109.31 |     -69.90 | 1718.89 |  -48.06 | 10.45 |
+| Ensemble-DQV-Max | 430.85      | 18011.71 |    98.12 |   98.26 |     -77.73 | 3544.01 |  -48.42 | 11.61 |
 
+H1: q-values for normal variants have greater mean than for
+ensemble variants
+PLUS relax ttest assumption of equal variance
+(=scipy.stats.ttest_ind(equal_variance=False)=)
+significant results:
+- Ttest_indResult(statistic=2.6250447866263285,
+  pvalue=0.008893920311760395) -> reward dqn/ensemble dqn cp
+- Ttest_indResult(statistic=7.403451368089367,
+  pvalue=6.634862608220054e-13) -> qval dqn/ensemble dqn cp
+- Ttest_indResult(statistic=2.3948058285806435,
+  pvalue=0.00850028266079653) -> reward dqv/ensemble dqv cp
 
-# Ensemble DQV-Max ablations diff:
-#       ****sample not normal! p: 0.0
-#       ****sample not normal! p: 0.0
-#       ****sample not normal! p: 0.0
-#       REWARD p kruskal: KruskalResult(statistic=1.364962138148842, pvalue=0.5053615986165446)
-#       ****sample not normal! p: 0.0
-#       ****sample not normal! p: 0.0
-#       ****sample not normal! p: 0.0
-#       MAX_Q_S0 p kruskal: KruskalResult(statistic=0.30792649762406654, pvalue=0.8573035273555845)
+NOTE alpha 0.01
+
+NOTE first performed a Mann-Whitney U test for significance, done
+because the distributions are not normal (highly skewed); this test
+compares the medians then. however, in the end
+doing t-test: too many results of the U test are significant, and I am
+sure that they are not just by looking at the distributions of the
+dependent variables: they are basically the same! some pointers to
+expand on: https://arxiv.org/abs/1904.06979
+https://arxiv.org/abs/1709.06560
+https://statistics.laerd.com/statistical-guides/mann-whitney-u-test-assumptions.php
+
+* Questions - too high false positive rate with Mann-Whitney U?
++ how can Q-value for dqvmax and ensemble dqvmax be significantly
+  different on acrobot? their mean and std seem about the same;
+  however also testing for differences on individual runs - not on all
+  3 redundancies - gives significant differences.
++ same as above for dqn and ensemble dqn
++ DONE using the t-test - which seems the most robust even in case of
+  non-normal distributions according to
+  https://arxiv.org/abs/1904.06979 - gives expected results
+# + for dqv and ensemble dqv on acrobot, the significant difference in q
+#   values might be because of quite different variances, same for the
+#   reward
+
+NOTE from the plots it does seem that if the median is considered,
+than those differences in distributions are indeed significant;
+
+NOTE using ANOVA also gives insignificant results, even more in line
+with my expectations than the Kruskal results - higher p-values to
+reject H_0. Kruskal tests for media - so even a stronger way to reject
+H1 here, since the distributions are skewed
+Ensemble DQV-Max ablations diff:
+	****sample not normal! p: 3.18280543452567e-18
+	****sample not normal! p: 7.127607645102982e-13
+	****sample not normal! p: 8.953287886310902e-18
+	CartPole-v1 REWARD p kruskal: KruskalResult(statistic=2.645296692603794, pvalue=0.26642877115885966)
+	****sample not normal! p: 2.414641561792449e-76
+	****sample not normal! p: 8.183573900364784e-75
+	****sample not normal! p: 6.10903864788703e-77
+	CartPole-v1 MAX_Q_S0 p kruskal: KruskalResult(statistic=2.5272079911210312, pvalue=0.28263357859692984)
+
+	****sample not normal! p: 3.0684350259403694e-84
+	****sample not normal! p: 1.3214973357981272e-82
+	****sample not normal! p: 1.3157260653351261e-75
+	Acrobot-v1 REWARD p kruskal: KruskalResult(statistic=3.981534968565202, pvalue=0.13659055410369192)
+	****sample not normal! p: 3.5724115905980406e-104
+	****sample not normal! p: 8.216701483653472e-105
+	****sample not normal! p: 1.449197921476512e-104
+	Acrobot-v1 MAX_Q_S0 p kruskal: KruskalResult(statistic=0.016584338389748154, pvalue=0.99174211600842)

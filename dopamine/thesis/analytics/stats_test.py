@@ -1,6 +1,12 @@
+import functools as ft
+import os
+
+import matplotlib.pyplot as plt
 import pandas as pd
 import pymongo
+import seaborn as sns
 from scipy import stats
+from thesis import constants
 from thesis.analytics import plot_scratch
 
 alpha = 0.01
@@ -30,6 +36,16 @@ def check_normality(s):
     return True
 
 
+# from wikipedia:
+# Otherwise, if both the dispersions and shapes of the distribution of
+# both samples differ, the Mann-Whitney U test fails a test of
+# medians. It is possible to show examples where medians are numerically
+# equal while the test rejects the null hypothesis with a small
+# p-value.[4] [5]
+# also, see https://arxiv.org/abs/1904.06979
+# in essence, use Welch t-test (ttest with relaxed assumption of equal
+# pop. variance) which seems more robust to false positives; although
+# my distributions are not normal, it should still work well enough
 def ttest_diffs(data: pd.DataFrame, ag: str, ens_ag: str, env: str):
     env_data = data[data["Env"] == env]
     ag_data = env_data[env_data["Agent"] == ag]
@@ -43,13 +59,19 @@ def ttest_diffs(data: pd.DataFrame, ag: str, ens_ag: str, env: str):
         print(
             f"{m.upper()}\nmeans: {ag_summ.mean} | {ens_ag_summ.mean}\nvars: {ag_summ.variance} | {ens_ag_summ.variance}"
         )
-        test = (
-            stats.mannwhitneyu
-            if not (check_normality(ag_data[m]) and check_normality(ens_ag_data[m]))
-            else stats.ttest_ind
-        )
-        test_res = test(ag_data[m], ens_ag_data[m])
-        print(f"**{test.__name__}**: {test_res}")
+        normality = check_normality(ag_data[m]) and check_normality(ens_ag_data[m])
+        pargs = {"alternative": "greater"}
+        # if not normality:
+        if False:
+            test = stats.mannwhitneyu
+        else:
+            test = stats.ttest_ind
+            pargs.update({"equal_var": False})
+            # test = stats.mannwhitneyu
+            # test = stats.ks_2samp
+        test_name = test.__name__
+        test_res = ft.partial(test, **pargs)(ag_data[m], ens_ag_data[m])
+        print(f"**{test_name}**: {test_res}")
         if test_res.pvalue <= alpha:
             print("___SIGNIFICANT DIFF___")
 
@@ -67,36 +89,93 @@ dqvmax_ablation_exps = exp_name_stitcher(
 )
 abl_data = plot_scratch.get_data(dqvmax_ablation_exps, client)
 abl_eval_data = abl_data[abl_data["Schedule"] == "eval"]
-grouped_abl_data = abl_eval_data.groupby("Agent")
 print("\n\nEnsemble DQV-Max ablations diff:")
-for m in ["Reward", "Max_Q_S0"]:
-    seqs = grouped_abl_data[m].agg(list)
-    test = stats.f_oneway
-    for s in seqs:
-        if not check_normality(s):
-            test = stats.kruskal
-    print(f"\t{m.upper()} p {test.__name__}: {test(*seqs)}")
+for env in ["CartPole-v1", "Acrobot-v1"]:
+    ag_env_data = abl_eval_data[abl_eval_data.Env == env].groupby("Agent")
+    for m in ["Reward", "Max_Q_S0"]:
+        seqs = ag_env_data[m].agg(list)
+        test = stats.f_oneway
+        for s in seqs:
+            if not check_normality(s):
+                test = stats.kruskal
+        print(f"\t{env} {m.upper()} p {test.__name__}: {test(*seqs)}")
+    print()
 
 
-# |                  | CartPole-v1 |          |          |         | Acrobot-v1 |         |          |       |
-# |------------------+-------------+----------+----------+---------+------------+---------+----------+-------|
-# |                  |      Reward |          |  Q-Value |         | Reward     |         | Q-Value  |       |
-# |                  |        Mean |      Var |     Mean |     Var | Mean       |     Var | Mean     |   Var |
-# |------------------+-------------+----------+----------+---------+------------+---------+----------+-------|
-# | DQN              |      440.36 | 15540.87 | 208.71 * | 8755.07 | -70.48 *   | 2533.65 | -45.22 * | 14.57 |
-# | Ensemble-DQN     |      410.55 | 23157.11 |   163.70 | 2330.90 | -76.02     | 2949.21 | -45.78   | 15.70 |
-# | DQV              |      489.09 |  2473.61 |    79.68 |   79.68 | -70.86 *   | 2032.89 | -51.45 * | 19.04 |
-# | Ensemble-DQV     |      475.88 |  6657.30 |    79.56 |   81.74 | -82.43     | 5457.53 | -51.60   | 31.53 |
-# | DQV-Max          |      445.77 | 14386.91 |    99.70 |  109.31 | -69.90 *   | 1718.89 | -48.06 * | 10.45 |
-# | Ensemble-DQV-Max |      430.85 | 18011.71 |    98.12 |   98.26 | -77.73     | 3544.01 | -48.42   | 11.61 |
+def add_dist_plot(all_data, agents_pair, env_axes, metric: str, lgd_loc):
+    agents_data = all_data[all_data.Agent.isin(agents_pair)].reset_index()
+    for ax, env, loc in zip(env_axes, ["CartPole-v1", "Acrobot-v1"], lgd_loc):
+        sns.kdeplot(
+            data=agents_data,
+            x=agents_data[agents_data.Env == env][metric],
+            hue="Agent",
+            fill=True,
+            ax=ax,
+        )
+        ax.set_title(env)
+        sns.move_legend(ax, loc)
 
 
-# Ensemble DQV-Max ablations diff:
-#       ****sample not normal! p: 0.0
-#       ****sample not normal! p: 0.0
-#       ****sample not normal! p: 0.0
-#       REWARD p kruskal: KruskalResult(statistic=1.364962138148842, pvalue=0.5053615986165446)
-#       ****sample not normal! p: 0.0
-#       ****sample not normal! p: 0.0
-#       ****sample not normal! p: 0.0
-#       MAX_Q_S0 p kruskal: KruskalResult(statistic=0.30792649762406654, pvalue=0.8573035273555845)
+def make_lgd_pos(metric, first, n):
+    if metric == "Max_Q_S0":
+        return (
+            [["best", "best"]] + [["upper left", "best"]] * 2
+            if first
+            else [["upper left", "best"]] * n
+        )
+    if metric == "Reward":
+        return [["upper left", "upper left"]] * n
+
+
+if __name__ == "__main__":
+    plt.rcParams["font.size"] = 55
+    plt.rcParams["axes.linewidth"] = 3
+    plt.rcParams["axes.spines.right"] = False
+    plt.rcParams["axes.spines.top"] = False
+
+    rplc = lambda s: s.replace("MultiHead", "").replace("Tiny", "")
+
+    eval_data["Agent"] = eval_data["Agent"].apply(rplc)
+    mod_compare_agents = [(rplc(e), std) for e, std in compare_agents]
+
+    # plot the distribution of Rewards and Max_Q_S0 of each ensemble
+    # agent against its base version, across environments
+    for metric, title in zip(["Max_Q_S0", "Reward"], ["all_qv_dist", "all_rwd_dist"]):
+        fig, axes = plt.subplots(2, 3, figsize=(60, 40))
+        for i, (ag_pair, lgd_pos) in enumerate(
+            zip(mod_compare_agents, make_lgd_pos(metric, True, len(mod_compare_agents)))
+        ):
+            add_dist_plot(eval_data, ag_pair, axes[:, i], metric, lgd_pos)
+            plt.tight_layout()
+            plt.savefig(
+                os.path.join(constants.resources_dir, "paper/img", f"{title}.png"),
+                transparent=True,
+            )
+
+    # same as above, but for ablations of EnsembleDQVMax against
+    # EnsembleDQVMax
+    abl_eval_data["Agent"] = abl_eval_data["Agent"].apply(rplc)
+    for metric, title in zip(
+        ["Max_Q_S0", "Reward"], ["dqvmax_abl_qv_dist", "dqvmax_abl_rwd_dist"]
+    ):
+        fig, axes = plt.subplots(2, 2, figsize=(60, 40))
+        lgd_poss = make_lgd_pos(metric, False, 2)
+        add_dist_plot(
+            abl_eval_data,
+            ["EnsembleDQVMax", "EnsembleDQVMaxOnQ"],
+            axes[:, 0],
+            metric,
+            lgd_poss[0],
+        )
+        add_dist_plot(
+            abl_eval_data,
+            ["EnsembleDQVMax", "EnsembleDQVMaxOnV"],
+            axes[:, 1],
+            metric,
+            lgd_poss[1],
+        )
+        plt.tight_layout()
+        plt.savefig(
+            os.path.join(constants.resources_dir, "paper/img", f"{title}.png"),
+            transparent=True,
+        )
