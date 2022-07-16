@@ -10,12 +10,12 @@ Appendix~\ref{sec:appendix}.
 The reward signals for the \texttt{CartPole-v1} environment are
 noisier compared to the ones for \texttt{Acrobot-v1}; this is in line
 with the performance of the online behavioral DQN agent, which also
-produced quite unstable learning curves on this problem.
+produced unstable learning curves on this problem.
 
 \subsection{Offline bootstrapping error in the DQV family}
 \begin{figure}[!tbp]
   \centering
-  \includegraphics[width=.5\textwidth]{img/dshift_plots_normal.png}
+  \includegraphics[width=.5\textwidth]{img/dshift_plots_qv.png}
   \caption{The $Q$-value estimates of offline DQN, DQV and DQV-Max at
     evaluation time. The shaded areas are $\pm 1$ standard deviation
     from the mean of 3 different
@@ -23,8 +23,6 @@ produced quite unstable learning curves on this problem.
 \end{figure}
 % Q estimates discussion for:
 % DQN offline
-% NOTE why no BE on acrobot for DQN offline? maybe the env is too easy
-% TODO say something about acrobot too, where no BE seems to occur?
 As seen in~\ref{fig:dshift_offline_normal}, the experiments confirmed
 previous findings for Q-learning-based gents run offline on continuous
 domain problems \citep{pmlr-v97-fujimoto19a,kumar2019stabilizing}: the
@@ -33,21 +31,20 @@ bootstrapping errors. This is most evident on the \texttt{CartPole-v1}
 environment, where DQN's $Q$-value estimates quickly escalate above
 the true value. Since the offline agent has no access to ground truth
 values due to lack of exploration, it cannot adjust the $Q$ function
-estimates during training and the whole estimation process diverges.
+estimates during training and the whole estimation process
+diverges. Offline DQN suffers overestimation on the
+\texttt{Acrobot-v1} problem too, but no divergence in $Q$ estimates is
+observed here; this is likely because the behavioral data for this
+environment are less noisy compared to those of \texttt{CartPole-v1}'s.
 
 % DQV offline
-% NOTE why dqv high BE or OB but still good performance on DQV?!
-% motivate
-% NOTE also, how is it possible that an on-policy algo is able to learn
-% from off-policy data?
 Among the studied algorithms, offline DQV is the most robust one to
 the bootstrapping error. On the \texttt{CartPole-v1} environment it is
 almost able to correctly estimate the true value of $s_0$ for each
-episode, consistently assessing at approximately $-10$ points from the
-true solution. However, on the \texttt{Acrobot-v1} problem, offline
-DQV still suffers from a stable form of overestimation, despite coming
-closest to the true value estimate of$ s_0$. DQV is likely capable of
-resisting the bootstrapping error because it is an \textit{on-policy}
+episode, never incurring in overoptimistic estimates. However, on the
+\texttt{Acrobot-v1} problem, offline DQV still suffers from stable
+overestimation, despite coming closest to the true value of $s_0$.
+DQV avoids the bootstrapping error because it is an \textit{on-policy}
 algorithm. Although theoretically it should not be able to learn in
 the offline setting, its strong
 performance compared to the other agents is probably due to efficient
@@ -81,37 +78,37 @@ for the offline one.
 \subsection{Offline bootstrapping error on the ensemble variants}
 \begin{figure}[!tbp]
   \centering
-  \includegraphics[width=.5\textwidth]{img/dshift_plots_ensembles.png}
+  \includegraphics[width=.5\textwidth]{img/dshift_plots_ensembles_qv.png}
   \caption{Evaluation time $Q$-value estimates of the ensemble version
     of offline DQN, DQV and DQV-Max. The shaded areas are $\pm 1$
     standard deviation from the mean of 3 different
     simulations.}\label{fig:dshift_offline_ensemble}
 \end{figure}
-% TODO I am not sure that the significance results are correct, there
-% are too many significant differences! should I present the result in
-% the table??
 % TS: ensemble-dqn less optimistically biased, in line with baseline
 % results from REM and with theoretical analysis of Averaged-DQN
-Offline Ensemble-DQN suffers from a milder overestimation bias than
-offline DQN.\ A significant reduction in $Q$-value estimates was
-found on the ensemble version for both environments ($U=57775.0$ and
-$U=57227.5$ respectively, $p<.01$). Moreover, on the
-\texttt{CartPole-v1} environment, the $Q$ estimates of Ensemble-DQN
-show approximately 4 times lower variance than those of DQN (8755.07
-vs. 2330.90, respectively), in line with the aforementioned analysis
-by \citet{anschel2017averaged}.
+On the \texttt{CartPole-v1} environment, Offline Ensemble-DQN suffers
+from a milder overestimation bias than offline DQN.\ The $Q$-value
+estimates on this problem decreased significantly with the
+implementation of the ensemble strategy ($t=2.62,p<.01$); moreover, in
+line with the baseline results of \citet{agarwal2020optimistic} and
+with the theoretical analysis of \citet{anschel2017averaged}, the
+observed decrease in $Q$ estimates variance is proportional to the
+ensemble number of heads $K$ (8755.07 vs. 2330.90 for Ensemble-DQN and
+DQN, respectively). However, ensembling the $Q$ function alone
+does not prevent the bootstrapping error: as seen in
+Figure~\ref{fig:dshift_offline_ensemble}, the $Q$-value for $s_0$
+still diverges from the true baseline. Similar results to base offline
+DQN were obtained on the \texttt{Acrobot-v1} environment.
 
 % stuff to say generally:
 % - acrobot is more stable env for mean q values + for dqns and dqvs,
-% variance too
-% - generally: all algos seem to perform worse on ensemble version,
-% and except for dqns, their estimates of the response metric have
-% higher variability -> in fact also rewards are lower
-% - differences are significant on the acrobot env for every algo ->
-% why? dqvs q-values for variance likely, dqvmaxs seem the same
-% though?!
- % - need to talk about the ablated versions: no significant differences
-% at all, why is that?
+%   variance too
+%   - generally: all algos seem to perform basically the same!
+
+% worse on ensemble version,
+%   and except for dqns, their estimates of the response metric have
+%   higher variability -> in fact also rewards are lower NOTE why??
+% - ablated versions: no significant differences at all NOTE why??
 
 
 % TS: ensemble-dqv no real change
@@ -122,9 +119,6 @@ the reward signals for this agent follow a pattern generally recorded
 across all ensemble variants: average returns are more unstable across
 
 % TODO paper plots:
-% - standard algos offline, only Q-values
-% - ensemble algos offline, only Q-values
 % - DQVMax and ablations offline, only Q-values
 % appendix:
-% - rewards for standard agents
-% - rewards for all ensemble agents (or should I exclude ablations?)
+% - rewards for ablations
