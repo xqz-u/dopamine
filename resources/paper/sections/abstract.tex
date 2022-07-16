@@ -1,3 +1,28 @@
 \begin{abstract}
-{TODO\vspace{6ex}}
+  {
+    Interest in Reinforcement Learning has surged in recent years,
+    on pair with its success stories. Nonetheless, deployment of
+    Reinforcement Learning systems to real-world applications is still
+    not on the scale of standard supervised learning models which can
+    exploit a vastness of offline data. Through algorithms that can
+    learn from data collected by another policy, off-policy
+    Reinforcement Learning aims to improve the low sample efficiency
+    of standard online algorithms to better exploit existing offline
+    datasets. One key challenge for off-policy value-based algorithms
+    is the bootstrapping error \citep{kumar2019stabilizing}, where
+    actions outside of the training data distribution incorrectly
+    influence policy optimization. This error is exacerbated in the
+    offline setting, and common solutions pertaining to
+    uncertainty-based methods focus on bootstrap ensembles. This
+    research seeks to assess whether the DQV algorithmic family
+    \citep{sabatelli2020deep} benefits from the simple ensemble
+    technique of Ensemble-DQN \citep{agarwal2020optimistic} for
+    bootstrapping error control. Empirical studies are performed on
+    two classic control OpenAI Gym environments, tracking the
+    algorithms' accumulated reward and value estimates evolution.
+    % to say: no error even on base algos, promising for offline rl in
+    % general; no effect on BE prevention, indicating more refined
+    % techniques for BE control are needed
+    \vspace{6ex}
+  }
 \end{abstract}

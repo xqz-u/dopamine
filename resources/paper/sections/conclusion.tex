@@ -1,1 +1,106 @@
 \section{Conclusion}\label{sec:Conclusion}
+% TS: general conclusion: no gains from bare ensemble technique
+% implemented as is
+The experiments presented in the previous section provide an answer to the
+question of whether the DQV algorithmic family benefits from ensemble
+techniques when doing offline reinforcement learning. According to the
+presented empirical results, simply re-framing the learning problem of
+offline RL to use multiple copies of the same agent is not enough to
+prevent the bootstrapping error. Ensembles of function approximators
+are a well-known performance boost in machine learning, but it is
+crucial to properly exploit the additional information they provide
+compared to a single learner. If this is not correctly addressed, the
+possible uncertainty estimation gains are overlooked, which is
+critical information for an offline RL agent.
+
+% LIMITATIONS
+% TS: one limitation is the DQV family, which is too strong and
+% already acts where the bootstrapping error takes place, so they are
+% inherently wrong to use with naive ensembles
+When testing whether the simple ensemble technique of Ensemble-DQN can
+be generalized to other algorithms, translating it to DQV and DQV-Max
+becomes a limitation of this study. In fact, as already mentioned,
+these algorithms disentangle \textit{selection} -- the choice of the
+regression targets for the state, or state-action, value function --
+from \textit{evaluation} -- the estimation of a state's, or
+state-action pair, value. This is one important factor in the infamous
+\textit{deadly triad} of off-policy RL
+\citep{sutton2018reinforcement}, and the main focus of this research
+in the form of bootstrapping error. Where such decoupling is absent,
+as in the DQN algorithm, using a simple ensemble was in fact enough to
+observe gains in terms of variance reduction, which is directly
+related to the overestimation bias \citep{anschel2017averaged} and
+results from misaligned value estimates -- also known as bootstrapping
+errors. This was the case for the experiments with offline
+Ensemble-DQN on the \texttt{CartPole-v1} environment. When it comes to
+the DQV algorithmic family and controlling the bootstrapping error
+using ensembles, these algorithms' strength thus becomes an
+architectural weakness for the proposed experiments. In fact, base DQV
+and DQVMax show a robust performance in the offline setting that is
+unaffected by the addition of more heads for uncertainty
+estimation. Since these algorithms use distinct function to form
+TD-targets and to evaluate current states, they already take
+significant steps concerning bootstrapping error prevention, which
+makes them unfit candidates for the simple ensemble strategy of
+Ensemble-DQN.\
+
+% TS: another limitation is the naive ensemble technique used, which is
+% a simple average over heads for both Q(s',a') and Q(s,a) and trains
+% everyone on the same loss
+Another limitation is the naive ensemble technique employed throughout
+the experiments, adapted from Ensemble-DQN.\ Given the empirical
+results, it is not sufficient to increase the number of prediction
+heads in DQV and DQV-Max, apply standard value-based regression
+methods (i.e.\ temporal difference learning
+\citep{sutton2018reinforcement}) on each individually, then train
+every head with on the average of the ensemble total loss. As
+previously stated, these are two strong off-policy algorithm; yet for
+offline RL they could still benefit from the uncertainty estimated by
+an ensemble of $Q$ or $V$ functions, if this information is integrated
+properly in their learning formulation. The simple averaging technique
+implemented in this research does not fully exploit the uncertainty
+information provided by the ensembles of $Q$ and $V$ functions. It
+would be interesting to see what happens when conservative estimates
+are formed in the face of uncertainty, for example, by down-scaling
+the TD-targets by the variance of the ensemble predicted $Q$-values as
+discussed in \citet{levine2020offline}.
+
+% FUTURE RESEARCH
+% TS: cool to see if dqv and dqvmax are strong alone with less and/or
+% worse online training data
+For future work with a setup similar to this research, different lines
+of experimentation are possible. For example, the size and diversity
+of the offline dataset $\mathcal{B}$ collected by $\pi_{\beta}$ could
+be manipulated to asses the generalization capabilities of offline DQV
+and DQV-Max. As done for some of the experiments for the REM agent
+\citep{agarwal2020optimistic}, one could reduce the size of
+$\mathcal{B}$ to find the minimum amount of trajectories needed to
+obtain acceptable performance. Or, offline DQV and DQV-Max could be
+given only expert or quasi-random data, so decreasing $\mathcal{B}$'s
+diversity. The offline agents in this research learned on the full set
+of policies encountered during online training of $\pi_{\beta}$; this
+was done in order to establish a safe baseline, in lieu of the
+training dataset's diverse composition highlighted in the REM
+paper. Learning on data produced by a small number of policies or by
+highly suboptimal ones matters for offline DQV and DQV-Max because it
+resembles what is available from many settings in the real world,
+where behavioral data are collected by a handful of static policies --
+or even a single one.
+
+% TS: move uncertainty estimation out of the single algorithm scope,
+% and use it when combining different conceptually different learners;
+% ultimately, try voting ensembles, e.g. DQV and DQV-Max
+Finally, regarding uncertainty estimation in offline RL, the ensemble
+component could be extracted from the single algorithm scope and
+applied to different learners. This means having a multitude of agents
+(e.g.\ both DQV and DQV-Max) learn and collaborate on the same
+problem, implementing a voting procedure to decide, for example, on
+the TD-targets for the whole ensemble. Then, the same information
+relating to uncertainty estimation purposes available from individual
+heads in the current setup could instead come from different RL
+algorithms to inform the ensemble decisions. Voting ensembles are a
+well-defined concepts in machine learning, and in the case of DQV and
+DQV-Max it could be of interest to assess if the relative strength of
+each agent -- lower variance for the first, on-policy algorithm,
+greater learning generality for the second, off-policy one -- can be
+combined in a meaningful way for the offline RL setting.
