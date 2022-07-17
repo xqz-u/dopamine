@@ -5,16 +5,17 @@ training, while the ones in Figure~\ref{fig:dshift_offline_ensemble}
 show the same metric for their respective ensemble version. Every
 proposed offline agent learns to solve both classic control
 environments, and the reward curves are presented in
-Appendix~\ref{sec:appendix}.
+Appendix~\ref{sec:appendix_figs}.
 % NOTE maybe this sentence is not even necessary
 The reward signals for the \texttt{CartPole-v1} environment are
-noisier compared to the ones for \texttt{Acrobot-v1}; this is in line
+generally noisier compared to the ones for \texttt{Acrobot-v1}; this
+is in line
 with the performance of the online behavioral DQN agent
 $\pi_{\textrm{DQN}}$, which also produced unstable learning curves on
 the problem.
 
 \subsection{Offline bootstrapping error in the DQV family}
-\begin{figure}[!tbp]
+\begin{figure}[h]
   \centering
   \includegraphics[width=.5\textwidth]{img/dshift_plots_qv.png}
   \caption{The $Q$-value estimates of offline DQN, DQV and DQV-Max at
@@ -24,8 +25,9 @@ the problem.
 \end{figure}
 % Q estimates discussion for:
 % DQN offline
-As seen in~\ref{fig:dshift_offline_normal}, the experiments confirmed
-previous findings for Q-learning-based gents run offline on continuous
+As seen in Figure~\ref{fig:dshift_offline_normal}, the experiments
+confirmed
+previous findings for Q-learning-based agents run offline on continuous
 domain problems \citep{pmlr-v97-fujimoto19a,kumar2019stabilizing}: the
 $Q$ function incurs in a heavy overestimation bias produced by
 bootstrapping errors. This is most evident on the \texttt{CartPole-v1}
@@ -35,7 +37,7 @@ values due to lack of exploration, it cannot adjust the $Q$ function
 estimates during training and the whole estimation process
 diverges. Offline DQN suffers overestimation on the
 \texttt{Acrobot-v1} problem too, but no divergence in $Q$ estimates is
-observed here; this is likely because the behavioral data for this
+observed here; this might be because the behavioral data for this
 environment are less noisy compared to those of \texttt{CartPole-v1}.
 
 % DQV offline
@@ -77,7 +79,7 @@ bias in the online setting, and these experiments confirm the results
 for the offline one.
 
 \subsection{Offline bootstrapping error on the ensemble variants}
-\begin{figure}[!tbp]
+\begin{figure}[h]
   \centering
   \includegraphics[width=.5\textwidth]{img/dshift_plots_ensembles_qv.png}
   \caption{Evaluation time $Q$-value estimates of the ensemble version
@@ -152,7 +154,7 @@ and evaluation, we want to assess whether either value function
 involved in the computation of DQV-Max's TD-targets drives more
 bootstrapping error than the other, based on the assumption that
 ensemble techniques should dampen $Q$-values.
-\begin{figure}[!tbp]
+\begin{figure}[h]
   \centering
   \includegraphics[width=.5\textwidth]{img/dshift_plots_ablation_qv.png}
   \caption{Evaluation time $Q$-value estimates of the ablated variants
@@ -174,8 +176,3 @@ probably enough to correct bootstrapping errors arising when computing
 the targets for $V$, and the two value functions are able to balance
 their respective estimates, such that using an ensemble on either
 results in no significant change.
-
-%% TODO appendix:
-%% - table with mean and variance (or std) for each agent on each
-%%   environment, coloring entries that show significant differences
-%% - hyper-parameters

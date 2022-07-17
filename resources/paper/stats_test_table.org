@@ -1,3 +1,8 @@
+# #+begin_table
+# #+latex: \adjustbox{max width=\linewidth}{
+# #+attr_latex: :center nil
+#+latex_header: \usepackage{tabularx}
+#+ATTR_LATEX: :environment tabularx :width \textwidth :align XXXXXXXXX
 |                  | CartPole-v1 |          |          |         | Acrobot-v1 |         |         |       |
 |------------------+-------------+----------+----------+---------+------------+---------+---------+-------|
 |                  | Reward      |          |  Q-Value |         |     Reward |         | Q-Value |       |
@@ -11,6 +16,8 @@
 |                  |             |          |          |         |            |         |         |       |
 | DQV-Max          | 445.77      | 14386.91 |    99.70 |  109.31 |     -69.90 | 1718.89 |  -48.06 | 10.45 |
 | Ensemble-DQV-Max | 430.85      | 18011.71 |    98.12 |   98.26 |     -77.73 | 3544.01 |  -48.42 | 11.61 |
+# #+latex: }
+# #+end_table
 
 H1: q-values for normal variants have greater mean than for
 ensemble variants

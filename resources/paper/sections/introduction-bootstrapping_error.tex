@@ -4,11 +4,11 @@ as \textit{extrapolation error} \citep{pmlr-v97-fujimoto19a}. Due to a
 mismatch between the state-action distribution induced by the current
 policy and the one contained in the batch, the $Q$ function is unable
 to correctly estimate the value of unseen state-action pairs. As a
-result, such inputs receive artificially high estimates which will
+result, such inputs receive artificially high estimates which
 skew the $Q$ function, and possibly cause it to
 diverge. \citet{pmlr-v97-fujimoto19a} remark that, when combined with
 RL algorithms which employ a maximization operator to compute
-$Q^*\left(s,a\right)$ (such as Q-learning), the extrapolation error
+$Q^*\left(s,a\right)$ like Q-learning, the extrapolation error
 induces a consistent positive \textit{overestimation bias}
 \citep{thrun1993issues} in the $Q$ function.
 
@@ -19,7 +19,12 @@ regression problem using their own current estimate of such target,
 which is a biased estimator. Referring to update rules~\ref{eq:ql_td}
 and~\ref{eq:dqn_td}, it is clear that Q-learning-based algorithms are
 prone to the bootstrapping error since their respective TD-targets
-both come from a present estimate of $Q$. Given that this estimate is
+both come from a present estimate of $Q$. This is why, in practice,
+deep RL algorithms keep a copy of frozen parameters $\theta^-$ which are
+updated at intervals and used to compute the target estimates,
+hence simulating a second static estimator that is not regressing
+towards itself.
+Given that the TD targets are
 arbitrarily wrong during training, maximizing the $Q$-values with
 respect to actions at the next state as in Equation~\ref{eq:dqn_td}
 might

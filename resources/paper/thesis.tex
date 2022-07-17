@@ -1,6 +1,9 @@
 \documentclass[10pt,a4paper,twocolumn]{article}
 \usepackage{bachelorproject}
 \usepackage{hyperref}
+\usepackage{multirow}
+\usepackage{colortbl}
+\usepackage{booktabs}
 \hypersetup{
   colorlinks=false
 }
@@ -42,9 +45,16 @@
 
 \clearpage
 
-%% \begin{appendices}
-%%     \input{sections/appendix.tex}
-%%     \newpage
-%% \end{appendices}
+%% \renewcommand{\appendixpagename}{List of appendices}
+%% \appendixpage
+
+\begin{appendices}
+    \input{sections/appendix_hparams.tex}
+    \newpage
+    \input{sections/appendix_tables.tex}
+    \newpage
+    \input{sections/appendix_figures.tex}
+    \newpage
+\end{appendices}
 
 \end{document}

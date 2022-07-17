@@ -1,13 +1,13 @@
 \begin{abstract}
   {
-    Interest in Reinforcement Learning has surged in recent years,
+    Interest in Reinforcement Learning has surged in recent years
     on pair with its success stories. Nonetheless, deployment of
     Reinforcement Learning systems to real-world applications is still
-    not on the scale of standard supervised learning models which can
-    exploit a vastness of offline data. Through algorithms that can
-    learn from data collected by another policy, off-policy
+    not on the scale of standard supervised learning models, which are
+    able to exploit vast offline datasets. Through algorithms that can
+    learn from data collected by other policies, off-policy
     Reinforcement Learning aims to improve the low sample efficiency
-    of standard online algorithms to better exploit existing offline
+    of standard online algorithms and better exploit existing offline
     datasets. One key challenge for off-policy value-based algorithms
     is the bootstrapping error \citep{kumar2019stabilizing}, where
     actions outside of the training data distribution incorrectly
@@ -19,10 +19,14 @@
     technique of Ensemble-DQN \citep{agarwal2020optimistic} for
     bootstrapping error control. Empirical studies are performed on
     two classic control OpenAI Gym environments, tracking the
-    algorithms' accumulated reward and value estimates evolution.
-    % to say: no error even on base algos, promising for offline rl in
-    % general; no effect on BE prevention, indicating more refined
-    % techniques for BE control are needed
+    algorithms' accumulated reward and value estimates evolution
+    during evaluation. Preliminary results found offline DQV and
+    DQV-Max robust to bootstrapping errors due to their particular
+    temporal difference updates. The proposed ensemble
+    technique confirmed moderate bootstrapping error correction for
+    offline DQN on one environment, yet no significant advantage was
+    found for the DQV family, suggesting that these deep off-policy
+    algorithms are already strong in the offline setting.
     \vspace{6ex}
   }
 \end{abstract}

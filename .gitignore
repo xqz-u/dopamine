@@ -29,6 +29,8 @@ resources/paper/template
 resources/paper/thesis.pdf
 resources/paper/thesis.out
 resources/paper/table.pdf
+resources/paper/stats_test_table.pdf
+resources/paper/stats_test_table.tex
 
 resources/symposium/beamer-test
 resources/symposium/offline_rl_gif
