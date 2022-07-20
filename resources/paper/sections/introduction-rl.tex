@@ -47,7 +47,7 @@ is provided by the Bellman optimality equation
 \begin{equation}
 \begin{aligned}
 Q^*\left(s_t,a_t\right)=\mathbb{E}\bigg[&R\left(s_t,a_t\right)+\\ &\gamma
-  \max_{a\in\mathcal{A}\left(s\right)}Q^*\left(s_{t+1},a\right)\bigg\vert
+  \max_{a\in\mathcal{A}}Q^*\left(s_{t+1},a\right)\bigg\vert
   s_t=s,a_t=a \bigg]
 \end{aligned}
 \end{equation}
@@ -55,7 +55,7 @@ Q^*\left(s_t,a_t\right)=\mathbb{E}\bigg[&R\left(s_t,a_t\right)+\\ &\gamma
 also be expressed as the \textit{optimal state value function}
 $V^*\left(s\right)$ when replacing the optimal $Q$ value estimate at
 the next state
-$\max_{a\in\mathcal{A}\left(s\right)}Q^*\left(s_{t+1},a\right)$ by
+$\max_{a\in\mathcal{A}}Q^*\left(s_{t+1},a\right)$ by
 $V^*\left(s_{t+1}\right)$.
 
 % TS: Deep RL and Q-learning
@@ -72,7 +72,7 @@ Q\left(s_t,a_t\right)+\alpha\left[y^{\scriptscriptstyle
 where
 \begin{equation}\label{eq:ql_td}
 y^{\scriptscriptstyle \textrm{TD}}_{\scriptscriptstyle
-\textrm{QL}}=R\left(s_t,a_t\right)+\gamma\max_{a\in\mathcal{A}\left(s\right)}Q\left(s_{t+1},a\right)
+\textrm{QL}}=R\left(s_t,a_t\right)+\gamma\max_{a\in\mathcal{A}}Q\left(s_{t+1},a\right)
 \end{equation}
 \citep{watkins1992q}. When the state space $\mathcal{S}$ is large and
 high-dimensional, the $Q$ function is approximated with
@@ -92,7 +92,7 @@ loss function
 where
 \begin{equation}\label{eq:dqn_td}
 y^{\scriptscriptstyle \textrm{TD}}_{\scriptscriptstyle
-\textrm{DQN}}=r_t+\gamma\max_{a\in\mathcal{A}(s)}Q\left(s_{t+1},a;\theta^{-}\right),
+\textrm{DQN}}=r_t+\gamma\max_{a\in\mathcal{A}}Q\left(s_{t+1},a;\theta^{-}\right),
 \end{equation}
 $\mathcal{D}$ is the Experience Replay buffer
 \citep{lin1992self} and $\theta^-$ are the parameters of a frozen

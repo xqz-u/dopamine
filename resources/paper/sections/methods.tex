@@ -12,7 +12,7 @@ susceptibility of these algorithms to the bootstrapping error.
 
 % NOTE should I keep all the equation numbering?
 % TODO the objective function for Q in DQV-Max does not fit inside the
-% column, needs to shrink more somehow?!
+% column, needs to shrink more somehow?! DONE
 % TS: DQV family: why chosen and what is it
 \subsection{DQV and DQV-Max}
 DQV and DQV-Max were chosen because they are model-free, value-based
@@ -62,12 +62,12 @@ DQV-Max are as follows:
                                 s_t,a_t,r_t,s_{t+1}\rangle\sim
                                 \mathcal{D}}\left[{\left(q^{\scriptscriptstyle
                                 \textrm{TD}}_{\scriptscriptstyle
-                                \textrm{DQV-Max}}-Q\left(s_t,a_t;\theta\right)\right)}^2\right],
+                                \textrm{DQV-Max}}-Q\left(s_t,a_t;\theta\right)\right)}^2\right]
 \end{align}
 where
 \begin{align}
   v^{\scriptscriptstyle \textrm{TD}}_{\scriptscriptstyle
-  \textrm{DQV-Max}}&=r_t+\gamma\max_{a\in\mathcal{A}\left(s\right)}Q\left(s_{t+1},a;\theta^{-}\right)
+  \textrm{DQV-Max}}&=r_t+\gamma\max_{a\in\mathcal{A}}Q\left(s_{t+1},a;\theta^{-}\right)
   \label{dqvmax:v_td_target}\\
   q^{\scriptscriptstyle \textrm{TD}}_{\scriptscriptstyle \textrm{DQV-Max}}&=r_t+\gamma
   V\left(s_{t+1};\phi\right)\label{dqvmax:q_td_target}.
@@ -161,6 +161,7 @@ environment's actual return $G_t$ at an episode's first state $s_0$.
 % vectors elsewhere? Then should I change all such vectors in the
 % paper?
 % TODO ask Matthia how should I go about breaking too long equations
+% DONE
 \subsection{Ensemble DQV and DQV-Max}
 % TS: brief description of main inspiration, Ensemble-DQN
 To investigate the efficacy of ensembling methods for
@@ -185,13 +186,16 @@ diversity to the model to obtain reliable uncertainty estimates
 \citep{osband2016deep,levine2020offline}. Finally, each head optimizes
 a global loss which is the average of the ensemble total loss; the
 objective function for Ensemble-DQN thus takes the form
-\begin{align}
-\mathcal{L}\left(\theta\right)&=\frac{1}{K}\sum_{k=0}^{k-1}\mathbb{E}_{\langle
-                     s_t,a_t,r_t,s_{t+1}\rangle\sim\mathcal{D}}\left[{\left(y^{\scriptscriptstyle\textrm{TD}}_{\scriptscriptstyle\textrm{Ens-DQN}}-Q\left(s_t,a_t;\theta_{k}\right)\right)}^2\right],
-\end{align}
+\begin{equation}
+  \begin{aligned}
+\mathcal{L}\left(\theta\right)=&\frac{1}{K}\sum_{k=0}^{k-1}\mathbb{E}_{\langle
+                                 s_t,a_t,r_t,s_{t+1}\rangle\sim\mathcal{D}}\\
+                               &\left[{\left(y^{\scriptscriptstyle\textrm{TD}}_{\scriptscriptstyle\textrm{Ens-DQN}}-Q\left(s_t,a_t;\theta_{k}\right)\right)}^2\right],
+  \end{aligned}
+\end{equation}
 where
 \begin{equation}
-  y^{\scriptscriptstyle\textrm{TD}}_{\scriptscriptstyle\textrm{Ens-DQN}}=r_t+\gamma\max_{a\in\mathcal{A}\left(s\right)}Q\left(s_{t+1},a;\theta_{k}^{-}\right).
+  y^{\scriptscriptstyle\textrm{TD}}_{\scriptscriptstyle\textrm{Ens-DQN}}=r_t+\gamma\max_{a\in\mathcal{A}}Q\left(s_{t+1},a;\theta_{k}^{-}\right).
 \end{equation}
 
 When translating the ensemble loss objective to DQV and DQV-Max, we
@@ -205,42 +209,44 @@ requires two different TD-targets, Ensemble-DQV-Max uses ensembles to
 estimate both the $Q$ and $V$ function, yet the $V$ heads lack target
 networks as in the original DQV-Max algorithm. Thus, the modified
 objectives of Ensemble-DQV and Ensemble-DQV-Max respectively become
-\begin{align}
-\mathcal{L}\left(\phi\right)&=\frac{1}{K}\sum_{k=0}^{k-1}\mathbb{E}_{\langle
-                              s_t,a_t,r_t,s_{t+1}\rangle\sim
-                              \mathcal{D}}\left[{\left(y^{\scriptscriptstyle
-                              \textrm{TD}}_{\scriptscriptstyle
-                              \textrm{Ens-DQV}}-V\left(s_t;\phi_{k}\right)\right)}^2\right]
-  \\
-\mathcal{L}\left(\theta\right)&=\frac{1}{K}\sum_{k=0}^{k-1}\mathbb{E}_{\langle
-                                s_t,a_t,r_t,s_{t+1}\rangle\sim
-                                \mathcal{D}}\left[{\left(y^{\scriptscriptstyle
-                                \textrm{TD}}_{\scriptscriptstyle
-                                \textrm{Ens-DQV}}-Q\left(s_t,a_t;\theta\right)\right)}^2\right],
-\end{align}
+\begin{equation}
+  \begin{aligned}
+    \mathcal{L}\left(\phi\right)=&\frac{1}{K}\sum_{k=0}^{k-1}\mathbb{E}_{\langle
+                                   s_t,a_t,r_t,s_{t+1}\rangle\sim\mathcal{D}}\\
+                                 &\left[{\left(y^{\scriptscriptstyle\textrm{TD}}_{\scriptscriptstyle\textrm{Ens-DQV}}-V\left(s_t;\phi_{k}\right)\right)}^2\right]
+  \end{aligned}
+\end{equation}
+\begin{equation}
+  \begin{aligned}
+    \mathcal{L}\left(\theta\right)=&\frac{1}{K}\sum_{k=0}^{k-1}\mathbb{E}_{\langle
+                                     s_t,a_t,r_t,s_{t+1}\rangle\sim\mathcal{D}}\\
+                                   &\left[{\left(y^{\scriptscriptstyle\textrm{TD}}_{\scriptscriptstyle\textrm{Ens-DQV}}-Q\left(s_t,a_t;\theta\right)\right)}^2\right],
+  \end{aligned}
+\end{equation}
 where
 \begin{equation}
   y^{\scriptscriptstyle\textrm{TD}}_{\scriptscriptstyle\textrm{Ens-DQV}}=r_t+\gamma
   V\left(s_{t+1};\phi_{k}^{-}\right)
 \end{equation}
 and
-\begin{align}
-\mathcal{L}\left(\phi\right)&=\frac{1}{K}\sum_{k=0}^{k-1}\mathbb{E}_{\langle
-                              s_t,a_t,r_t,s_{t+1}\rangle\sim
-                              \mathcal{D}}\left[{\left(v^{\scriptscriptstyle
-                              \textrm{TD}}_{\scriptscriptstyle
-                              \textrm{Ens-DQV-Max}}-V\left(s_t;\phi_k\right)\right)}^2\right]
-  \\
-\mathcal{L}\left(\theta\right)&=\frac{1}{K}\sum_{k=0}^{k-1}\mathbb{E}_{\langle
-                                s_t,a_t,r_t,s_{t+1}\rangle\sim
-                                \mathcal{D}}\left[{\left(q^{\scriptscriptstyle
-                                \textrm{TD}}_{\scriptscriptstyle
-                                \textrm{Ens-DQV-Max}}-Q\left(s_t,a_t;\theta_k\right)\right)}^2\right],
-\end{align}
+\begin{equation}
+  \begin{aligned}
+    \mathcal{L}\left(\phi\right)=&\frac{1}{K}\sum_{k=0}^{k-1}\mathbb{E}_{\langle
+                                   s_t,a_t,r_t,s_{t+1}\rangle\sim\mathcal{D}}\\
+                                 &\left[{\left(v^{\scriptscriptstyle\textrm{TD}}_{\scriptscriptstyle\textrm{Ens-DQV-Max}}-V\left(s_t;\phi_k\right)\right)}^2\right]
+  \end{aligned}
+\end{equation}
+\begin{equation}
+  \begin{aligned}
+    \mathcal{L}\left(\theta\right)=&\frac{1}{K}\sum_{k=0}^{k-1}\mathbb{E}_{\langle
+                                     s_t,a_t,r_t,s_{t+1}\rangle\sim\mathcal{D}}\\
+                                   &\left[{\left(q^{\scriptscriptstyle\textrm{TD}}_{\scriptscriptstyle\textrm{Ens-DQV-Max}}-Q\left(s_t,a_t;\theta_k\right)\right)}^2\right],
+  \end{aligned}
+\end{equation}
 where
 \begin{align}
   v^{\scriptscriptstyle
-  \textrm{TD}}_{\scriptscriptstyle\textrm{Ens-DQV-Max}}&=r_t+\gamma\max_{a\in\mathcal{A}\left(s\right)}Q\left(s_{t+1},a;\theta_k^{-}\right)\\
+  \textrm{TD}}_{\scriptscriptstyle\textrm{Ens-DQV-Max}}&=r_t+\gamma\max_{a\in\mathcal{A}}Q\left(s_{t+1},a;\theta_k^{-}\right)\\
   q^{\scriptscriptstyle\textrm{TD}}_{\scriptscriptstyle\textrm{Ens-DQV-Max}}&=r_t+\gamma V\left(s_{t+1};\phi_k\right).
 \end{align}
 The ensembles were implemented using a multi-head architecture: each
@@ -251,7 +257,7 @@ heads; this architecture is also employed by REM
 The experiments concerning the ensemble version of DQV and DQV-Max
 follow the same setup as in Section~\ref{sec:methods_be_dqv_dqvmax},
 however in this case we recorded
-$\max_{a\in\mathcal{A}\left(s\right)}\frac{1}{K}\sum_{k=0}^{k-1}Q\left(s_0,a;\theta_k\right)$
+$\max_{a\in\mathcal{A}}\frac{1}{K}\sum_{k=0}^{k-1}Q\left(s_0,a;\theta_k\right)$
 to track the evolution of value estimates.
 For each experiment on the aforementioned environments a number of
 heads $K=4$ was used; although other examples in the literature use a
@@ -261,4 +267,4 @@ limitations. Results are presented in
 Figure~\ref{fig:dshift_offline_ensemble}, where offline Ensemble-DQN
 is used as the baseline.
 % TODO ablations study once the data are ready; think about how to
-% discuss them in the results section
+% discuss them in the results section DONE

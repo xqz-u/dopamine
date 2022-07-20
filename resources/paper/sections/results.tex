@@ -15,14 +15,14 @@ $\pi_{\textrm{DQN}}$, which also produced unstable learning curves on
 the problem.
 
 \subsection{Offline bootstrapping error in the DQV family}
-\begin{figure}[h]
-  \centering
-  \includegraphics[width=.5\textwidth]{img/dshift_plots_qv.png}
-  \caption{The $Q$-value estimates of offline DQN, DQV and DQV-Max at
-    evaluation time. The shaded areas are $\pm 1$ standard deviation
-    from the mean of 3 different
-    simulations.}\label{fig:dshift_offline_normal}
-\end{figure}
+% \begin{figure}[h]
+%   \centering
+%   \includegraphics[width=.5\textwidth]{img/dshift_plots_qv.png}
+%   \caption{The $Q$-value estimates of offline DQN, DQV and DQV-Max at
+%     evaluation time. The shaded areas are $\pm 1$ standard deviation
+%     from the mean of 3 different
+%     simulations.}\label{fig:dshift_offline_normal}
+% \end{figure}
 % Q estimates discussion for:
 % DQN offline
 As seen in Figure~\ref{fig:dshift_offline_normal}, the experiments
@@ -79,14 +79,14 @@ bias in the online setting, and these experiments confirm the results
 for the offline one.
 
 \subsection{Offline bootstrapping error on the ensemble variants}
-\begin{figure}[h]
-  \centering
-  \includegraphics[width=.5\textwidth]{img/dshift_plots_ensembles_qv.png}
-  \caption{Evaluation time $Q$-value estimates of the ensemble version
-    of offline DQN, DQV and DQV-Max. The shaded areas are $\pm 1$
-    standard deviation from the mean of 3 different
-    simulations.}\label{fig:dshift_offline_ensemble}
-\end{figure}
+% \begin{figure}[h]
+%   \centering
+%   \includegraphics[width=.5\textwidth]{img/dshift_plots_ensembles_qv.png}
+%   \caption{Evaluation time $Q$-value estimates of the ensemble version
+%     of offline DQN, DQV and DQV-Max. The shaded areas are $\pm 1$
+%     standard deviation from the mean of 3 different
+%     simulations.}\label{fig:dshift_offline_ensemble}
+% \end{figure}
 % TS: ensemble-dqn less optimistically biased, in line with baseline
 % results from REM and with theoretical analysis of Averaged-DQN
 On the \texttt{CartPole-v1} environment, Offline Ensemble-DQN suffers
@@ -154,14 +154,14 @@ and evaluation, we want to assess whether either value function
 involved in the computation of DQV-Max's TD-targets drives more
 bootstrapping error than the other, based on the assumption that
 ensemble techniques should dampen $Q$-values.
-\begin{figure}[h]
-  \centering
-  \includegraphics[width=.5\textwidth]{img/dshift_plots_ablation_qv.png}
-  \caption{Evaluation time $Q$-value estimates of the ablated variants
-    of offline Ensemble-DQV-Max. The shaded areas are $\pm 1$ standard
-    deviation from the mean of 3 different
-    simulations.}\label{fig:dshift_dqvmax_ablations}
-\end{figure}
+% \begin{figure}[h]
+%   \centering
+%   \includegraphics[width=.5\textwidth]{img/dshift_plots_ablation_qv.png}
+%   \caption{Evaluation time $Q$-value estimates of the ablated variants
+%     of offline Ensemble-DQV-Max. The shaded areas are $\pm 1$ standard
+%     deviation from the mean of 3 different
+%     simulations.}\label{fig:dshift_dqvmax_ablations}
+% \end{figure}
 As seen in Figure~\ref{fig:dshift_dqvmax_ablations}, results for these
 experiments are clear: ensembling either only the $Q$ function
 (EnsembleDQVMaxOnQ) or the $V$ function (EnsembleDQVMaxOnV) results in

@@ -38,3 +38,4 @@ resources/symposium/offline_rl_gif
 
 **/*.log
 **/*.aux
+**/_region_.*
