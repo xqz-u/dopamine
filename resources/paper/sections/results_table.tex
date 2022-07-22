@@ -1,0 +1,27 @@
+\begin{table*}
+\centering
+\setlength{\extrarowheight}{0pt}
+\addtolength{\extrarowheight}{\aboverulesep}
+\addtolength{\extrarowheight}{\belowrulesep}
+\setlength{\aboverulesep}{0pt}
+\setlength{\belowrulesep}{0pt}
+\caption{Response metrics summary. Each agent is compared to its
+  ensemble version, and colored cell-pairs show significant
+  differences}\label{table:center_results}
+\begin{tabular}{lclclclcl}
+\toprule
+\multicolumn{1}{c}{\multirow{3}{*}{Agent}} & \multicolumn{4}{c}{\texttt{CartPole-v1}}                                                                                                                                  & \multicolumn{4}{c}{\texttt{Acrobot-v1}}                                                                      \\
+\cline{2-9}
+\multicolumn{1}{c}{}                       & \multicolumn{2}{c}{Reward}                                                          & \multicolumn{2}{c}{$Q$-Value}                                                       & \multicolumn{2}{c}{Reward}                           & \multicolumn{2}{c}{$Q$-Value}                         \\
+\cline{2-9}
+\multicolumn{1}{c}{}                       & Mean                                                      & \multicolumn{1}{c}{Var} & Mean                                                      & \multicolumn{1}{c}{Var} & Mean                       & \multicolumn{1}{c}{Var} & Mean                       & \multicolumn{1}{c}{Var}  \\
+\hline
+DQN                                        & {\cellcolor[rgb]{1,0.988,0.62}}440.36                     & 15540.87                & {\cellcolor[rgb]{1,0.988,0.62}}208.71                     & 8755.07                 & -70.48                     & 2533.65                 & -45.22                     & 14.57                    \\
+Ensemble-DQN                               & \multicolumn{1}{l}{{\cellcolor[rgb]{1,0.988,0.62}}410.55} & 23157.11                & \multicolumn{1}{l}{{\cellcolor[rgb]{1,0.988,0.62}}163.70} & 2330.90                 & \multicolumn{1}{l}{-76.02} & 2949.21                 & \multicolumn{1}{l}{-45.78} & 15.70                    \\
+DQV                                        & {\cellcolor[rgb]{1,0.988,0.62}}489.09                     & 2473.61                 & 79.68                                                     & 79.68                   & -70.86                     & 2032.89                 & -51.45                     & 19.04                    \\
+Ensemble-DQV                               & \multicolumn{1}{l}{{\cellcolor[rgb]{1,0.988,0.62}}475.88} & 6657.30                 & \multicolumn{1}{l}{79.56}                                 & 81.74                   & \multicolumn{1}{l}{-82.43} & 5457.53                 & \multicolumn{1}{l}{-51.60} & 31.53                    \\
+DQV-Max                                    & 445.77                                                    & 14386.91                & 99.70                                                     & 109.31                  & -69.90                     & 1718.89                 & -48.06                     & 10.45                    \\
+Ensemble-DQV-Max                           & \multicolumn{1}{l}{430.85}                                & 18011.71                & \multicolumn{1}{l}{98.12}                                 & 98.26                   & \multicolumn{1}{l}{-77.73} & 3544.01                 & \multicolumn{1}{l}{-48.42} & 11.61                    \\
+\bottomrule
+\end{tabular}
+\end{table*}

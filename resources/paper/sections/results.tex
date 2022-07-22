@@ -106,7 +106,8 @@ base DQN are actually desirable and better capture the ensemble's
 uncertainty about the true value of $s_0$. This naturally results in a
 significant drop in performance for Ensemble-DQN ($t=2.62,p<.01$),
 showing that the agent uses the $Q$-values as a proxy for predicted
-reward; full results can be found in Table~\ref{}. Again, the $Q$
+reward; full results can be found in
+Table~\ref{table:center_results}. Again, the $Q$
 estimates on the \texttt{Acrobot-v1} environment for Ensemble-DQN are
 stable and overoptimistic, but they do not significantly differ from
 those of base offline DQN.\
@@ -138,6 +139,7 @@ lower than that of base DQV mostly in the early stages of learning
 (first $50 \; 000$ steps) across each run, subsequently stabilizing at
 the
 maximum for the \texttt{CartPole-v1} environment.
+\input{sections/results_table.tex}
 
 %% REVIEW should I introduce this section in the methods first??
 %% TODO check the sentence with 'based on the assumption': it is

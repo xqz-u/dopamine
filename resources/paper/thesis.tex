@@ -1,14 +1,11 @@
 \documentclass[10pt,a4paper,twocolumn]{article}
 \usepackage{bachelorproject}
 \usepackage{hyperref}
+
+% for the tables: https://www.latex-tables.com/
 \usepackage{multirow}
 \usepackage{colortbl}
 \usepackage{booktabs}
-\usepackage{hhline}
-
-\hypersetup{
-  colorlinks=false
-}
 
 \title{\vspace{-0.5in}{\bfseries\scshape
     Using ensembles to address Bootstrapping Errors in Offline
@@ -47,16 +44,23 @@
 
 \clearpage
 
-%% \renewcommand{\appendixpagename}{List of appendices}
-%% \appendixpage
-
 \begin{appendices}
-    \input{sections/appendix_hparams.tex}
-    \newpage
-    \input{sections/appendix_tables.tex}
-    \newpage
-    % \input{sections/appendix_figures.tex}
-    % \newpage
+  \section{Appendix}
+  Following the practice from \citet{DBLP:journals/corr/abs-1709-06560}
+  and \citet{https://doi.org/10.48550/arxiv.1904.06979}, Welch's
+  \textit{t}-test was used to test whether each ensemble variant of the
+  analyzed algorithms performed worse than its respective base version
+  in terms of the defined response metrics. Significant results are
+  highlighted in Table~\ref{table:center_results}.
+  For the Ensemble-DQV-Max ablations experiment, a Kruskal-Wallis H-test
+  was used to compare the former agent to its ablated variants.
+  Both test were performed with the corresponding routines from the
+  \texttt{SciPy} Python package \citep{2020SciPy-NMeth}.
+
+  \input{sections/appendix_hparams.tex}
+  \newpage
+  % \input{sections/appendix_figures.tex}
+  % \newpage
 \end{appendices}
 
 \end{document}
