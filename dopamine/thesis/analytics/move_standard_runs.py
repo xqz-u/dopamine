@@ -6,6 +6,9 @@ from thesis import constants
 repo = aim.Repo.from_path(str(constants.aim_dir))
 new_repo = aim.Repo.from_path(os.path.join(constants.data_dir, "symposium"))
 
+
+# FIXME once runs are copied, the aim UI does not display metrics
+# anymore, it freezes but there are no errors printed on the backend
 standard_algos_hashes = [
     r.hash
     for r in repo.iter_runs()

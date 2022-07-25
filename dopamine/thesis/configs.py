@@ -34,11 +34,6 @@ make_mlp_def = lambda features, env_name, **kwargs: (
     },
 )
 
-make_convnet_def = lambda out_dim, **kwargs: {
-    networks.NatureDQNNetwork,
-    {"num_actions": out_dim, **kwargs},
-}
-
 
 make_ensemble_def = lambda n_heads, heads_model: (
     networks.EnsembledNet,
@@ -46,8 +41,7 @@ make_ensemble_def = lambda n_heads, heads_model: (
 )
 
 
-# like Dopamine's
-# TODO change to huber loss for final experiments!
+# like Dopamine's, but with MSE instead of Huber Loss
 make_adam_mse_def = lambda: {
     "opt": optax.adam,
     "opt_params": {
@@ -57,17 +51,16 @@ make_adam_mse_def = lambda: {
     "loss_fn": losses.mse_loss,
 }
 
-
+# NOTE kws passed to make_mlp_def should be under kw "mlp"; they are
+# stripped from the passed dict during construction of the MLP in
+# ModelDefStore, and the remaining kws are passed as is to
+# ModelDefStore. suboptimal design, too many things are being mixed here
 adam_mse_mlp = lambda features, env_name, **kwargs: agent_utils.ModelDefStore(
     **{
         "net_def": make_mlp_def(features, env_name, **kwargs.pop("mlp", {})),
         **make_adam_mse_def(),
-        **kwargs,  # NOTE for multihead q net, fix!!
+        **kwargs,
     },
-)
-
-adam_mse_convnet = lambda out_dim, **conv_kwargs: agent_utils.ModelDefStore(
-    **{"net_def": make_convnet_def(out_dim, **conv_kwargs), **make_adam_mse_def()}
 )
 
 adam_mse_ensemble_mlp = (
@@ -107,17 +100,6 @@ def dqvmax_model_maker(
     return {
         **dqn_model_maker(env_name, q_out_dim, **kwargs),
         "V_model_def": adam_mse_mlp(1, env_name, **kwargs),
-    }
-
-
-# TODO functions which accepts model arg, not different functions for
-# different models!
-def dqvmax_conv_model_maker(
-    q_out_dim: int, **kwargs
-) -> Dict[str, agent_utils.ModelDefStore]:
-    return {
-        "Q_model_def": adam_mse_convnet(q_out_dim, **kwargs),
-        "V_model_def": adam_mse_mlp(1, **kwargs),
     }
 
 

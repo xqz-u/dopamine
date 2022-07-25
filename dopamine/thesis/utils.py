@@ -97,24 +97,6 @@ def list_all_ckpt_iterations(base_directory: str) -> List[int]:
     return list(range(min(iters), max(iters) + 1))
 
 
-# NOTE sorted uses alphanumeric ordering by default
-# this function finds replay buffers stored in (possibly) multiple
-# folders starting from 1 level of depth from base_dir; a directory
-# structure of arbitrary depth can exist after this level, so 2
-# 2 folder structure are admissible:
-# /base_dir
-#   /replay_buffers_dir_0
-#     /inter_tree (of arbitrary depth, optional)
-#       /replay_buffers_files_0
-#   /replay_buffers_dir_1
-#     /inter_tree (of arbitrary depth, optional)
-#       /replay_buffers_files_1
-# ...
-def unfold_replay_buffers_dir(base_dir: str, inter_tree: str = "") -> List[str]:
-    return [os.path.join(base_dir, d, inter_tree) for d in sorted(os.listdir(base_dir))]
-
-
-# TODO add Pendulum, which has a formula to compute reward
 @ft.lru_cache
 def deterministic_discounted_return(env: gym.Env, discount: float = 0.99) -> float:
     """
@@ -125,7 +107,7 @@ def deterministic_discounted_return(env: gym.Env, discount: float = 0.99) -> flo
 
     Supported environments: CartPole, Acrobot, MountainCar (discrete).
     """
-    rewards = {"CartPole": 1, "Acrobot": -1, "MountainCar": -1, "Pendulum": ...}
+    rewards = {"CartPole": 1, "Acrobot": -1, "MountainCar": -1}
     max_steps = env.spec.max_episode_steps
     exponential_gammas = np.array([math.pow(discount, k) for k in range(max_steps)])
     return np.sum(
