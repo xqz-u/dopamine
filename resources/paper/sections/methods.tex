@@ -4,11 +4,12 @@
 % prevention in the DQV family of deep
 % reinforcement learning algorithms \citep{sabatelli2020deep}.
 The preliminary experiments in this research aimed at determining the
-presence of bootstrapping errors in DQV and DQV-Max, the two
+presence of offline bootstrapping errors in DQV and DQV-Max, the two
 algorithms in the DQV algorithmic family \citep{sabatelli2020deep}.
 Subsequently, in line with the research question, a second experiment
-sought to assess the impact of value function ensembling on the
-susceptibility of these algorithms to the bootstrapping error.
+sought to assess the impact of value function ensembles on the
+susceptibility of these algorithms to the offline bootstrapping
+error.
 
 % NOTE should I keep all the equation numbering?
 % TODO the objective function for Q in DQV-Max does not fit inside the
@@ -21,11 +22,10 @@ domains. Moreover, differently from DQN, both algorithms add
 a state-value function $V$ to the optimization problem to
 obtain more robust value estimates and be less prone to the
 overestimation bias \citep{sabatelli2020deep}. Given two neural
-networks $Q\left(s_t,a_t;\theta\right)$ and $V\left(s_t;\phi\right)$
-with corresponding target parameters $\theta^-$ and $\phi^-$ that
-stabilize the computation of TD-targets, and trajectory batches
-sampled from the Experience Replay Buffer $\mathcal{D}$, the objective
-functions used by DQV become
+networks $Q\left(s,a;\theta\right)$ and $V\left(s;\phi\right)$
+with corresponding target parameters $\theta^-$ and $\phi^-$, and
+trajectory batches sampled from the Experience Replay Buffer
+$\mathcal{D}$, the objective functions used by DQV become
 \begin{align}
 \mathcal{L}\left(\phi\right)&=\mathbb{E}_{\langle
                               s_t,a_t,r_t,s_{t+1}\rangle\sim
@@ -77,41 +77,40 @@ Equation~\ref{eq:dqn_td} -- DQV-Max is an off-policy algorithm, so
 of greater interest for offline RL.\ In addition,
 DQV-Max uses two different temporal difference targets, where the one
 used to learn the state-action value function resembles the TD-target
-for DQV but without the usage of a target network.
+for DQV but without employing a target network.
 
 \subsection{Common experimental details}
 % TS: experiments implementation details:
 % environments/agents/hyper-parameters/DQN online data collection
 All experiments are conducted on the
 \texttt{CartPole-v1} and \texttt{Acrobot-v1} OpenAI Gym environments
-\citep{https://doi.org/10.48550/arxiv.1606.01540}, two classic control
+\citep{https://doi.org/10.48550/arxiv.1606.01540}, two pole-balancing
+classic control
 problem well studied in the RL literature. Both environments
 provide continuous state representations $s\in \mathbb{R}^n$ and
 discrete action spaces, suitable for approximate dynamic programming
-(i.e.\ value-based) methods such as Q-learning. The
-deep reinforcement learning algorithms involved in the experiments are
-self-implemented using the JAX machine learning library by Google
-\citep{jax2018github}, then trained and evaluated under standard deep
-RL neural networks architectures, hyper-parameters and pre-processing
-settings following the Dopamine reinforcement
+(i.e.\ value-based) methods such as Q-learning. The algorithms
+involved in the experiments are implemented using Google's JAX machine
+learning library \citep{jax2018github}, then trained and evaluated
+under standard DRL neural networks architectures, hyper-parameters and
+pre-processing settings following the Dopamine reinforcement
 learning framework \citep{castro18dopamine}; see
-Appendix~\ref{sec:appendix_hparams} for the full hyper-parameters
-table.
+Table~\ref{table:hyperp} for the full hyper-parameters table.
 
 Due to the offline nature of the proposed experiments,
 the first common step was online data collection. We replicated the
 data collection process employed by \citet{agarwal2020optimistic} for
 the \href{https://research.google/tools/datasets/dqn-replay/}{DQN
   Replay Dataset} on the ALE environments, adapting it to the two
-proposed problems. We
-trained a behavioral DQN agent online on each environment for a total
+proposed problems. A behavioral DQN agent was
+trained online on each environment for a total
 of approximately $500 \; 000$ steps (500 iterations of at least 1000
 steps),
 starting to fit the $Q$ function after experiencing 500
-trajectories, then performing a gradient update every 4 steps. We
-logged every trajectory observed by the behavioral agent during
-training in order to gather a dataset of significant size and diverse
-policy composition, vital for the success of offline RL
+trajectories, then performing a gradient update every 4 steps.
+Every trajectory observed by the behavioral agent during
+training was logged in order to gather a dataset of significant size
+and diverse policy composition, vital for the success of offline RL
 \citep{agarwal2020optimistic}. This process was repeated across 3
 random seed initializations to control for volatility due to
 stochasticity. In the offline experiments, each run was
@@ -135,14 +134,19 @@ evolution of the $Q$ estimates as a function of training steps -- a
 proxy for the number of Bellman backups. If the
 bootstrapping error occurs, it will cause an overestimation bias in
 the $Q$ function, and the agents will inflate the expected discounted
-return $G_t$ it thinks to gain starting from state $s_t$. Since the
+return $G_t$ it believes it will gain starting from state $s_t$. Since
+the
 chosen environments provide constant reward $r$ at each time-step $t$
 until the enforced episode termination at time $M$, it is
 straightforward to compute the baseline discounted return expected
 from state $t$ as $G_t=\sum^{M}_{k=t}\gamma^{k}r$.
-We recorded the progression of $Q$ values at evaluation time focusing
-on the first state $s_0$ of each new episode, as given by $\max_{a\in
-  \mathcal{A}\left(s\right)}Q\left(s_0,a;\theta\right)$. It should be
+Focusing on the first state $s_0$ of each new episode as given by
+$\max_{a\in\mathcal{A}}Q\left(s_0,a;\theta\right)$, the
+evaluation-time progression of $Q$ values was recorded.
+% We recorded the progression of $Q$ values at evaluation time focusing
+% on the first state $s_0$ of each new episode, as given by $\max_{a\in
+%   \mathcal{A}\left(s\right)}Q\left(s_0,a;\theta\right)$.
+It should be
 noted that one evaluation iteration of 1000 time-steps occurred every
 5 training iterations; by interleaving training and testing, we are
 still able to analyze the $Q$ estimates evolution as a temporal
@@ -182,7 +186,7 @@ that each head is trained on a different sample drawn with
 replacement from the dataset $\mathcal{D}$, it is well known in the
 deep learning literature that
 initializing a model with different parameters provides enough
-diversity to the model to obtain reliable uncertainty estimates
+diversity to obtain reliable uncertainty estimates
 \citep{osband2016deep,levine2020offline}. Finally, each head optimizes
 a global loss which is the average of the ensemble total loss; the
 objective function for Ensemble-DQN thus takes the form
@@ -201,13 +205,13 @@ where
 When translating the ensemble loss objective to DQV and DQV-Max, we
 decided to use ensembles for the TD-targets computation. The rationale
 for this choice is to mitigate the bootstrapping error occurring
-precisely at this step, as we expect that the compound estimate of the
-ensemble is close to the true TD-target $\hat{y}$. As a result,
+precisely at this step; we expect that the compound estimate computed
+by the ensemble is close to the true TD-target $\hat{y}$. As a result,
 Ensemble-DQV employs only one ensemble on the $V$ function to compute
-a TD-target common across $Q$ and $V$; on the contrary, since DQV-Max
+the common TD-target; by contrast, since DQV-Max
 requires two different TD-targets, Ensemble-DQV-Max uses ensembles to
 estimate both the $Q$ and $V$ function, yet the $V$ heads lack target
-networks as in the original DQV-Max algorithm. Thus, the modified
+networks as in the original DQV-Max algorithm. The modified
 objectives of Ensemble-DQV and Ensemble-DQV-Max respectively become
 \begin{equation}
   \begin{aligned}
@@ -255,10 +259,10 @@ fully connected layer, initialized with different parameters across
 heads; this architecture is also employed by REM
 \citep{agarwal2020optimistic}.
 The experiments concerning the ensemble version of DQV and DQV-Max
-follow the same setup as in Section~\ref{sec:methods_be_dqv_dqvmax},
-however in this case we recorded
+follow the same setup outlined in
+Section~\ref{sec:methods_be_dqv_dqvmax}, however in this case
 $\max_{a\in\mathcal{A}}\frac{1}{K}\sum_{k=0}^{k-1}Q\left(s_0,a;\theta_k\right)$
-to track the evolution of value estimates.
+was recorded to track the evolution of value estimates.
 For each experiment on the aforementioned environments a number of
 heads $K=4$ was used; although other examples in the literature use a
 greater number of heads (e.g. $K=10$ for Bootstrapped-DQN

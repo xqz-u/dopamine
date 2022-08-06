@@ -2,9 +2,10 @@
 Off-policy RL is systematically afflicted by a source of error denoted
 as \textit{extrapolation error} \citep{pmlr-v97-fujimoto19a}. Due to a
 mismatch between the state-action distribution induced by the current
-policy and the one contained in the batch, the $Q$ function is unable
+policy and the one contained in the experience replay batch, the $Q$
+function is unable
 to correctly estimate the value of unseen state-action pairs. As a
-result, such inputs receive artificially high estimates which
+result, such inputs receive inflated estimates which
 skew the $Q$ function, and possibly cause it to
 diverge. \citet{pmlr-v97-fujimoto19a} remark that, when combined with
 RL algorithms which employ a maximization operator to compute
@@ -12,39 +13,43 @@ $Q^*\left(s,a\right)$ like Q-learning, the extrapolation error
 induces a consistent positive \textit{overestimation bias}
 \citep{thrun1993issues} in the $Q$ function.
 
-The bootstrapping error \citep{kumar2019stabilizing} is a form of
+The \textit{bootstrapping error} \citep{kumar2019stabilizing} is a
+form of
 extrapolation error which appears in algorithms that bootstrap to
 compute their targets. These algorithms create the true target of a
 regression problem using their own current estimate of such target,
 which is a biased estimator. Referring to update rules~\ref{eq:ql_td}
 and~\ref{eq:dqn_td}, it is clear that Q-learning-based algorithms are
 prone to the bootstrapping error since their respective TD-targets
-both come from a present estimate of $Q$. This is why, in practice,
-deep RL algorithms keep a copy of frozen parameters $\theta^-$ which are
-updated at intervals and used to compute the target estimates,
-hence simulating a second static estimator that is not regressing
-towards itself.
-Given that the TD targets are
-arbitrarily wrong during training, maximizing the $Q$-values with
-respect to actions at the next state as in Equation~\ref{eq:dqn_td}
-might
+both come from a present estimate of $Q$. To stabilize the $Q$
+function's recursive regression, DRL algorithms form their target
+estimates from another static estimator, simulated by keeping a copy
+of parameters $\theta^-$ frozen and only updating them at intervals.
+% This is why, in practice,
+% deep RL algorithms keep a copy of frozen parameters $\theta^-$ which are
+% updated at intervals and used to compute the target estimates,
+% hence simulating a second static estimator that is not regressing
+% towards itself.
+Moreover, since the TD targets are arbitrarily wrong during training,
+maximizing the $Q$-values with respect to actions at the next state as
+in Equation~\ref{eq:dqn_td} might
 evaluate the $Q$ function on actions that do not correspond to the
-training data distribution. Since such out-of-distribution (OOD)
+training data distribution. Such out-of-distribution (OOD)
 actions \citep{kumar2019stabilizing} are not contained in the training
-batch, their true value is unknown; a naive maximization will then
-pick these overestimated $Q$-values, therefore compounding and
+batch, and their true value is unknown; a naive maximization will then
+pick the overoptimistic $Q$-values, therefore compounding and
 propagating the bootstrapping error during training through Bellman
-backups. In the most extreme case where the $Q$ function is
-initialized with high positive values only at OOD actions, a
-Q-learning based agent will thus learn to perform these very actions
-and disregard information gathered from the behavior policy
-$\pi_\beta$.
+backups (Equation~\ref{eq:ql_bellman_backup}). In the most extreme
+case where the $Q$ function is initialized with high positive values
+only at OOD actions, a Q-learning based agent will thus learn to
+perform these very actions and disregard information gathered from the
+behavior policy $\pi_\beta$.
 
 The bootstrapping error is especially detrimental in offline RL, where
 no additional data collection is possible. In the online case, the
 wrong estimation of $Q\left(s,a\right)$ for some $\left(s,a\right)$
-pair can be adjusted by actually performing $a$ and assessing its
-result. However, the dataset $\mathcal{B}$ used by an offline RL agent
-is fixed and no further exploration is possible. As a consequence,
-dealing with bootstrapping error is crucial for the success of offline
-RL algorithms.
+pair can be adjusted by actually performing $a$ in $s$ and assessing
+its result. However, the dataset $\mathcal{B}$ used by an offline RL
+agent is fixed and it does not allow for further exploration. Dealing
+with bootstrapping errors is therefore crucial for the success of
+offline RL algorithms.

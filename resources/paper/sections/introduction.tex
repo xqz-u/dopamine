@@ -18,26 +18,25 @@ major success over a wide number of real-world applications, ranging
 from Computer Vision to Natural Language Processing tasks.
 Much of the progress in these areas can be attributed to the
 development of \textit{data-driven}, scalable learning methods. In
-fact, although advancements in models and architectures are an integral
-part of this success story, the learning techniques these models
-employ are
-well-founded and understood, and major improvements in model
-performance stem from the availability of large and diverse training
-datasets.
-However, such data-driven methods do not map to the Reinforcement
+fact, although advancements in models and architectures are an
+integral part of this success story, the learning techniques these
+models employ are well-founded and understood, and major improvements
+in model performance stem from the availability of large and diverse
+training datasets.
+Such data-driven methods do not map to the Reinforcement
 Learning (RL) framework equally well. RL involves sequential decision
 making problems where the best behavior strategy is learned through
 active interaction with the environment. This naturally
 \textit{online} learning paradigm prevents effective exploitation of
-the rich \textit{offline} datasets at the base of the
-success of supervised learning methods.
-Moreover, data collection for complex real-world RL applications such as
-autonomous driving or healthcare support systems can often be
-expensive or hazardous. Developing safe and capable
-offline RL agents has therefore a great appeal: by efficiently
+the rich \textit{offline} datasets that make supervised learning
+methods so powerful.
+Moreover, data collection for complex real-world RL applications such
+as autonomous driving or healthcare support systems can often be
+expensive or hazardous. Therefore, developing safe and capable
+offline RL agents has a great appeal: by efficiently
 learning from large amounts of data, we could create ``generalizable
 and powerful \textit{decision making engines}''
-\citep{levine2020offline} that can aid in solving many real-world open
+\citep{levine2020offline} to aid solving many real-world open
 problems.
 
 % TS: offline RL entails reasoning about what has not happened
@@ -49,9 +48,8 @@ This differs from classical online RL, where an agent can actively
 collect new experience by interacting with its environment
 \citep{sutton2018reinforcement}. For an offline agent to
 improve, it is therefore crucial that it is able to partake in
-counterfactual
-reasoning to accurately estimate what would happen if it took a
-decision different from the one in the training dataset
+counterfactual reasoning to accurately estimate the outcomes of a
+decision different from the corresponding one in the training dataset
 \citep{levine2020offline}. By contrast, an online RL agent could
 explore and learn on its own the effects of a decision
 different than the one previously chosen in the same situation. This
@@ -88,10 +86,8 @@ are prone to overoptimistic value estimates
 \citep{thrun1993issues}. In the offline setting, this form of
 \textit{bootstrapping error} results in the selection of actions that
 lie outside of the training data distribution
-\citep{kumar2019stabilizing}, and when the dataset is frozen and no
-ground truth information is available they
-disrupt the training process and drive it towards regions of
-uncertainty.
+\citep{kumar2019stabilizing} which disrupt the training process and
+drive it towards regions of uncertainty.
 
 % NOTE look at commented part at end of paragraph for another
 % formulation of RQ
@@ -112,10 +108,10 @@ ensembling methods have demonstrated a successful approach in
 offline RL, as seen in the REM agent by
 \citet{agarwal2020optimistic}. The present
 paper investigates to which extent results concerning bootstrapping
-error prevention based on ensembled versions of Q-learning transfer to
+error prevention based on ensemble variants of Q-learning transfer to
 other model-free, value-based RL algorithms in the context of offline
 RL.\@ In particular, we will inquire whether benefits concerning
-bootstrapping error reduction stemming from simple ensembling methods
+bootstrapping error reduction stemming from simple ensemble methods
 apply to the deep RL agents of the DQV algorithmic family
 \citep{sabatelli2020deep}.
 % also apply to RL algorithms that already take steps to minimize it,

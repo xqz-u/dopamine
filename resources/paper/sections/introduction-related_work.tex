@@ -13,7 +13,7 @@ involve either \textit{policy constraint} or
 % NOTE it is possible that I will have to eliminate the deep explanation
 % of policy constraint methods, as it is only laterally relevant to my
 % research question and more of a general review
-The $Q$ functions is evaluated on the same states that it is
+The $Q$ function is evaluated on the same states that it is
 trained on. Therefore, only the action inputs across states can be out
 of distribution in the training process. \textit{Policy constraint}
 methods address this issue by bounding the distribution over actions
@@ -29,32 +29,34 @@ distributional proximity.
 For example, Batch-Constrained deep Q-Learning (BCQ)
 \citep{pmlr-v97-fujimoto19a} trains a generative model -- a variational
 auto-encoder (VAE) \citep{kingma2013auto} -- to produce actions which
-are likely given the data in $\mathcal{B}$, then it perturbs them to
-increase diversity in a constrained manner, and finally selects the
-maximum $Q$-value over these artificial actions. By substituting the
-maximum over all possible actions at the next state, involved in the
-computation of the TD-target, with the maximum over actions likely
-under $\pi_\beta$ BCQ ensures that the learned policy $\pi$ is
-centered around $\pi_\beta$, hence that the $Q$ function is not
-queried on OOD actions with resulting bootstrapping
-error. Bootstrapping Error Accumulation Reduction Q-Learning (BEAR-QL)
+are likely given the data in $\mathcal{B}$ and are then used to
+compute the TD-targets.
+% , then it perturbs them to
+% increase diversity in a constrained manner, and finally selects the
+% maximum $Q$-value over these artificial actions.
+By substituting the standard TD-target maximum over all possible
+actions at the next state with the maximum over actions likely
+under $\pi_\beta$, BCQ ensures that the learned policy $\pi$ is
+centered around $\pi_\beta$ and that the $Q$ function is not
+queried on OOD actions which cause bootstrapping errors. Bootstrapping
+Error Accumulation Reduction Q-Learning (BEAR-QL)
 \citep{kumar2019stabilizing} also follows the intuition of placing
-constraints on the learned action distribution, however it achieves so
-with fewer restrictions. This makes it more viable for $\pi$ to
-improve on $\pi_\beta$, a capability hindered by the aggressive
+constraints on the learned action distribution, but it achieves so
+with fewer restrictions than BCQ.\ This makes it more viable for $\pi$
+to improve on $\pi_\beta$, a capability hindered by the tight
 constraint of BCQ.\ Instead of requiring the learned policy to be
 close in distribution to $\pi_\beta$, BEAR demands a \textit{support
 constraint} \citep{kumar}. This loose condition means that the
 learned policy must place non-zero probability on all those actions
 that have non-negligible probability according to the behavior policy.
 With this precaution BEAR is able to improve over suboptimal, even
-random off-policy trajectories, whereas BCQ would learn a policy close
-to uniform \citep{kumar2019stabilizing}.
+random off-policy trajectories, where BCQ would instead learn a policy
+close to uniform \citep{kumar2019stabilizing}.
 
 By contrast, \textit{uncertainty-based} methods do not aim to
 restrict the learned policy to a safe region; rather, they rely on
 estimating epistemic uncertainty in the $Q$ function and integrating
-this information in the computation of target values. Precisely, this
+this information in the computation of target values. This
 means learning an uncertainty distribution over $Q$ functions as
 induced by the offline dataset $\mathcal{B}$, denoted
 $\mathcal{P}_{\mathcal{B}}\left(Q^\pi\right)$. When this is known, a
@@ -62,30 +64,33 @@ penalty term of the form
 $-\alpha\textrm{Unc}\left(\mathcal{P}_{\mathcal{B}}\left(Q^\pi\right)\right)$
 can be added to the TD-targets in order to produce a
 \textit{conservative} estimate of the actual $Q$
-function that is proportional to the model's confidence in the data.
-Since OOD actions are outside of the training data distribution, their
-uncertainty estimates are naturally large, resulting in desirably
-conservative $Q$-values \citep{levine2020offline}.
+function that, ideally, is proportional to the model's confidence in
+the data.
+Since OOD actions are outside of the training data distribution, they
+should naturally have large uncertainty estimates and result in
+desirably conservative $Q$-values \citep{levine2020offline}.
 
 % NOTE should I add a brief sentence stating that I mostly focus on this
 % since this is of interest in the present research?
 One common way of learning $\mathcal{P}_{\mathcal{B}}\left(Q^\pi\right)$ is to
 use bootstrap ensembles
-\citep{osband2016deep,kumar2019stabilizing,agarwal2020optimistic}. Ensembling
-a $Q$ function means training multiple $Q_i$ functions on samples from
-$\mathcal{B}$ drawn with replacement, then compounding the different
-$Q_i\left(s,a\right)$ predictions (typically by averaging in a
-regression problem) to obtain the final population prediction
+\citep{osband2016deep,kumar2019stabilizing,agarwal2020optimistic}.
+A $Q$ function ensemble trains multiple $Q_i$ functions on samples from
+$\mathcal{B}$ drawn with replacement, then it compounds the different
+$Q_i\left(s,a\right)$ predictions -- typically by averaging in a
+regression problem -- to obtain the final population prediction
 $Q\left(s,a\right)$. It is known that ensemble methods help
 stabilizing highly unstable prediction procedures
 \citep{breiman1996bagging}; in fact, simply using $K$ approximators to
-estimate $Q$ in DQN yields a $K$-fold variance reduction, improving
-accuracy in TD-targets estimation \citep{anschel2017averaged}. When
-estimating uncertainty using ensembles, one common choice of `Unc' is
-the variance across the ensemble $Q$-value predictions
-\citep{kumar2019stabilizing}. Lastly, Random Ensemble Mixture (REM)
-\citep{agarwal2020optimistic}, a strong off-policy algorithm based on
-DQN, obtained state-of-the-art results in discrete and continuous
-domain offline RL using $Q$ function ensembles. As a measure of
-uncertainty, REM employs a convex weighted sum of the ensemble
-$Q$-values, which is minimized globally by the ensemble.
+estimate $Q$ in DQN yields a $K$-fold variance reduction, with improved
+accuracy in TD-targets estimation and diminished overestimation bias
+\citep{anschel2017averaged}. When estimating uncertainty using
+ensembles, one common choice of `Unc' is the variance across the
+ensemble $Q$-value predictions \citep{kumar2019stabilizing}.
+Random Ensemble Mixture (REM) \citep{agarwal2020optimistic}, a strong
+off-policy algorithm based on DQN, obtained state-of-the-art results
+in discrete and continuous domain offline RL using $Q$ function
+ensembles. As a measure of uncertainty, REM employs a convex weighted
+sum of each $Q$ function's estimate
+% the ensemble $Q$-values,
+which is minimized globally by the ensemble.

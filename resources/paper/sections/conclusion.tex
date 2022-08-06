@@ -3,7 +3,7 @@
 % implemented as is
 The experiments presented in the previous section provide an answer to the
 question of whether the DQV algorithmic family benefits from ensemble
-techniques when doing offline RL.\ According to the
+techniques in offline RL.\ According to the
 empirical results, simply re-framing the learning problem of
 offline RL to use multiple copies of the same agent is not enough to
 prevent the bootstrapping error. Ensembles of function approximators
@@ -29,8 +29,8 @@ state-action pair's value. This is one important factor in the infamous
 under the form of bootstrapping error. Where such decoupling is absent,
 as in the DQN algorithm, using a simple ensemble was in fact enough to
 observe gains in terms of variance reduction, which is directly
-related to the overestimation bias \citep{anschel2017averaged} and
-results from misaligned value estimates -- also known as bootstrapping
+related to the overestimation bias \citep{anschel2017averaged} and is
+caused by misaligned value estimates -- also known as bootstrapping
 errors. This was the case for the experiments with offline
 Ensemble-DQN on the \texttt{CartPole-v1} environment. When it comes to
 the DQV algorithmic family and controlling the bootstrapping error
@@ -38,8 +38,8 @@ with ensembles, these algorithms' strength thus becomes an
 architectural weakness for the proposed experiments. In fact, base DQV
 and DQVMax show a robust performance in the offline setting that is
 unaffected by the addition of more heads to estimate uncertainty.
-By using a different function to form the
-TD-targets than to evaluate current states, these algorithms already
+By using a function to form the TD-targets different from the one
+dedicated to evaluate current states, these algorithms already
 take significant steps to prevent the bootstrapping error, which
 makes them unfit candidates for the simple ensemble strategy of
 Ensemble-DQN.\
@@ -50,12 +50,11 @@ Ensemble-DQN.\
 Another limitation is the naive ensemble technique employed throughout
 the experiments adapted from Ensemble-DQN.\ Given the empirical
 results, it is not sufficient to increase the number of prediction
-heads in DQV and DQV-Max, apply standard value-based regression
+heads in DQV and DQV-Max, to apply standard value-based regression
 methods (i.e.\ temporal difference learning) individually on each,
-then train
-every head on the average of the ensemble total loss. As
-previously stated, the former are two strong off-policy algorithm; yet
-for
+and finally to train every head on the average of the ensemble total
+loss. As previously stated, the former are two strong off-policy
+algorithms; yet for
 offline RL they could still benefit from the uncertainty estimated by
 an ensemble of $Q$ or $V$ functions, if this information is properly
 integrated in their learning formulation. The simple averaging technique
@@ -74,17 +73,15 @@ of experimentation are possible. For example, the size and diversity
 of the offline dataset $\mathcal{B}$ collected by $\pi_{\beta}$ could
 be manipulated to asses the generalization capabilities of offline DQV
 and DQV-Max. As seen in some of the experiments for the REM agent
-\citep{agarwal2020optimistic}, one could reduce the size of the
-dataset
-$\mathcal{B}$ to find the minimum amount of trajectories needed to
-obtain an acceptable performance. Alternatively, offline DQV and
+\citep{agarwal2020optimistic}, the size of the dataset $\mathcal{B}$
+could be reduced to find the minimum amount of trajectories needed to
+obtain an acceptable performance level. Alternatively, offline DQV and
 DQV-Max could be
 given only expert or quasi-random data, thus decreasing $\mathcal{B}$'s
 diversity. The offline agents in this research learned on the full set
-of policies encountered during online training of $\pi_{\textrm{DQN}}$; this
-was done in order to establish a safe baseline in lieu of the
-importance of training datasets' diverse composition highlighted by
-the REM results.
+of policies encountered during online training of $\pi_{\textrm{DQN}}$,
+in lieu of the importance of training datasets' diverse composition
+highlighted by the REM results.
 Learning on data produced by a small number of policies or by
 highly suboptimal ones matters for offline DQV and DQV-Max because it
 resembles what is available from many settings in the real world,
@@ -107,5 +104,5 @@ well-defined concepts in machine learning, and in the case of DQV and
 DQV-Max it could be of interest to assess if the relative strength of
 each agent taken individually -- lower variance for the first
 on-policy algorithm, greater learning generality for the second
-off-policy one -- can be combined in a meaningful way on the offline
+off-policy one -- can be combined in a meaningful way in the offline
 RL setting.

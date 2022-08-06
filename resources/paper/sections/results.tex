@@ -6,23 +6,23 @@ show the same metric for their respective ensemble version. Every
 proposed offline agent learns to solve both classic control
 environments, and the reward curves are presented in
 Appendix~\ref{sec:appendix_figs}.
-% NOTE maybe this sentence is not even necessary
+% NOTE maybe this sentence is not even necessary DONE it is alright
 The reward signals for the \texttt{CartPole-v1} environment are
 generally noisier compared to the ones for \texttt{Acrobot-v1}; this
 is in line
 with the performance of the online behavioral DQN agent
 $\pi_{\textrm{DQN}}$, which also produced unstable learning curves on
-the problem.
+this problem.
 
 \subsection{Offline bootstrapping error in the DQV family}
-% \begin{figure}[h]
-%   \centering
-%   \includegraphics[width=.5\textwidth]{img/dshift_plots_qv.png}
-%   \caption{The $Q$-value estimates of offline DQN, DQV and DQV-Max at
-%     evaluation time. The shaded areas are $\pm 1$ standard deviation
-%     from the mean of 3 different
-%     simulations.}\label{fig:dshift_offline_normal}
-% \end{figure}
+\begin{figure*}[h]
+  \centering
+  \includegraphics[width=.9\textwidth]{img/dshift_plots_qv.png}
+  \caption{The $Q$-value estimates of offline DQN, DQV and DQV-Max at
+    evaluation time. The shaded areas are $\pm 1$ standard deviation
+    from the mean of 3 different
+    simulations.}\label{fig:dshift_offline_normal}
+\end{figure*}
 % Q estimates discussion for:
 % DQN offline
 As seen in Figure~\ref{fig:dshift_offline_normal}, the experiments
@@ -32,7 +32,8 @@ domain problems \citep{pmlr-v97-fujimoto19a,kumar2019stabilizing}: the
 $Q$ function incurs in a heavy overestimation bias produced by
 bootstrapping errors. This is most evident on the \texttt{CartPole-v1}
 environment, where DQN's $Q$-value estimates quickly escalate above
-the true value. Since the offline agent has no access to ground truth
+the true value for $s_0$. Since the offline agent has no access to
+ground truth
 values due to lack of exploration, it cannot adjust the $Q$ function
 estimates during training and the whole estimation process
 diverges. Offline DQN suffers overestimation on the
@@ -76,29 +77,30 @@ out-of-distribution actions could disrupt the function's
 convergence to the true $V^*$. \citet{sabatelli2020deep} note that
 this disentanglement makes DQV-Max less prone to the overestimation
 bias in the online setting, and these experiments confirm the results
-for the offline one.
+in the offline one.
 
 \subsection{Offline bootstrapping error on the ensemble variants}
-% \begin{figure}[h]
-%   \centering
-%   \includegraphics[width=.5\textwidth]{img/dshift_plots_ensembles_qv.png}
-%   \caption{Evaluation time $Q$-value estimates of the ensemble version
-%     of offline DQN, DQV and DQV-Max. The shaded areas are $\pm 1$
-%     standard deviation from the mean of 3 different
-%     simulations.}\label{fig:dshift_offline_ensemble}
-% \end{figure}
+\begin{figure*}[h]
+  \centering
+  \includegraphics[width=.9\textwidth]{img/dshift_plots_ensembles_qv.png}
+  \caption{Evaluation time $Q$-value estimates of the ensemble version
+    of offline DQN, DQV and DQV-Max. The shaded areas are $\pm 1$
+    standard deviation from the mean of 3 different
+    simulations.}\label{fig:dshift_offline_ensemble}
+\end{figure*}
 % TS: ensemble-dqn less optimistically biased, in line with baseline
 % results from REM and with theoretical analysis of Averaged-DQN
 On the \texttt{CartPole-v1} environment, Offline Ensemble-DQN suffers
 from a milder overestimation bias than offline DQN.\ The $Q$-value
 estimates on this problem decreased significantly with the
-implementation of the ensemble strategy ($t=7.40,p<.01$); moreover, in
+implementation of the ensemble strategy ($t=7.40,p<.01$);
+interestingly, in
 line with the theoretical analysis of \citet{anschel2017averaged}, the
 observed decrease in $Q$ estimates variance was proportional to the
 ensemble number of heads $K$ (8755.07 vs. 2330.90 for Ensemble-DQN and
 DQN, respectively). The $Q$-value for $s_0$ still diverges from the
 true baseline, as seen in Figure~\ref{fig:dshift_offline_ensemble};
-this is a symptomatic that simply ensembling the $Q$ function alone
+this is symptomatic that a simple ensemble of $Q$ functions alone
 does not prevent the DQN bootstrapping error. Since the behavior
 policy $\pi_{\textrm{DQN}}$ produced a noisy reward signal on the
 \texttt{CartPole-v1} environment, the lower $Q$ estimates compared to
@@ -123,7 +125,7 @@ notable exception is the performance of offline Ensemble-DQV on the
 \texttt{CartPole-v1} environment, where a significant drop was
 registered ($t=2.40,p<.01$). However, the $Q$ estimates distributions
 for $s_0$ between this agent and offline DQV almost perfectly
-overlap (Figure~\ref{fig:qv_dist}). Both offline
+overlap as seen in Figure~\ref{fig:qv_dist}. Both offline
 DQV and Ensemble-DQV converge to basically the same $Q$-value for
 $s_0$, and both cannot incur in an overestimation bias since they only
 use the $V$ function to compute the TD-target. Therefore, one
@@ -134,17 +136,24 @@ yet offline DQV is still able to solve the problems correctly due to
 their relative ease. However, it is likely that the incorrect
 estimations derived from being on-policy compound together from each
 head of the ensemble, producing a sub-optimal policy. To this regard,
-it should be noted that the reward accumulated by Ensemble-DQV is
-lower than that of base DQV mostly in the early stages of learning
-(first $50 \; 000$ steps) across each run, subsequently stabilizing at
-the
-maximum for the \texttt{CartPole-v1} environment.
+it should be noted that the reward accumulated by Ensemble-DQV on
+\texttt{CartPole-v1} is lower than that of base DQV mostly in the
+early stages of learning (first $50 \; 000$ steps) across each run,
+subsequently stabilizing at the maximum for the environment.
+\begin{figure*}[h]
+  \centering
+  \includegraphics[width=.9\textwidth]{img/all_qv_dist.png}
+  \caption{Distribution of maximum $Q$-values for $s_0$ for each agent
+    and its ensemble variant}\label{fig:qv_dist}
+\end{figure*}
 \input{sections/results_table.tex}
 
-%% REVIEW should I introduce this section in the methods first??
+%% REVIEW should I introduce this section in the methods first?? DONE
+%% it seems ok to Matthia too
 %% TODO check the sentence with 'based on the assumption': it is
 %% underlying the whole RQ and paper, but is it consistent with previous
-%% formulations of the problem?
+%% formulations of the problem? DONE yes it is briefly mentioned in
+%% the related work intro section
 \subsection{Additional study: Ensemble-DQV-Max ablations}
 Since no change was found when using ensembles to estimate both $Q$
 and $V$ in DQV-Max, two additional experiments were performed where
@@ -156,25 +165,25 @@ and evaluation, we want to assess whether either value function
 involved in the computation of DQV-Max's TD-targets drives more
 bootstrapping error than the other, based on the assumption that
 ensemble techniques should dampen $Q$-values.
-% \begin{figure}[h]
-%   \centering
-%   \includegraphics[width=.5\textwidth]{img/dshift_plots_ablation_qv.png}
-%   \caption{Evaluation time $Q$-value estimates of the ablated variants
-%     of offline Ensemble-DQV-Max. The shaded areas are $\pm 1$ standard
-%     deviation from the mean of 3 different
-%     simulations.}\label{fig:dshift_dqvmax_ablations}
-% \end{figure}
+\begin{figure*}[h]
+  \centering
+  \includegraphics[width=.9\textwidth]{img/dshift_plots_ablation_qv.png}
+  \caption{Evaluation time $Q$-value estimates of the ablated variants
+    of offline Ensemble-DQV-Max. The shaded areas are $\pm 1$ standard
+    deviation from the mean of 3 different
+    simulations.}\label{fig:dshift_dqvmax_ablations}
+\end{figure*}
 As seen in Figure~\ref{fig:dshift_dqvmax_ablations}, results for these
-experiments are clear: ensembling either only the $Q$ function
+experiments are clear: ensembling the $Q$ function
 (EnsembleDQVMaxOnQ) or the $V$ function (EnsembleDQVMaxOnV) results in
 fundamentally the same $Q$ estimates for $s_0$ as produced by
 ensembling both functions. Looking at the DQV-Max temporal difference
 targets for $V$ and $Q$ (Equation~\ref{dqvmax:v_td_target}
 and~\ref{dqvmax:q_td_target}, respectively) the reason is evident: the
 $Q$ function regresses towards targets computed by $V$, which cannot
-suffer from the action distributional shift, thus updates to $Q$ are
-in-distribution with respect to the training data. Ultimately, this is
-probably enough to correct bootstrapping errors arising when computing
-the targets for $V$, and the two value functions are able to balance
-their respective estimates, such that using an ensemble on either
-results in no significant change.
+suffer from the action distributional shift, and updates to $Q$ are
+thus in-distribution with respect to the training data. Ultimately,
+this is probably enough to correct bootstrapping errors arising when
+computing the targets for $V$, and the two value functions are able to
+balance their respective estimates such that using an ensemble on
+either one results in no significant change.
